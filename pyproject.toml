@@ -1,0 +1,42 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "bullsquid"
+version = "1.0.0"
+description = ""
+authors = ["Chris Latham <cl@bink.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+piccolo = {extras = ["postgres", "orjson"], version = "^0.69.2"}
+fastapi = "^0.74.1"
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.1.0"
+pylint = "^2.12.2"
+mypy = "^0.931"
+pytest = "^7.0.1"
+ptpython = "^3.0.20"
+isort = "^5.10.1"
+uvicorn = "^0.17.5"
+types-ujson = "^4.2.1"
+ipython = "^8.0.1"
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+exclude = "piccolo_migrations"
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+
+[tool.pylint.messages_control]
+ignore = "piccolo_migrations"
+extension-pkg-whitelist = "pydantic"

@@ -1,3 +1,5 @@
+![project logo](docs/bullsquid.png)
+
 # bullsquid
 
 Portal API backend project.

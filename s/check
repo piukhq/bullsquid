@@ -1,0 +1,6 @@
+#!/usr/bin/env zsh
+set -eufx -o pipefail
+poetry run isort --check --diff .
+poetry run black --check .
+poetry run mypy .
+poetry run pylint api mids asgi conftest piccolo_conf settings

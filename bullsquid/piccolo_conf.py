@@ -15,4 +15,4 @@ DB = PostgresEngine(
     log_queries=settings.debug,
 )
 
-APP_REGISTRY = AppRegistry(apps=["mids.piccolo_app"])
+APP_REGISTRY = AppRegistry(apps=["bullsquid.mids.piccolo_app"])

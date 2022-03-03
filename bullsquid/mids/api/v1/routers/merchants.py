@@ -1,17 +1,13 @@
 """Defines endpoints under the /merchants prefix"""
 from typing import Any, Mapping, TypeAlias
 
-from asyncpg import UniqueViolationError
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Response
 from pydantic import BaseModel
-from starlette.status import (
-    HTTP_204_NO_CONTENT,
-    HTTP_400_BAD_REQUEST,
-    HTTP_404_NOT_FOUND,
-)
+from starlette.status import HTTP_204_NO_CONTENT
 
-from mids.models import MerchantIn, MerchantOut
-from mids.tables import Merchant, PaymentScheme
+from bullsquid.mids.api.errors import MerchantNotFoundError
+from bullsquid.mids.models import MerchantIn, MerchantOut
+from bullsquid.mids.tables import Merchant, PaymentScheme
 
 router = APIRouter(prefix="/merchants")
 
@@ -43,22 +39,8 @@ async def create_merchant(merchant_model: MerchantIn) -> ViewResponse:
         PaymentScheme.slug.is_in(payment_scheme_slugs)
     )
 
-    if len(payment_schemes) != len(payment_scheme_slugs):
-        missing = set(payment_scheme_slugs) - {p.slug for p in payment_schemes}
-        raise HTTPException(
-            HTTP_404_NOT_FOUND,
-            f"The following payment schemes do not exist: {', '.join(missing)}",
-        )
-
     merchant = Merchant(**merchant_data)
-    try:
-        await merchant.save()
-    except UniqueViolationError as ex:
-        raise HTTPException(
-            status_code=HTTP_400_BAD_REQUEST,
-            detail=f"Failed to create merchant: {ex.as_dict().get('detail', 'Unknown error')}",
-        ) from ex
-
+    await merchant.save()
     await merchant.add_m2m(
         *payment_schemes,
         m2m=Merchant.payment_schemes,
@@ -78,7 +60,7 @@ async def update_merchant(
     """Update a merchant's details."""
     merchant = await Merchant.objects().get(Merchant.pk == merchant_ref)
     if not merchant:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Merchant not found")
+        raise MerchantNotFoundError
 
     for key, value in merchant_model.dict().items():
         setattr(merchant, key, value)
@@ -93,7 +75,7 @@ async def delete_merchant(merchant_ref: str) -> ViewResponse:
     """Delete a merchant."""
     merchant = await Merchant.objects().get(Merchant.pk == merchant_ref)
     if not merchant:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Merchant not found")
+        raise MerchantNotFoundError
 
     await merchant.remove()
 

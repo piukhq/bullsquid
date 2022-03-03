@@ -5,14 +5,18 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "bullsquid"
 version = "1.0.0"
-description = ""
+description = "Portal API backend project."
+license = "MIT"
 authors = ["Chris Latham <cl@bink.com>"]
 readme = "README.md"
+repository = "https://github.com/binkhq/bullsquid"
 
 [tool.poetry.dependencies]
 python = "^3.10"
 piccolo = {extras = ["postgres", "orjson"], version = "^0.69.2"}
 fastapi = "^0.74.1"
+loguru = "^0.6.0"
+sentry-sdk = "^1.5.6"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.1.0"

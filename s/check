@@ -3,4 +3,4 @@ set -eufx -o pipefail
 poetry run isort --check --diff .
 poetry run black --check .
 poetry run mypy .
-poetry run pylint api mids asgi conftest piccolo_conf settings
+poetry run pylint bullsquid asgi conftest settings

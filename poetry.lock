@@ -443,7 +443,7 @@ ptyprocess = ">=0.5"
 
 [[package]]
 name = "piccolo"
-version = "0.69.3"
+version = "0.69.5"
 description = "A fast, user friendly ORM and query builder which supports asyncio."
 category = "main"
 optional = false
@@ -1151,8 +1151,8 @@ pexpect = [
     {file = "pexpect-4.8.0.tar.gz", hash = "sha256:fc65a43959d153d0114afe13997d439c22823a27cefceb5ff35c2178c6784c0c"},
 ]
 piccolo = [
-    {file = "piccolo-0.69.3-py3-none-any.whl", hash = "sha256:928745bfb0dbff76a93a50fc7bf16329d7a2ca7aa358fca8f942705a1f3005b0"},
-    {file = "piccolo-0.69.3.tar.gz", hash = "sha256:bd2c698a63fca7ebbf8dc9870479831981763515ef23a2ec104ec10bc7295eee"},
+    {file = "piccolo-0.69.5-py3-none-any.whl", hash = "sha256:103710ea2ddea431c301a87074129ff92976d6f92c5904b46de38ebe9118511b"},
+    {file = "piccolo-0.69.5.tar.gz", hash = "sha256:e8a4d6e29304f3b58f1b315d50195bc02b410a3b32458cd910f76320cc2adae2"},
 ]
 pickleshare = [
     {file = "pickleshare-0.7.5-py2.py3-none-any.whl", hash = "sha256:9649af414d74d4df115d5d718f82acb59c9d418196b7b4290ed47a12ce62df56"},

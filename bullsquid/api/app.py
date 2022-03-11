@@ -1,19 +1,15 @@
 """
 Defines the create_app function used to initialize the application.
 """
-import sentry_sdk
 from asyncpg.exceptions import PostgresError
 from fastapi import FastAPI, Request
 from loguru import logger
 from piccolo.engine import engine_finder
 from starlette.responses import JSONResponse
-from starlette.status import (
-    HTTP_500_INTERNAL_SERVER_ERROR,
-    HTTP_503_SERVICE_UNAVAILABLE,
-)
+from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
-from bullsquid.mids.api.routers import v1 as mids_v1
-from settings import settings
+from bullsquid.api.errors import error_response
+from bullsquid.merchant_data.api.routers import v1 as merchant_data_v1
 
 
 def create_app() -> FastAPI:
@@ -24,42 +20,32 @@ def create_app() -> FastAPI:
         description="API for interacting with the portal backend.",
         version="1.0.0",
     )
-    app.include_router(mids_v1, prefix="/mid_management", tags=["MID Management"])
+    app.include_router(
+        merchant_data_v1, prefix="/merchant_data", tags=["Merchant Data Management"]
+    )
+
+    @app.exception_handler(Exception)
+    async def generic_error_handler(_request: Request, ex: Exception) -> JSONResponse:
+        """Handles generic exceptions."""
+        return error_response(ex)
 
     @app.exception_handler(OSError)
-    async def os_error_handler(_request: Request, exc: OSError) -> JSONResponse:
+    async def os_error_handler(_request: Request, ex: OSError) -> JSONResponse:
         """Handles OSErrors, usually caused by connection failure to other services."""
-        if settings.debug:
-            logger.exception(exc)
-
-        sentry_sdk.capture_exception(exc)
-
-        return JSONResponse(
+        return error_response(
+            ex,
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
-            content={
-                "detail": {
-                    "msg": "Unable to process request due to an internal error.",
-                }
-            },
+            message="Unable to process request due to connection failure to another service.",
         )
 
     @app.exception_handler(PostgresError)
     async def postgres_error_handler(
-        _request: Request, exc: PostgresError
+        _request: Request, ex: PostgresError
     ) -> JSONResponse:
         """Handles PostgresErrors, usually caused by bad queries or validation gaps."""
-        if settings.debug:
-            logger.exception(exc)
-
-        sentry_sdk.capture_exception(exc)
-
-        return JSONResponse(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "detail": {
-                    "msg": "Unable to process request due to a database error.",
-                }
-            },
+        return error_response(
+            ex,
+            message="Unable to process request due to a database error.",
         )
 
     @app.on_event("startup")

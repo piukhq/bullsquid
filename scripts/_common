@@ -1,0 +1,10 @@
+#!/usr/bin/env zsh
+set -euf -o pipefail
+
+function hr() {
+    echo '--------'
+}
+
+function info() {
+    echo "$@"
+}

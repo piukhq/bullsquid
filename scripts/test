@@ -1,0 +1,8 @@
+#!/usr/bin/env zsh
+source scripts/_common
+
+info 'Running tests...'
+python scripts/test.py "$@"
+hr
+
+info 'Done!'

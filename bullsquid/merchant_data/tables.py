@@ -1,9 +1,7 @@
 """Definitions of all the table models used for MID management."""
 from enum import Enum
 
-from piccolo.columns import UUID, Boolean, ForeignKey, Integer, Text
-from piccolo.columns.m2m import M2M
-from piccolo.columns.reference import LazyTableReference
+from piccolo.columns import UUID, Array, Boolean, ForeignKey, Integer, Text
 from piccolo.table import Table
 
 
@@ -14,7 +12,7 @@ class Merchant(Table):
     name = Text(required=True, unique=True)
     icon_url = Text(null=True, default=None)
     slug = Text(null=True, default=None, unique=True)
-    payment_schemes = M2M(LazyTableReference("MerchantToPaymentScheme", "mids"))
+    payment_schemes = Array(Text(null=False), null=False)
     plan_id = Integer(null=True, default=None, unique=True)
     location_label = Text(required=True)
 
@@ -23,14 +21,6 @@ class PaymentScheme(Table):
     """Represents a payment scheme such as Visa or Amex."""
 
     slug = Text(primary_key=True)
-    merchants = M2M(LazyTableReference("MerchantToPaymentScheme", "mids"))
-
-
-class MerchantToPaymentScheme(Table):
-    """Links a merchant to the payment schemes it is interested in."""
-
-    merchant = ForeignKey(Merchant, null=False)
-    payment_scheme = ForeignKey(PaymentScheme, null=False)
 
 
 class Location(Table):

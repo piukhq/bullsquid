@@ -1,0 +1,15 @@
+{
+    "merchant_data": {
+        "PaymentScheme": [
+            {
+                "slug": "visa"
+            },
+            {
+                "slug": "amex"
+            },
+            {
+                "slug": "mastercard"
+            }
+        ]
+    }
+}

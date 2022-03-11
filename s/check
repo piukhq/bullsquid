@@ -1,6 +1,0 @@
-#!/usr/bin/env zsh
-set -eufx -o pipefail
-poetry run isort --check --diff .
-poetry run black --check .
-poetry run mypy .
-poetry run pylint bullsquid asgi conftest settings

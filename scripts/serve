@@ -1,0 +1,8 @@
+#!/usr/bin/env zsh
+source scripts/_common
+
+info 'Starting API.'
+python asgi.py
+hr
+
+info 'Done!'

@@ -5,13 +5,19 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: FastAPI",
+            "name": "Python: API",
             "type": "python",
             "request": "launch",
             "module": "uvicorn",
             "args": [
                 "asgi:app"
             ]
+        },
+        {
+            "name": "Python: Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "scripts.test",
         }
     ]
 }

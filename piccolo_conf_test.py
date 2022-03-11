@@ -1,12 +1,12 @@
 """Piccolo ORM configuration."""
-from piccolo.conf.apps import AppRegistry
 from piccolo.engine.postgres import PostgresEngine
 
+from piccolo_conf import APP_REGISTRY  # pylint: disable=unused-import
 from settings import settings
 
 DB = PostgresEngine(
     config={
-        "database": settings.postgres.dbname,
+        "database": f"{settings.postgres.dbname}_test",
         "user": settings.postgres.user,
         "password": settings.postgres.password,
         "host": settings.postgres.host,
@@ -14,5 +14,3 @@ DB = PostgresEngine(
     },
     log_queries=settings.debug,
 )
-
-APP_REGISTRY = AppRegistry(apps=["bullsquid.mids.piccolo_app"])

@@ -1,4 +1,3 @@
-# pylint: disable=too-few-public-methods
 """Pydantic-validated application configuration."""
 from pydantic import BaseSettings
 
@@ -8,7 +7,7 @@ class PostgresSettings(BaseSettings):
 
     host = "localhost"
     port = 5432
-    user = "bullsquid"
+    user = "postgres"
     password = ""
     dbname = "bullsquid"
 
@@ -22,6 +21,7 @@ class Settings(BaseSettings):
     """Top level settings for the app."""
 
     debug = False
+    trace_queries = False
     postgres = PostgresSettings()
 
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
 set -euf
 
-function hr() {
+hr() {
     echo '--------'
 }
 
-function info() {
+info() {
     echo "$@"
 }

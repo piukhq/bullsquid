@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-set -euf -o pipefail
+set -euf
 
 function hr() {
     echo '--------'

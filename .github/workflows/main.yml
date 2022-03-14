@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  release:
+    types: [published]
+
+jobs:
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: bullsquid_test
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
+      - run: pip install poetry==1.2.0a2
+      - run: poetry config virtualenvs.create false
+      - run: poetry install
+      - run: scripts/lint
+      - run: scripts/test

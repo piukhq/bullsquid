@@ -1,36 +1,36 @@
 #!/usr/bin/env sh
 . scripts/_common
 
-function install() {
+install() {
     info 'Installing dependencies...'
     poetry install
     hr
 }
 
-function psql_cmd() {
+psql_cmd() {
     psql -h localhost -U postgres -c "$1" -o /dev/null
 }
 
-function test_postgres() {
+test_postgres() {
     info 'Testing postgres connection...'
     psql_cmd 'select 1' >/dev/null 2>&1
     hr
 }
 
-function make_postgres() {
+make_postgres() {
     info 'Creating postgres docker container...'
     docker run -d --rm --name postgres -e POSTGRES_HOST_AUTH_METHOD=trust -p5432:5432 postgres
     hr
 }
 
-function make_databases() {
+make_databases() {
     info 'Making bullsquid & bullsquid_test databases...'
     psql_cmd 'create database bullsquid' >/dev/null 2>&1 || true
     psql_cmd 'create database bullsquid_test' >/dev/null 2>&1 || true
     hr
 }
 
-function ensure_postgres() {
+ensure_postgres() {
     if test_postgres; then
         info 'Postgres is available on localhost:5432'
         hr

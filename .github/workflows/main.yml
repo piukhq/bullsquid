@@ -29,4 +29,4 @@ jobs:
       - run: poetry config virtualenvs.create false
       - run: poetry install
       - run: scripts/lint
-      - run: scripts/test
+      - run: scripts/test --cov bullsquid

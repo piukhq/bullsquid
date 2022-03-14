@@ -6,6 +6,8 @@
     "editor.formatOnSave": true,
     "conventionalCommits.scopes": [
         "poetry",
-        "db"
+        "db",
+        "scripts",
+        "meta"
     ]
 }

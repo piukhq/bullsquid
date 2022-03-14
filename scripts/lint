@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-source scripts/_common
+. scripts/_common
 
 info 'Running isort...'
 isort --check --diff .

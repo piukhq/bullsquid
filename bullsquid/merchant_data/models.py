@@ -14,6 +14,6 @@ class Merchant(BaseModel):
 
 
 class MerchantWithPK(Merchant):
-    """Merchant request model with a primary key."""
+    """Merchant response model with a primary key."""
 
     pk: UUID4

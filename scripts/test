@@ -1,8 +1,8 @@
-#!/usr/bin/env sh
+#!/bin/sh
 . scripts/_common
 
 info 'Running tests...'
-python scripts/test.py "$@"
+piccolo tester run --pytest_args="--cov=bullsquid --cov-report=xml --cov-report=term"
 hr
 
 info 'Done!'

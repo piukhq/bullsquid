@@ -60,6 +60,8 @@ good-names = [
 [tool.coverage.run]
 omit = [
     "*/piccolo_migrations/*",  # migrations aren't run in tests currently
+    "*/piccolo_app.py",        # just piccolo ORM configuration, nothing to test
+    "*/tables.py",             # table definitions are not directly tested
     "bullsquid/log_conf.py",   # log_conf sets up a complex log intercept that is hard to test
     "bullsquid/api/app.py",    # api app initialisation sets up db pools and so on that are hard to test
 ]

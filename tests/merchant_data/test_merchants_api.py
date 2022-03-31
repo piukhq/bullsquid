@@ -4,6 +4,7 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 from requests import Response
+from starlette import status
 
 from bullsquid.merchant_data import models
 from bullsquid.merchant_data.tables import Merchant, PaymentScheme
@@ -41,7 +42,7 @@ def merchant_factory(
 def assert_is_uniqueness_error(resp: Response, *, loc: list[str]) -> None:
     """Asserts that the response is a uniqueness error."""
     assert not resp.ok, resp.text
-    assert resp.status_code == 422
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     detail = resp.json()["detail"]
     assert len(detail) == 1
@@ -52,7 +53,7 @@ def assert_is_uniqueness_error(resp: Response, *, loc: list[str]) -> None:
 def assert_is_not_found_error(resp: Response, *, loc: list[str]) -> None:
     """Asserts that the response is a not found error."""
     assert not resp.ok, resp.text
-    assert resp.status_code == 404
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     detail = resp.json()["detail"]
     assert len(detail) == 1
@@ -155,6 +156,24 @@ def test_update_merchant(
     assert resp.json() == new_merchant_data | {"pk": str(merchant.pk)}
 
 
+def test_update_merchant_with_duplicate_details(
+    test_client: TestClient,
+    merchant_factory: ModelFactory,
+) -> None:
+    """Test updating a merchant with duplicates of another merchant's fields."""
+    merchant = merchant_factory.get()
+    merchant2 = merchant_factory.get()
+    new_merchant = merchant_factory.get(persist=False, name=merchant2.name)
+    new_merchant_data = ser(new_merchant, models.Merchant)
+
+    resp = test_client.put(
+        f"/merchant_data/v1/merchants/{merchant.pk}",
+        json=new_merchant_data,
+    )
+
+    assert_is_uniqueness_error(resp, loc=["body", "name"])
+
+
 def test_update_merchant_with_invalid_pk(
     test_client: TestClient,
     merchant_factory: ModelFactory,
@@ -176,7 +195,7 @@ def test_delete_merchant(
     merchant = merchant_factory.get()
     resp = test_client.delete(f"/merchant_data/v1/merchants/{merchant.pk}")
     assert resp.ok, resp.text
-    assert resp.status_code == 204
+    assert resp.status_code == status.HTTP_204_NO_CONTENT
     assert not Merchant.exists().where(Merchant.pk == merchant.pk).run_sync()
 
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/sh
 set -euf
 
 hr() {
@@ -7,4 +7,10 @@ hr() {
 
 info() {
     echo "$@"
+}
+
+warn() {
+    tput setaf 1;
+    echo "!! $@"
+    tput sgr0
 }

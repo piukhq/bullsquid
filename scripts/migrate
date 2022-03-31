@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/sh
 . scripts/_common
 
 info 'Running migrations...'

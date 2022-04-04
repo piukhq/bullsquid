@@ -2,12 +2,13 @@
 Defines the create_app function used to initialize the application.
 """
 from asyncpg.exceptions import PostgresError
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from loguru import logger
 from piccolo.engine import engine_finder
 from starlette.responses import JSONResponse
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
+from bullsquid.api.auth import check_api_key
 from bullsquid.api.errors import error_response
 from bullsquid.merchant_data.api.routers import v1 as merchant_data_v1
 from bullsquid.status.views import router as status_api
@@ -23,7 +24,10 @@ def create_app() -> FastAPI:
     )
     app.include_router(status_api, tags=["Status"])
     app.include_router(
-        merchant_data_v1, prefix="/merchant_data", tags=["Merchant Data Management"]
+        merchant_data_v1,
+        prefix="/merchant_data",
+        tags=["Merchant Data Management"],
+        dependencies=[Depends(check_api_key)],
     )
 
     @app.exception_handler(Exception)

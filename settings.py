@@ -24,5 +24,8 @@ class Settings(BaseSettings):
     trace_queries = False
     postgres = PostgresSettings()
 
+    # TEMPORARY: will be entirely replaced by Auth0 eventually.
+    api_key: str
+
 
 settings = Settings()

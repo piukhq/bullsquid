@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core", "poetry-dynamic-versioning"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -33,6 +33,9 @@ pytest-cov = "^3.0.0"
 coverage = "^6.3.2"
 types-requests = "^2.27.12"
 pytest-mock = "^3.7.0"
+
+[tool.poetry-dynamic-versioning]
+enable = true
 
 [tool.isort]
 profile = "black"

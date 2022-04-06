@@ -51,13 +51,13 @@ def all_tables() -> Generator[None, None, None]:
     drop_tables(*tables)
 
 
-TModel = TypeVar("TModel", bound=Table, covariant=True)
+TModel_co = TypeVar("TModel_co", bound=Table, covariant=True)
 
 
-class ModelFactory(Protocol[TModel]):
+class ModelFactory(Protocol[TModel_co]):
     """A protocol for factory that creates a model instance."""
 
-    def get(self, *, persist: bool = True, **defaults: Any) -> TModel:
+    def get(self, *, persist: bool = True, **defaults: Any) -> TModel_co:
         """Create and return a model instance."""
 
 
@@ -68,7 +68,7 @@ class ModelFactoryMaker(Protocol):
     """Callback protocol for the type that model_factory returns."""
 
     def __call__(
-        self, table: Type[TModel], **baked_defaults: Any
+        self, table: Type[TModel_co], **baked_defaults: Any
     ) -> ModelFactoryFixture:
         ...
 
@@ -77,11 +77,11 @@ class ModelFactoryMaker(Protocol):
 def model_factory() -> ModelFactoryMaker:
     """Returns a function that creates a model factory for a given table."""
 
-    def factory(table: Type[TModel], **baked_defaults: Any) -> ModelFactoryFixture:
+    def factory(table: Type[TModel_co], **baked_defaults: Any) -> ModelFactoryFixture:
         """Returns a factory class for the given table."""
         with contextlib.ExitStack() as stack:
 
-            def get(*, persist: bool = True, **defaults: Any) -> TModel:
+            def get(*, persist: bool = True, **defaults: Any) -> TModel_co:
                 """
                 Builds a randomised model in the database and returns it.
                 The model is automatically deleted after the test.
@@ -94,7 +94,7 @@ def model_factory() -> ModelFactoryMaker:
                     persist=persist,
                 )
                 stack.callback(lambda: obj.remove().run_sync())
-                return cast(TModel, obj)
+                return cast(TModel_co, obj)
 
             yield type(f"{table.__name__}ModelFactory", (ModelFactory,), {"get": get})
 

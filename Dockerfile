@@ -15,5 +15,5 @@ COPY --from=build /src/piccolo_conf.py .
 COPY --from=build /src/settings.py .
 RUN pip install bullsquid-0.0.0-py3-none-any.whl
 
-ENTRYPOINT [ "uvicorn" ]
-CMD [ "asgi:app", "--host", "0.0.0.0", "--port", "9000" ]
+ENTRYPOINT [ "linkerd-await", "--" ]
+CMD [ "uvicorn", "asgi:app", "--host", "0.0.0.0", "--port", "6502" ]

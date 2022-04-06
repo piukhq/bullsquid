@@ -9,6 +9,11 @@ from starlette import status
 from bullsquid.merchant_data import models
 from bullsquid.merchant_data.tables import Merchant, PaymentScheme
 from conftest import ModelFactory, ModelFactoryFixture, ModelFactoryMaker, ser
+from settings import settings
+
+AUTH = {
+    "Authorization": settings.api_key,
+}
 
 
 @pytest.fixture
@@ -69,7 +74,7 @@ def test_list_merchants(
     for _ in range(num_merchants):
         merchant_factory.get()
 
-    resp = test_client.get("/merchant_data/v1/merchants")
+    resp = test_client.get("/merchant_data/v1/merchants", headers=AUTH)
     assert resp.ok, resp.text
 
     merchants = resp.json()
@@ -84,6 +89,7 @@ def test_create_unique_merchant(
     resp = test_client.post(
         "/merchant_data/v1/merchants",
         json=ser(merchant_factory.get(persist=False), models.Merchant),
+        headers=AUTH,
     )
     assert resp.ok, resp.text
 
@@ -98,6 +104,7 @@ def test_create_merchant_with_duplicate_name(
     resp = test_client.post(
         "/merchant_data/v1/merchants",
         json=ser(new_merchant, models.Merchant),
+        headers=AUTH,
     )
 
     assert_is_uniqueness_error(resp, loc=["body", "name"])
@@ -114,6 +121,7 @@ def test_create_merchant_with_duplicate_slug(
     resp = test_client.post(
         "/merchant_data/v1/merchants",
         json=ser(new_merchant, models.Merchant),
+        headers=AUTH,
     )
 
     assert_is_uniqueness_error(resp, loc=["body", "slug"])
@@ -129,7 +137,9 @@ def test_create_merchant_with_duplicate_plan_id(
     new_merchant = merchant_factory.get(persist=False, plan_id=merchant.plan_id)
 
     resp = test_client.post(
-        "/merchant_data/v1/merchants", json=ser(new_merchant, models.Merchant)
+        "/merchant_data/v1/merchants",
+        json=ser(new_merchant, models.Merchant),
+        headers=AUTH,
     )
 
     assert_is_uniqueness_error(resp, loc=["body", "plan_id"])
@@ -150,6 +160,7 @@ def test_update_merchant(
     resp = test_client.put(
         f"/merchant_data/v1/merchants/{merchant.pk}",
         json=new_merchant_data,
+        headers=AUTH,
     )
 
     assert resp.ok, resp.text
@@ -169,6 +180,7 @@ def test_update_merchant_with_duplicate_details(
     resp = test_client.put(
         f"/merchant_data/v1/merchants/{merchant.pk}",
         json=new_merchant_data,
+        headers=AUTH,
     )
 
     assert_is_uniqueness_error(resp, loc=["body", "name"])
@@ -183,6 +195,7 @@ def test_update_merchant_with_invalid_pk(
     resp = test_client.put(
         f"/merchant_data/v1/merchants/{uuid4()}",
         json=ser(merchant, models.Merchant),
+        headers=AUTH,
     )
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
@@ -193,7 +206,9 @@ def test_delete_merchant(
 ) -> None:
     """Test deleting an existing merchant."""
     merchant = merchant_factory.get()
-    resp = test_client.delete(f"/merchant_data/v1/merchants/{merchant.pk}")
+    resp = test_client.delete(
+        f"/merchant_data/v1/merchants/{merchant.pk}", headers=AUTH
+    )
     assert resp.ok, resp.text
     assert resp.status_code == status.HTTP_204_NO_CONTENT
     assert not Merchant.exists().where(Merchant.pk == merchant.pk).run_sync()
@@ -201,5 +216,5 @@ def test_delete_merchant(
 
 def test_delete_merchant_with_invalid_pk(test_client: TestClient) -> None:
     """Test deleting a merchant with an invalid pk."""
-    resp = test_client.delete(f"/merchant_data/v1/merchants/{uuid4()}")
+    resp = test_client.delete(f"/merchant_data/v1/merchants/{uuid4()}", headers=AUTH)
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])

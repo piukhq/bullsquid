@@ -9,7 +9,7 @@ DESCRIPTION = "replace merchant-payment_scheme relationship with string array"
 
 async def forwards():
     manager = MigrationManager(
-        migration_id=ID, app_name="mids", description=DESCRIPTION
+        migration_id=ID, app_name="merchant_data", description=DESCRIPTION
     )
 
     manager.drop_table(

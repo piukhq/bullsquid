@@ -30,5 +30,4 @@ jobs:
       - run: pip install poetry==1.2.0a2
       - run: poetry config virtualenvs.create false
       - run: poetry install
-      - run: scripts/lint
-      - run: scripts/test --cov bullsquid
+      - run: scripts/cibuild

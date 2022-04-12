@@ -2,10 +2,11 @@
 import contextlib
 import os
 import sys
-from typing import Any, Dict, Generator, Mapping, Protocol, Type, TypeVar, cast
+from typing import Any, Dict, Generator, MutableMapping, Protocol, Type, TypeVar, cast
 
 import pytest
 from asyncpg import DuplicateTableError
+from fastapi import status
 from fastapi.testclient import TestClient
 from piccolo.columns import Column
 from piccolo.conf.apps import Finder
@@ -13,8 +14,11 @@ from piccolo.table import Table, create_tables, drop_tables
 from piccolo.testing.model_builder import ModelBuilder
 from piccolo.utils.warnings import colored_warning
 from pydantic import BaseModel
+from requests import Response
 
 from bullsquid.api.app import create_app
+from bullsquid.merchant_data import tables
+from settings import settings
 
 
 def pytest_configure() -> None:
@@ -29,6 +33,14 @@ def pytest_configure() -> None:
             "\n\n"
         )
         sys.exit(1)
+
+
+@pytest.fixture
+def auth_header() -> dict:
+    """Fills out the Authorization header with the configured API key."""
+    return {
+        "Authorization": f"token {settings.api_key}",
+    }
 
 
 @pytest.fixture(autouse=True)
@@ -108,6 +120,71 @@ def test_client() -> TestClient:
     return TestClient(app)
 
 
-def ser(table: Table, model: BaseModel) -> Mapping[str, Any]:
+def ser(table: Table, model: BaseModel) -> MutableMapping[str, Any]:
     """Serialise a piccolo object to a dict using the given model."""
     return model.parse_obj(table.to_dict()).dict()
+
+
+@pytest.fixture
+def payment_scheme_factory(
+    model_factory: ModelFactoryMaker,
+) -> ModelFactoryFixture:
+    """Returns a model factory for creating payment schemes."""
+    yield from model_factory(tables.PaymentScheme)
+
+
+@pytest.fixture
+def default_payment_schemes(
+    payment_scheme_factory: ModelFactory,
+) -> list[tables.PaymentScheme]:
+    """Creates default payment schemes."""
+    return [
+        payment_scheme_factory.get(slug="visa"),
+        payment_scheme_factory.get(slug="amex"),
+        payment_scheme_factory.get(slug="mastercard"),
+    ]
+
+
+@pytest.fixture
+def merchant_factory(model_factory: ModelFactoryMaker) -> ModelFactoryFixture:
+    """Returns a model factory for creating merchants."""
+    yield from model_factory(tables.Merchant, icon_url=None)
+
+
+@pytest.fixture
+def location_factory(model_factory: ModelFactoryMaker) -> ModelFactoryFixture:
+    """Returns a model factory for creating locations."""
+    yield from model_factory(tables.Location)
+
+
+def assert_is_uniqueness_error(resp: Response, *, loc: list[str]) -> None:
+    """Asserts that the response is a uniqueness error."""
+    assert not resp.ok, resp.text
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    detail = resp.json()["detail"]
+    assert len(detail) == 1
+    assert detail[0]["loc"] == loc
+    assert detail[0]["type"] == "unique_error"
+
+
+def assert_is_missing_field_error(resp: Response, *, loc: list[str]) -> None:
+    """Asserts that the response is a uniqueness error."""
+    assert not resp.ok, resp.text
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    detail = resp.json()["detail"]
+    assert len(detail) == 1
+    assert detail[0]["loc"] == loc
+    assert detail[0]["type"] == "value_error"
+
+
+def assert_is_not_found_error(resp: Response, *, loc: list[str]) -> None:
+    """Asserts that the response is a not found error."""
+    assert not resp.ok, resp.text
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    detail = resp.json()["detail"]
+    assert len(detail) == 1
+    assert detail[0]["loc"] == loc
+    assert detail[0]["type"] == "ref_error"

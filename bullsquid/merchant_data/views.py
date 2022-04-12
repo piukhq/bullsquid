@@ -8,9 +8,14 @@ from starlette import status
 
 from bullsquid.api.errors import APIMultiError, ResourceNotFoundError, UniqueError
 from bullsquid.merchant_data import db
-from bullsquid.merchant_data.models import Merchant, MerchantWithPK
+from bullsquid.merchant_data.models import (
+    Location,
+    LocationWithPK,
+    Merchant,
+    MerchantWithPK,
+)
 
-router = APIRouter(prefix="/merchants")
+router = APIRouter(prefix="/v1")
 
 
 async def field_is_unique(
@@ -24,13 +29,13 @@ async def field_is_unique(
     return not await model.exists().where(field == value)
 
 
-@router.get("", response_model=list[MerchantWithPK])
+@router.get("/merchants", response_model=list[MerchantWithPK])
 async def merchants() -> list[dict]:
     """List all Merchants."""
     return [m.to_dict() for m in await db.list_merchants()]
 
 
-@router.post("", response_model=MerchantWithPK)
+@router.post("/merchants", response_model=MerchantWithPK)
 async def create_merchant(merchant_data: Merchant) -> dict:
     """Create a new Merchant."""
     if errors := [
@@ -44,7 +49,7 @@ async def create_merchant(merchant_data: Merchant) -> dict:
     return merchant.to_dict()
 
 
-@router.put("/{merchant_ref}", response_model=MerchantWithPK)
+@router.put("/merchants/{merchant_ref}", response_model=MerchantWithPK)
 async def update_merchant(merchant_ref: UUID, merchant_data: Merchant) -> dict:
     """Update a merchant's details."""
     if errors := [
@@ -67,7 +72,7 @@ async def update_merchant(merchant_ref: UUID, merchant_data: Merchant) -> dict:
 
 
 @router.delete(
-    "/{merchant_ref}",
+    "/merchants/{merchant_ref}",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={status.HTTP_404_NOT_FOUND: {}},
 )
@@ -79,3 +84,18 @@ async def delete_merchant(merchant_ref: UUID) -> None:
         raise ResourceNotFoundError(
             loc=("path", "merchant_ref"), resource_name="Merchant"
         ) from ex
+
+
+@router.post("/merchants/{merchant_ref}/locations", response_model=LocationWithPK)
+async def create_location(merchant_ref: UUID, location_data: Location) -> dict:
+    """Create a location for a merchant."""
+    merchant = await db.get_merchant(merchant_ref)
+
+    if await db.Location.exists().where(
+        db.Location.merchant == merchant,
+        db.Location.location_id == location_data.location_id,
+    ):
+        raise UniqueError(loc=("body", "location_id"))
+
+    location = await db.create_location(location_data.dict(), merchant=merchant)
+    return location.to_dict()

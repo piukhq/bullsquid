@@ -10,7 +10,7 @@ from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
 from bullsquid.api.auth import check_api_key
 from bullsquid.api.errors import error_response
-from bullsquid.merchant_data.api.routers import v1 as merchant_data_v1
+from bullsquid.merchant_data.views import router as merchant_router
 from bullsquid.status.views import router as status_api
 
 
@@ -24,7 +24,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(status_api, tags=["Status"])
     app.include_router(
-        merchant_data_v1,
+        merchant_router,
         prefix="/merchant_data",
         tags=["Merchant Data Management"],
         dependencies=[Depends(check_api_key)],

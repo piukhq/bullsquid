@@ -1,7 +1,7 @@
 """Database access layer."""
 from typing import Any, Mapping
 
-from bullsquid.merchant_data.tables import Merchant
+from bullsquid.merchant_data.tables import Location, Merchant
 
 
 class NoSuchRecord(Exception):
@@ -41,3 +41,10 @@ async def delete_merchant(pk: str) -> None:
     """Delete a merchant by its primary key. Raises MerchantNotFoundError if `pk` is not found."""
     merchant = await get_merchant(pk)
     await merchant.remove()
+
+
+async def create_location(fields: Mapping[str, Any], *, merchant: Merchant) -> Location:
+    """Create a new merchant with the given fields."""
+    location = Location(**fields, merchant=merchant)
+    await location.save()
+    return location

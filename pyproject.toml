@@ -59,6 +59,7 @@ disable = [
 good-names = [
     "pk",  # primary key
     "ex",  # exception
+    "v",   # pydantic validator value field
 ]
 
 [tool.coverage.run]

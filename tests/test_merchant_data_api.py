@@ -209,7 +209,8 @@ def test_create_duplicate_location(
     assert (
         Location.count()
         .where(
-            Location.merchant == merchant, Location.location_id == location.location_id
+            Location.merchant == merchant,
+            Location.location_id == location.location_id,
         )
         .run_sync()
         == 1
@@ -240,7 +241,8 @@ def test_create_physical_location_with_missing_address_line_1(
     assert (
         not Location.exists()
         .where(
-            Location.merchant == merchant, Location.location_id == location.location_id
+            Location.merchant == merchant,
+            Location.location_id == location.location_id,
         )
         .run_sync()
     )

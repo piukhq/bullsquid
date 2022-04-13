@@ -22,7 +22,8 @@ def test_invalid_auth_header_format(test_client: TestClient) -> None:
 def test_invalid_auth_header_prefix(test_client: TestClient) -> None:
     """Test making a request with an invalid prefix on the auth header."""
     resp = test_client.get(
-        "/merchant_data/v1/merchants", headers={"Authorization": "nothing abc123"}
+        "/merchant_data/v1/merchants",
+        headers={"Authorization": "nothing abc123"},
     )
     assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 

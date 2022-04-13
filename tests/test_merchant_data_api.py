@@ -11,6 +11,7 @@ from conftest import (
     assert_is_missing_field_error,
     assert_is_not_found_error,
     assert_is_uniqueness_error,
+    merchant_factory,
     ser,
 )
 
@@ -108,14 +109,11 @@ def test_update_merchant(
         headers=auth_header,
     )
 
-    expected_data = new_merchant_data | {"pk": merchant.pk}
-
     assert resp.ok, resp.text
     assert resp.json() == new_merchant_data | {"pk": str(merchant.pk)}
-    assert (
-        Merchant.select().where(Merchant.pk == merchant.pk).first().run_sync()
-        == expected_data
-    )
+    assert Merchant.select().where(
+        Merchant.pk == merchant.pk
+    ).first().run_sync() == new_merchant_data | {"pk": merchant.pk}
 
 
 def test_update_merchant_with_duplicate_details(
@@ -246,3 +244,74 @@ def test_create_physical_location_with_missing_address_line_1(
         )
         .run_sync()
     )
+
+
+def test_create_location_with_invalid_merchant(
+    test_client: TestClient, auth_header: dict, location_factory: ModelFactory
+) -> None:
+    """Test creating a location with a merchant ref that does not exist."""
+    location = location_factory.get(persist=False)
+    resp = test_client.post(
+        f"/merchant_data/v1/merchants/{uuid4()}/locations",
+        json=ser(location, models.Location),
+        headers=auth_header,
+    )
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+def test_update_location(
+    test_client: TestClient,
+    auth_header: dict,
+    merchant_factory: ModelFactory,
+    location_factory: ModelFactory,
+) -> None:
+    """Test updating an existing location with valid details."""
+    merchant = merchant_factory.get()
+    location = location_factory.get(merchant=merchant)
+
+    new_location = location_factory.get(persist=False)
+    new_location_data = ser(new_location, models.Location)
+
+    resp = test_client.put(
+        f"/merchant_data/v1/merchants/{merchant.pk}/locations/{location.pk}",
+        json=new_location_data,
+        headers=auth_header,
+    )
+
+    assert resp.ok, resp.text
+    assert resp.json() == new_location_data | {"pk": str(location.pk)}
+    assert Location.select().where(
+        Location.pk == location.pk
+    ).first().run_sync() == new_location_data | {
+        "pk": location.pk,
+        "merchant": merchant.pk,
+    }
+
+
+def test_update_location_invalid_merchant(
+    test_client: TestClient, auth_header: dict, location_factory: ModelFactory
+) -> None:
+    """Test updating a location with a merchant that does not exist."""
+    location = location_factory.get()
+    resp = test_client.put(
+        f"/merchant_data/v1/merchants/{uuid4()}/locations/{location.pk}",
+        json=ser(location_factory.get(persist=False), models.Location),
+        headers=auth_header,
+    )
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+def test_update_location_invalid_location(
+    test_client: TestClient,
+    auth_header: dict,
+    merchant_factory: ModelFactory,
+    location_factory: ModelFactory,
+) -> None:
+    """Test updating a location with a merchant that does not exist."""
+    merchant = merchant_factory.get()
+    resp = test_client.put(
+        f"/merchant_data/v1/merchants/{merchant.pk}/locations/{uuid4()}",
+        json=ser(location_factory.get(persist=False), models.Location),
+        headers=auth_header,
+    )
+    assert_is_not_found_error(resp, loc=["path", "location_ref"])

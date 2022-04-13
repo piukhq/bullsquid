@@ -33,9 +33,20 @@ pytest-cov = "^3.0.0"
 coverage = "^6.3.2"
 types-requests = "^2.27.12"
 pytest-mock = "^3.7.0"
+amazing-printer = "^0.1.0"
+types-PyYAML = "^6.0.5"
+
+[tool.poetry.group.cmd.dependencies]
+PyYAML = "^6.0"
+
+[tool.poetry.scripts]
+bullsquid-service-profile = "bullsquid.cmd.generate_service_profile:main"
 
 [tool.poetry-dynamic-versioning]
 enable = true
+
+# [tool.black]
+# line-length = 79
 
 [tool.isort]
 profile = "black"
@@ -52,6 +63,7 @@ warn_unreachable = true
 [tool.pylint.messages_control]
 ignore = "piccolo_migrations"
 extension-pkg-whitelist = "pydantic"
+# max-line-length = 79
 disable = [
     "redefined-outer-name",
     "too-few-public-methods",
@@ -69,4 +81,5 @@ omit = [
     "*/tables.py",             # table definitions are not directly tested
     "bullsquid/log_conf.py",   # log_conf sets up a complex log intercept that is hard to test
     "bullsquid/api/app.py",    # api app initialisation sets up db pools and so on that are hard to test
+    "bullsquid/cmd/generate_service_profile.py", # TEMPORARY: command line tool is not tested right now
 ]

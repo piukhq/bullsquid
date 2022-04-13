@@ -107,7 +107,8 @@ async def create_location(merchant_ref: UUID, location_data: Location) -> dict:
 
 
 @router.put(
-    "/merchants/{merchant_ref}/locations/{location_ref}", response_model=LocationWithPK
+    "/merchants/{merchant_ref}/locations/{location_ref}",
+    response_model=LocationWithPK,
 )
 async def update_location(
     merchant_ref: UUID, location_ref: UUID, location_data: Location

@@ -89,7 +89,12 @@ async def delete_merchant(merchant_ref: UUID) -> None:
 @router.post("/merchants/{merchant_ref}/locations", response_model=LocationWithPK)
 async def create_location(merchant_ref: UUID, location_data: Location) -> dict:
     """Create a location for a merchant."""
-    merchant = await db.get_merchant(merchant_ref)
+    try:
+        merchant = await db.get_merchant(merchant_ref)
+    except db.NoSuchRecord as ex:
+        raise ResourceNotFoundError(
+            loc=("path", "merchant_ref"), resource_name="Merchant"
+        ) from ex
 
     if await db.Location.exists().where(
         db.Location.merchant == merchant,
@@ -98,4 +103,30 @@ async def create_location(merchant_ref: UUID, location_data: Location) -> dict:
         raise UniqueError(loc=("body", "location_id"))
 
     location = await db.create_location(location_data.dict(), merchant=merchant)
+    return location.to_dict()
+
+
+@router.put(
+    "/merchants/{merchant_ref}/locations/{location_ref}", response_model=LocationWithPK
+)
+async def update_location(
+    merchant_ref: UUID, location_ref: UUID, location_data: Location
+) -> dict:
+    """Update a locations's details."""
+    try:
+        merchant = await db.get_merchant(merchant_ref)
+    except db.NoSuchRecord as ex:
+        raise ResourceNotFoundError(
+            loc=("path", "merchant_ref"), resource_name="Merchant"
+        ) from ex
+
+    try:
+        location = await db.update_location(
+            location_ref, location_data.dict(), merchant=merchant
+        )
+    except db.NoSuchRecord as ex:
+        raise ResourceNotFoundError(
+            loc=("path", "location_ref"), resource_name="Location"
+        ) from ex
+
     return location.to_dict()

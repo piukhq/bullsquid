@@ -9,7 +9,7 @@ class NoSuchRecord(Exception):
 
 
 async def get_merchant(pk: str) -> Merchant:
-    """Return a merchant by its primary key. Raises MerchantNotFoundError if `pk` is not found."""
+    """Return a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
     merchant = await Merchant.objects().get(Merchant.pk == pk)
     if not merchant:
         raise NoSuchRecord
@@ -38,13 +38,40 @@ async def update_merchant(pk: str, fields: Mapping[str, Any]) -> Merchant:
 
 
 async def delete_merchant(pk: str) -> None:
-    """Delete a merchant by its primary key. Raises MerchantNotFoundError if `pk` is not found."""
+    """Delete a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
     merchant = await get_merchant(pk)
     await merchant.remove()
+
+
+async def get_location(pk: str, *, merchant: Merchant) -> Location:
+    """
+    Return a location by its primary key. Raises NoSuchRecord if `pk` is not found.
+    Additionally validates that the location belongs to the given merchant.
+    """
+    location = (
+        await Location.objects()
+        .where(Location.pk == pk, Location.merchant == merchant)
+        .first()
+    )
+    if not location:
+        raise NoSuchRecord
+
+    return location
 
 
 async def create_location(fields: Mapping[str, Any], *, merchant: Merchant) -> Location:
     """Create a new merchant with the given fields."""
     location = Location(**fields, merchant=merchant)
+    await location.save()
+    return location
+
+
+async def update_location(
+    pk: str, fields: Mapping[str, Any], *, merchant: Merchant
+) -> Location:
+    """Update an existing location with the given fields."""
+    location = await get_location(pk, merchant=merchant)
+    for key, value in fields.items():
+        setattr(location, key, value)
     await location.save()
     return location

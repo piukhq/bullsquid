@@ -6,11 +6,7 @@ from settings import settings
 
 DB = PostgresEngine(
     config={
-        "database": f"{settings.postgres.dbname}_test",
-        "user": settings.postgres.user,
-        "password": settings.postgres.password,
-        "host": settings.postgres.host,
-        "port": settings.postgres.port,
+        "dsn": settings.database.dsn.format(f"{settings.database.dbname}_test"),
     },
     log_queries=settings.debug,
 )

@@ -2,19 +2,19 @@
 from pydantic import BaseSettings
 
 
-class PostgresSettings(BaseSettings):
-    """Settings for the PostgreSQL database connection."""
+class DatabaseSettings(BaseSettings):
+    """
+    Settings for the PostgreSQL database connection.
+    The DSN value must have a placeholder ({}) for the database name.
+    """
 
-    host = "localhost"
-    port = 5432
-    user = "postgres"
-    password = ""
+    dsn = "postgresql://postgres:postgres@localhost:5432/{}"
     dbname = "bullsquid"
 
     class Config:
         """Set PostgreSQL settings with postgres_host, postgres_port, et cetera."""
 
-        env_prefix = "postgres_"
+        env_prefix = "database_"
 
 
 class Settings(BaseSettings):
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     debug = False
     trace_queries = False
-    postgres = PostgresSettings()
+    database = DatabaseSettings()
 
     # TEMPORARY: will be entirely replaced by Auth0 eventually.
     api_key: str

@@ -38,9 +38,10 @@ types-PyYAML = "^6.0.5"
 
 [tool.poetry.group.cmd.dependencies]
 PyYAML = "^6.0"
+docopt-ng = "^0.7.2"
 
 [tool.poetry.scripts]
-bullsquid-service-profile = "bullsquid.cmd.generate_service_profile:main"
+bullsquid-kubefest = "bullsquid.cmd.kubefest:main"
 
 [tool.poetry-dynamic-versioning]
 enable = true

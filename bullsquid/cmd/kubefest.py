@@ -1,7 +1,19 @@
-"""Generate a Linkerd service profile for the API."""
+"""
+Generate Kubernetes manifests for the Bullsquid API.
+
+Usage:
+    bullsquid-kubefest service-profile
+    bullsquid-kubefest (-h | --help)
+    bullsquid-kubefest --version
+
+Options:
+    -h --help   Show this screen.
+    --version   Show version.
+"""
 import re
 
 import yaml
+from docopt import docopt
 from pydantic import BaseModel
 
 from bullsquid.api.app import create_app
@@ -81,10 +93,13 @@ def get_endpoints(api_spec: dict) -> list[APIEndpoint]:
 
 def main() -> None:
     """Parse arguments and run the application."""
+    args = docopt(__doc__)
+
     spec = get_api_spec()
     endpoints = get_endpoints(spec)
-    service_profile = generate_service_profile(endpoints)
-    print(yaml.dump(service_profile, explicit_start=True, sort_keys=False))
+    if args["service-profile"]:
+        service_profile = generate_service_profile(endpoints)
+        print(yaml.dump(service_profile, explicit_start=True, sort_keys=False))
 
 
 if __name__ == "__main__":

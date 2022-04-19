@@ -30,7 +30,7 @@ async def field_is_unique(
 
 
 @router.get("/merchants", response_model=list[MerchantWithPK])
-async def merchants() -> list[dict]:
+async def list_merchants() -> list[dict]:
     """List all Merchants."""
     return [m.to_dict() for m in await db.list_merchants()]
 

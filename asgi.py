@@ -22,4 +22,4 @@ if __name__ == "__main__":
 
     import uvicorn
 
-    uvicorn.run("asgi:app", reload=True)
+    uvicorn.run("asgi:app", reload=True, port=6502)

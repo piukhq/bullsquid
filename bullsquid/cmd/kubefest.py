@@ -18,6 +18,8 @@ from pydantic import BaseModel
 
 from bullsquid.api.app import create_app
 
+from . import __version__
+
 NAMESPACE = "default"
 LINKERD_API_VERSION = "linkerd.io/v1alpha2"
 METADATA_NAME = f"bullsquid-api.{NAMESPACE}.svc.cluster.local"
@@ -93,7 +95,7 @@ def get_endpoints(api_spec: dict) -> list[APIEndpoint]:
 
 def main() -> None:
     """Parse arguments and run the application."""
-    args = docopt(__doc__)
+    args = docopt(__doc__, version=f"bullsquid-kubefest {__version__}")
 
     spec = get_api_spec()
     endpoints = get_endpoints(spec)

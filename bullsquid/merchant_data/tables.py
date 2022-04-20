@@ -1,22 +1,23 @@
 """Definitions of all the table models used for MID management."""
 from enum import Enum
 
-from piccolo.columns import UUID, Array, Boolean, ForeignKey, Integer, Text
+from piccolo.columns import UUID, Boolean, ForeignKey, Integer, Text
 from piccolo.table import Table
+
+
+class PlanStatus(Enum):
+    """Status enum used for plans and merchants."""
+
+    ACTIVE = "active"  # live, available for use
+    DRAFT = "draft"  # actively being set up
+    COMING_SOON = "coming_soon"  # awaiting publishing
+    SUSPENDED = "suspended"  # temporarily hidden
+    PENDING_DELETION = "pending_deletion"  # delete in progress
+    DELETED = "deleted"  # soft deleted
 
 
 class Plan(Table):
     """Represents a loyalty plan that may contain any number of merchants."""
-
-    class PlanStatus(Enum):
-        """The status of a plan."""
-
-        ACTIVE = "active"  # live, available for use
-        DRAFT = "draft"  # actively being set up
-        COMING_SOON = "coming_soon"  # awaiting publishing
-        SUSPENDED = "suspended"  # temporarily hidden
-        PENDING_DELETION = "pending_deletion"  # delete in progress
-        DELETED = "deleted"  # soft deleted
 
     pk = UUID(primary_key=True)
     name = Text(required=True, unique=True)
@@ -32,11 +33,11 @@ class Merchant(Table):
 
     pk = UUID(primary_key=True)
     name = Text(required=True, unique=True)
+    status = Text(choices=PlanStatus)
     icon_url = Text(null=True, default=None)
-    slug = Text(null=True, default=None, unique=True)
-    payment_schemes = Array(Text(null=False), null=False)
-    plan_id = Integer(null=True, default=None, unique=True)
     location_label = Text(required=True)
+    is_deleted = Boolean(default=False)
+    plan = ForeignKey(Plan, required=True, null=False)
 
 
 class PaymentScheme(Table):

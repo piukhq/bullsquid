@@ -5,6 +5,28 @@ from piccolo.columns import UUID, Array, Boolean, ForeignKey, Integer, Text
 from piccolo.table import Table
 
 
+class Plan(Table):
+    """Represents a loyalty plan that may contain any number of merchants."""
+
+    class PlanStatus(Enum):
+        """The status of a plan."""
+
+        ACTIVE = "active"  # live, available for use
+        DRAFT = "draft"  # actively being set up
+        COMING_SOON = "coming_soon"  # awaiting publishing
+        SUSPENDED = "suspended"  # temporarily hidden
+        PENDING_DELETION = "pending_deletion"  # delete in progress
+        DELETED = "deleted"  # soft deleted
+
+    pk = UUID(primary_key=True)
+    name = Text(required=True, unique=True)
+    status = Text(choices=PlanStatus)
+    icon_url = Text(null=True, default=None)
+    slug = Text(null=True, default=None, unique=True)
+    plan_id = Integer(null=True, default=None, unique=True)
+    is_deleted = Boolean(default=False)
+
+
 class Merchant(Table):
     """Represents a merchant such as Iceland or Wasabi."""
 

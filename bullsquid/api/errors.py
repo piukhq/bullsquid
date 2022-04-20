@@ -1,14 +1,9 @@
 """Defines the base error types used by the API."""
 
 import sentry_sdk
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
 from loguru import logger
-from starlette.status import (
-    HTTP_404_NOT_FOUND,
-    HTTP_422_UNPROCESSABLE_ENTITY,
-    HTTP_500_INTERNAL_SERVER_ERROR,
-)
 
 from settings import settings
 
@@ -16,7 +11,7 @@ from settings import settings
 def error_response(
     ex: Exception,
     *,
-    status_code: int = HTTP_500_INTERNAL_SERVER_ERROR,
+    status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
     message: str = "Unable to process request due to an internal error.",
 ) -> JSONResponse:
     """
@@ -42,7 +37,7 @@ def error_response(
 class APIError(HTTPException):
     """Base class for all API errors."""
 
-    status_code = HTTP_500_INTERNAL_SERVER_ERROR
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     error = "api_error"
     message = "An error occurred while processing your request."
     loc: tuple[str, ...] | None = None
@@ -73,7 +68,7 @@ class APIMultiError(HTTPException):
 class ResourceNotFoundError(APIError):
     """Raised when the requested resource does not exist."""
 
-    status_code = HTTP_404_NOT_FOUND
+    status_code = status.HTTP_404_NOT_FOUND
     error = "ref_error"
 
     def __init__(self, *, loc: tuple[str, ...], resource_name: str) -> None:
@@ -85,7 +80,7 @@ class ResourceNotFoundError(APIError):
 class UniqueError(APIError):
     """Raised when a field is not unique."""
 
-    status_code = HTTP_422_UNPROCESSABLE_ENTITY
+    status_code = status.HTTP_409_CONFLICT
     error = "unique_error"
 
     def __init__(self, *, loc: tuple[str, ...]) -> None:

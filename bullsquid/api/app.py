@@ -2,11 +2,10 @@
 Defines the create_app function used to initialize the application.
 """
 from asyncpg.exceptions import PostgresError
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, status
 from loguru import logger
 from piccolo.engine import engine_finder
 from starlette.responses import JSONResponse
-from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
 from bullsquid.api.auth import check_api_key
 from bullsquid.api.errors import error_response
@@ -40,7 +39,7 @@ def create_app() -> FastAPI:
         """Handles OSErrors, usually caused by connection failure to other services."""
         return error_response(
             ex,
-            status_code=HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             message="Unable to process request due to connection failure to another service.",
         )
 

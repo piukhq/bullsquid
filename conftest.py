@@ -160,7 +160,7 @@ def location_factory(model_factory: ModelFactoryMaker) -> ModelFactoryFixture:
 def assert_is_uniqueness_error(resp: Response, *, loc: list[str]) -> None:
     """Asserts that the response is a uniqueness error."""
     assert not resp.ok, resp.text
-    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert resp.status_code == status.HTTP_409_CONFLICT
 
     detail = resp.json()["detail"]
     assert len(detail) == 1

@@ -91,18 +91,13 @@ def create_fixtures(*, url: str, api_key: str) -> None:
             f"{url}/merchant_data/v1/merchants", json=merchant.dict(), headers=headers
         )
 
+        name = f"{Fore.CYAN}{merchant.name}{Style.RESET_ALL}"
         if resp.ok:
-            print(
-                f"{success()} Created merchant {Fore.CYAN}{merchant.name}{Style.RESET_ALL}"
-            )
+            print(f"{success()} Created merchant {name}")
         elif resp.status_code == status.HTTP_409_CONFLICT:
-            print(
-                f"{info()} Merchant {Fore.CYAN}{merchant.name}{Style.RESET_ALL} already exists, skipping."
-            )
+            print(f"{info()} Merchant {name} already exists, skipping.")
         elif not resp.ok:
-            print(
-                f"{error()} Failed to create merchant {Fore.CYAN}{merchant.name}{Style.RESET_ALL}"
-            )
+            print(f"{error()} Failed to create merchant {name}")
             ap(resp.json())
             return
 

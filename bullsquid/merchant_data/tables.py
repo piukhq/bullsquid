@@ -93,3 +93,15 @@ class PrimaryMID(Table):
     is_deleted = Boolean(default=False)
     merchant = ForeignKey(Merchant, required=True, null=False)
     location = ForeignKey(Location, null=True, default=None)
+
+
+class MerchantIdentifier(Table):
+    """Represents a payment scheme's internal merchant identifier."""
+
+    pk = UUID(primary_key=True)
+    value = Text(required=True, unique=True)
+    payment_scheme = ForeignKey(PaymentScheme, required=True)
+    name = Text(required=True)
+    date_added = Timestamptz()
+    is_deleted = Boolean(default=False)
+    merchant = ForeignKey(Merchant, required=True, null=False)

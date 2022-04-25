@@ -4,14 +4,25 @@
 
 Portal API backend project.
 
-## Setup
+# Prerequisites
 
-Ensure Poetry 1.2+ is installed.
+Ensure Poetry 1.2+ is installed:
 
 ```
 ❯ poetry --version
 Poetry (version 1.2.0a2)
 ```
+
+Ensure `psql` is installed:
+
+```
+❯ psql --version
+psql (PostgreSQL) 14.2
+```
+
+`psql` version does not matter as long as it's relatively recent.
+
+## Setup
 
 The bootstrap script will do most of the work setting up the project.
 

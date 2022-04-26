@@ -17,6 +17,22 @@ class BaseModel(PydanticBaseModel):
         validate_all = True
 
 
+class Plan(BaseModel):
+    """Plan request model."""
+
+    name: str
+    status: str
+    icon_url: HttpUrl | None
+    slug: str | None
+    plan_id: int | None
+
+
+class PlanWithPK(Plan):
+    """Plan response model with a primary key."""
+
+    plan_ref: UUID4 = Field(alias="pk")
+
+
 class Merchant(BaseModel):
     """Merchant request model."""
 

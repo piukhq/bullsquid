@@ -1,11 +1,16 @@
 """Database access layer."""
 from typing import Any, Mapping
 
-from bullsquid.merchant_data.tables import Location, Merchant
+from bullsquid.merchant_data.tables import Location, Merchant, Plan
 
 
 class NoSuchRecord(Exception):
     """Raised when the requested record could not be found."""
+
+
+async def list_plans() -> list[Plan]:
+    """Return a list of all plans."""
+    return await Plan.objects()
 
 
 async def get_merchant(pk: str) -> Merchant:

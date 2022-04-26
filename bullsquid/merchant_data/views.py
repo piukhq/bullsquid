@@ -13,9 +13,10 @@ from bullsquid.merchant_data.models import (
     LocationWithPK,
     Merchant,
     MerchantWithPK,
+    PlanWithPK,
 )
 
-router = APIRouter(prefix="/v1")
+router = APIRouter(prefix="/v1", tags=["Merchant Data Management"])
 
 
 async def field_is_unique(
@@ -27,6 +28,12 @@ async def field_is_unique(
         pk_field = getattr(model, "pk")
         return not await model.exists().where(pk_field != pk, field == value)
     return not await model.exists().where(field == value)
+
+
+@router.get("/plans", response_model=list[PlanWithPK])
+async def list_plans() -> list[dict]:
+    """List all plans."""
+    return [l.to_dict() for l in await db.list_plans()]
 
 
 @router.get("/merchants", response_model=list[MerchantWithPK])

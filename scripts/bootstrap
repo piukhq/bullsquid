@@ -43,6 +43,12 @@ make_databases() {
     hr
 }
 
+load_fixtures() {
+    info 'Loading default fixture...'
+    poetry run piccolo fixtures load --path=fixtures/default.json
+    hr
+}
+
 ensure_postgres() {
     if test_postgres; then
         info 'Postgres is available on localhost:5432'
@@ -57,3 +63,4 @@ ensure_postgres() {
 install
 ensure_postgres
 poetry run scripts/migrate
+load_fixtures

@@ -10,6 +10,35 @@
             {
                 "slug": "mastercard"
             }
+        ],
+        "Plan": [
+            {
+                "icon_url": "https://api.gb.bink.com/content/media/hermes/schemes/Iceland_Logo.png",
+                "is_deleted": false,
+                "name": "Iceland Bonus Card",
+                "pk": "0ce27edd-34b2-4630-b653-193e9f5947be",
+                "plan_id": 105,
+                "slug": "iceland-bonus-card",
+                "status": "active"
+            },
+            {
+                "icon_url": "https://api.gb.bink.com/content/media/hermes/schemes/Harvey_Nichols_Logo.png",
+                "is_deleted": false,
+                "name": "Rewards by Harvey Nichols",
+                "pk": "e9538964-ba55-42fb-852c-3ae37e2adcb8",
+                "plan_id": 124,
+                "slug": "harvey-nichols",
+                "status": "active"
+            },
+            {
+                "icon_url": "https://api.gb.bink.com/content/media/hermes/schemes/Wasabi_Logo.png",
+                "is_deleted": false,
+                "name": "Wasabi Club",
+                "pk": "ce2c7875-48d4-4d52-893d-2c671f0cf22a",
+                "plan_id": 215,
+                "slug": "wasabi-club",
+                "status": "active"
+            }
         ]
     }
 }

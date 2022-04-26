@@ -24,8 +24,7 @@ def create_app() -> FastAPI:
     app.include_router(status_api, tags=["Status"])
     app.include_router(
         merchant_router,
-        prefix="/merchant_data",
-        tags=["Merchant Data Management"],
+        prefix="/api",
         dependencies=[Depends(check_api_key)],
     )
 

@@ -13,6 +13,7 @@ from bullsquid.merchant_data.models import (
     LocationWithPK,
     Merchant,
     MerchantWithPK,
+    Plan,
     PlanWithPK,
 )
 
@@ -23,6 +24,10 @@ async def field_is_unique(
     model: Type[Table], field: str, value: Any, *, pk: UUID | None = None
 ) -> bool:
     """Returns true if the given field on the given table is unique, false otherwise."""
+    if value is None:
+        # null values are always unique
+        return True
+
     field = getattr(model, field)
     if pk:
         pk_field = getattr(model, "pk")
@@ -36,6 +41,21 @@ async def list_plans() -> list[dict]:
     return [l.to_dict() for l in await db.list_plans()]
 
 
+@router.post("/plans", response_model=PlanWithPK)
+async def create_plan(plan_data: Plan) -> dict:
+    """Create a new plan."""
+    plan_data = plan_data.dict()
+    if errors := [
+        UniqueError(loc=("body", field))
+        for field in ["name", "slug", "plan_id"]
+        if not await field_is_unique(db.Plan, field, plan_data[field])
+    ]:
+        raise APIMultiError(errors)
+
+    plan = await db.create_plan(plan_data)
+    return plan.to_dict()
+
+
 @router.get("/merchants", response_model=list[MerchantWithPK])
 async def list_merchants() -> list[dict]:
     """List all Merchants."""
@@ -45,31 +65,33 @@ async def list_merchants() -> list[dict]:
 @router.post("/merchants", response_model=MerchantWithPK)
 async def create_merchant(merchant_data: Merchant) -> dict:
     """Create a new Merchant."""
+    merchant_data = merchant_data.dict()
     if errors := [
         UniqueError(loc=("body", field))
         for field in ["name", "slug", "plan_id"]
-        if not await field_is_unique(db.Merchant, field, merchant_data.dict()[field])
+        if not await field_is_unique(db.Merchant, field, merchant_data[field])
     ]:
         raise APIMultiError(errors)
 
-    merchant = await db.create_merchant(merchant_data.dict())
+    merchant = await db.create_merchant(merchant_data)
     return merchant.to_dict()
 
 
 @router.put("/merchants/{merchant_ref}", response_model=MerchantWithPK)
 async def update_merchant(merchant_ref: UUID, merchant_data: Merchant) -> dict:
     """Update a merchant's details."""
+    merchant_data = merchant_data.dict()
     if errors := [
         UniqueError(loc=("body", field))
         for field in ["name", "slug", "plan_id"]
         if not await field_is_unique(
-            db.Merchant, field, merchant_data.dict()[field], pk=merchant_ref
+            db.Merchant, field, merchant_data[field], pk=merchant_ref
         )
     ]:
         raise APIMultiError(errors)
 
     try:
-        merchant = await db.update_merchant(merchant_ref, merchant_data.dict())
+        merchant = await db.update_merchant(merchant_ref, merchant_data)
     except db.NoSuchRecord as ex:
         raise ResourceNotFoundError(
             loc=("path", "merchant_ref"), resource_name="Merchant"

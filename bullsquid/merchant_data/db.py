@@ -13,6 +13,13 @@ async def list_plans() -> list[Plan]:
     return await Plan.objects()
 
 
+async def create_plan(fields: Mapping[str, Any]) -> Plan:
+    """Create a new plan with the given fields."""
+    plan = Plan(**fields)
+    await plan.save()
+    return plan
+
+
 async def get_merchant(pk: str) -> Merchant:
     """Return a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
     merchant = await Merchant.objects().get(Merchant.pk == pk)

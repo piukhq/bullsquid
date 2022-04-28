@@ -21,7 +21,7 @@ class Plan(Table):
 
     pk = UUID(primary_key=True)
     name = Text(required=True, unique=True)
-    status = Text(choices=PlanStatus)
+    status = Text(choices=PlanStatus, default=PlanStatus.ACTIVE)
     icon_url = Text(null=True, default=None)
     slug = Text(null=True, default=None, unique=True)
     plan_id = Integer(null=True, default=None, unique=True)

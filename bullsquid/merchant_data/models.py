@@ -21,16 +21,27 @@ class Plan(BaseModel):
     """Plan request model."""
 
     name: str
-    status: str
     icon_url: HttpUrl | None
     slug: str | None
     plan_id: int | None
+
+    @validator("name", "slug")
+    @classmethod
+    def provided_strings_must_not_be_blank(cls, value: str | None) -> str | None:
+        """
+        Validate that the provided string fields are not blank.
+        """
+        if value is not None and not value.strip():
+            raise ValueError("must not be blank if not null")
+
+        return value
 
 
 class PlanWithPK(Plan):
     """Plan response model with a primary key."""
 
     plan_ref: UUID4 = Field(alias="pk")
+    status: str
 
 
 class Merchant(BaseModel):

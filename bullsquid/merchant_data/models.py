@@ -1,7 +1,7 @@
 """Defines pydantic models used to translate between the database and the API."""
 from pydantic import UUID4
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, HttpUrl, validator
+from pydantic import HttpUrl, root_validator, validator
 
 
 class BaseModel(PydanticBaseModel):
@@ -15,6 +15,16 @@ class BaseModel(PydanticBaseModel):
 
         # perform validation even on omitted fields
         validate_all = True
+
+
+def alias_pk(field_name: str):  # type: ignore
+    """Returns a root validator that renames "pk" to the given field name."""
+
+    def validator(_: BaseModel, values: dict) -> dict:
+        values[field_name] = values.pop("pk")
+        return values
+
+    return root_validator(pre=True, allow_reuse=True)(validator)
 
 
 class Plan(BaseModel):
@@ -40,8 +50,10 @@ class Plan(BaseModel):
 class PlanWithPK(Plan):
     """Plan response model with a primary key."""
 
-    plan_ref: UUID4 = Field(alias="pk")
+    plan_ref: UUID4
     status: str
+
+    _alias_pk = alias_pk("plan_ref")
 
 
 class Merchant(BaseModel):
@@ -58,7 +70,9 @@ class Merchant(BaseModel):
 class MerchantWithPK(Merchant):
     """Merchant response model with a primary key."""
 
-    merchant_ref: UUID4 = Field(alias="pk")
+    merchant_ref: UUID4
+
+    _alias_pk = alias_pk("merchant_ref")
 
 
 class Location(BaseModel):
@@ -90,4 +104,6 @@ class Location(BaseModel):
 class LocationWithPK(Location):
     """Location response model with a primary key."""
 
-    location_ref: UUID4 = Field(alias="pk")
+    location_ref: UUID4
+
+    _alias_pk = alias_pk("location_ref")

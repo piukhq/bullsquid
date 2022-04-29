@@ -56,6 +56,27 @@ async def create_plan(plan_data: Plan) -> dict:
     return plan.to_dict()
 
 
+@router.put("/plans/{plan_ref}", response_model=PlanWithPK)
+async def update_plan(plan_ref: UUID, plan_data: Plan) -> dict:
+    """Update a plan's details."""
+    plan_data = plan_data.dict()
+    if errors := [
+        UniqueError(loc=("body", field))
+        for field in ["name", "slug", "plan_id"]
+        if not await field_is_unique(db.Plan, field, plan_data[field], pk=plan_ref)
+    ]:
+        raise APIMultiError(errors)
+
+    try:
+        plan = await db.update_plan(plan_ref, plan_data)
+    except db.NoSuchRecord as ex:
+        raise ResourceNotFoundError(
+            loc=("path", "plan_ref"), resource_name="Plan"
+        ) from ex
+
+    return plan.to_dict()
+
+
 @router.get("/merchants", response_model=list[MerchantWithPK])
 async def list_merchants() -> list[dict]:
     """List all Merchants."""

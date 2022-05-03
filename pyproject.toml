@@ -44,7 +44,6 @@ colorama = "^0.4.4"
 
 [tool.poetry.scripts]
 bullsquid-kubefest = "bullsquid.cmd.kubefest:main"
-bullsquid-fixtures = "bullsquid.cmd.fixtures:main"
 
 [tool.poetry-dynamic-versioning]
 enable = true

@@ -13,9 +13,7 @@ def test_valid_auth(test_client: TestClient, auth_header: dict) -> None:
 
 def test_invalid_auth_header_format(test_client: TestClient) -> None:
     """Test making a request with the auth header in the wrong format."""
-    resp = test_client.get(
-        "/api/v1/plans", headers={"Authorization": "nothing"}
-    )
+    resp = test_client.get("/api/v1/plans", headers={"Authorization": "nothing"})
     assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
 

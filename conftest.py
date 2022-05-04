@@ -146,6 +146,12 @@ def default_payment_schemes(
 
 
 @pytest.fixture
+def plan_factory(model_factory: ModelFactoryMaker) -> ModelFactoryFixture:
+    """Returns a model factory for creating plans."""
+    yield from model_factory(tables.Plan, icon_url=None)
+
+
+@pytest.fixture
 def merchant_factory(model_factory: ModelFactoryMaker) -> ModelFactoryFixture:
     """Returns a model factory for creating merchants."""
     yield from model_factory(tables.Merchant, icon_url=None)

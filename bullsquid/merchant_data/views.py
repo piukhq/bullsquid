@@ -83,18 +83,24 @@ async def list_merchants() -> list[dict]:
     return [m.to_dict() for m in await db.list_merchants()]
 
 
-@router.post("/merchants", response_model=MerchantWithPK)
-async def create_merchant(merchant_data: Merchant) -> dict:
-    """Create a new Merchant."""
-    merchant_data = merchant_data.dict()
-    if errors := [
-        UniqueError(loc=("body", field))
-        for field in ["name", "slug", "plan_id"]
-        if not await field_is_unique(db.Merchant, field, merchant_data[field])
-    ]:
-        raise APIMultiError(errors)
+@router.post("/plans/{plan_ref}/merchants", response_model=MerchantWithPK)
+async def create_merchant(plan_ref: UUID, merchant_data: Merchant) -> dict:
+    """Add a new merchant to a plan."""
+    try:
+        plan = await db.get_plan(plan_ref)
+    except db.NoSuchRecord as ex:
+        raise ResourceNotFoundError(
+            loc=("path", "plan_ref"), resource_name="Plan"
+        ) from ex
 
-    merchant = await db.create_merchant(merchant_data)
+    # TODO(cl): perform this check in db layer
+    if await db.Merchant.exists().where(
+        db.Merchant.name == merchant_data.name, db.Merchant.plan == plan
+    ):
+        raise UniqueError(loc=("body", "name"))
+
+    merchant = await db.create_merchant(merchant_data.dict(), plan=plan)
+
     return merchant.to_dict()
 
 

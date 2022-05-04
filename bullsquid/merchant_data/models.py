@@ -61,9 +61,6 @@ class Merchant(BaseModel):
 
     name: str
     icon_url: HttpUrl | None
-    slug: str | None
-    payment_schemes: list[str]
-    plan_id: int | None
     location_label: str
 
 
@@ -71,6 +68,7 @@ class MerchantWithPK(Merchant):
     """Merchant response model with a primary key."""
 
     merchant_ref: UUID4
+    status: str
 
     _alias_pk = alias_pk("merchant_ref")
 

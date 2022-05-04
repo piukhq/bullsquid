@@ -50,9 +50,9 @@ async def list_merchants() -> list[Merchant]:
     return await Merchant.objects()
 
 
-async def create_merchant(fields: Mapping[str, Any]) -> Merchant:
+async def create_merchant(fields: Mapping[str, Any], *, plan: Plan) -> Merchant:
     """Create a new merchant with the given fields."""
-    merchant = Merchant(**fields)
+    merchant = Merchant(**fields, plan=plan)
     await merchant.save()
     return merchant
 

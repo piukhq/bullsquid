@@ -31,7 +31,10 @@ async def readiness_check() -> dict:
     """
     engine = engine_finder()
     if not engine:
-        raise RuntimeError("No database engine found")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"msg": "No database engine found"},
+        )
 
     await engine.check_version()
 

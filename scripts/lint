@@ -1,20 +1,7 @@
 #!/bin/sh
 . scripts/_common
 
-info 'Running isort...'
 isort --check .
-hr
-
-info 'Running black...'
 black --check .
-hr
-
-info 'Running pylint...'
-pylint bullsquid asgi conftest settings
-hr
-
-info 'Running mypy...'
+pylint bullsquid asgi settings
 mypy .
-hr
-
-info 'All passed!'

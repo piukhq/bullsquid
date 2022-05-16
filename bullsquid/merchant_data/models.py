@@ -1,7 +1,17 @@
 """Defines pydantic models used to translate between the database and the API."""
 from pydantic import UUID4
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import HttpUrl, root_validator, validator
+from pydantic import HttpUrl, validator
+
+
+def string_must_not_be_blank(value: str | None) -> str | None:
+    """
+    Validate that the provided string field is not blank.
+    """
+    if value is not None and not value.strip():
+        raise ValueError("must not be blank if not null")
+
+    return value
 
 
 class BaseModel(PydanticBaseModel):
@@ -17,16 +27,6 @@ class BaseModel(PydanticBaseModel):
         validate_all = True
 
 
-def alias_pk(field_name: str):  # type: ignore
-    """Returns a root validator that renames "pk" to the given field name."""
-
-    def validator(_: BaseModel, values: dict) -> dict:
-        values[field_name] = values.pop("pk")
-        return values
-
-    return root_validator(pre=True, allow_reuse=True)(validator)
-
-
 class Plan(BaseModel):
     """Plan request model."""
 
@@ -35,25 +35,47 @@ class Plan(BaseModel):
     slug: str | None
     plan_id: int | None
 
-    @validator("name", "slug")
-    @classmethod
-    def provided_strings_must_not_be_blank(cls, value: str | None) -> str | None:
-        """
-        Validate that the provided string fields are not blank.
-        """
-        if value is not None and not value.strip():
-            raise ValueError("must not be blank if not null")
-
-        return value
+    _ = validator("name", "slug", allow_reuse=True)(string_must_not_be_blank)
 
 
-class PlanWithPK(Plan):
-    """Plan response model with a primary key."""
+class PlanMetadata(BaseModel):
+    """Plan details."""
+
+    name: str
+    plan_id: int | None
+    slug: str | None
+    icon_url: HttpUrl | None
+
+    _ = validator("name", "slug", allow_reuse=True)(string_must_not_be_blank)
+
+
+class PlanPaymentSchemeCount(BaseModel):
+    """Counts of MIDs by payment scheme on a plan."""
+
+    label: str
+    scheme_code: int
+    count: int
+
+    _ = validator("label", allow_reuse=True)(string_must_not_be_blank)
+
+
+class PlanCounts(BaseModel):
+    """Counts of merchants, locations, and MIDs on a plan."""
+
+    merchants: int
+    locations: int
+    payment_schemes: list[PlanPaymentSchemeCount]
+
+
+class PlanResponse(BaseModel):
+    """Plan response model."""
 
     plan_ref: UUID4
-    status: str
+    plan_status: str
+    plan_metadata: PlanMetadata
+    plan_counts: PlanCounts
 
-    _alias_pk = alias_pk("plan_ref")
+    _ = validator("plan_status", allow_reuse=True)(string_must_not_be_blank)
 
 
 class Merchant(BaseModel):
@@ -63,45 +85,43 @@ class Merchant(BaseModel):
     icon_url: HttpUrl | None
     location_label: str
 
-
-class MerchantWithPK(Merchant):
-    """Merchant response model with a primary key."""
-
-    merchant_ref: UUID4
-    status: str
-
-    _alias_pk = alias_pk("merchant_ref")
+    _ = validator("name", "location_label", allow_reuse=True)(string_must_not_be_blank)
 
 
-class Location(BaseModel):
-    """Location request model."""
+class MerchantMetadata(BaseModel):
+    """Merchant details."""
 
     name: str
-    location_id: str
-    merchant_internal_id: str | None
-    is_physical_location: bool
-    address_line_1: str | None
-    address_line_2: str | None
-    town_city: str | None
-    county: str | None
-    country: str | None
-    postcode: str | None
+    icon_url: HttpUrl | None
+    location_label: str
 
-    @validator("address_line_1", "postcode")
-    @classmethod
-    def physical_location_fields_are_present(
-        cls, v: str | None, values: dict
-    ) -> str | None:
-        """Validate that minimal address information is present on physical locations."""
-        if values["is_physical_location"] and not v:
-            raise ValueError("required for physical locations")
-
-        return v
+    _ = validator("name", "location_label", allow_reuse=True)(string_must_not_be_blank)
 
 
-class LocationWithPK(Location):
-    """Location response model with a primary key."""
+class MerchantPaymentSchemeCount(BaseModel):
+    """Counts of MIDs by payment scheme on a merchant."""
 
-    location_ref: UUID4
+    label: str
+    scheme_code: int
+    count: int
 
-    _alias_pk = alias_pk("location_ref")
+    _ = validator("label", allow_reuse=True)(string_must_not_be_blank)
+
+
+class MerchantCounts(BaseModel):
+    """Counts of merchants, locations, and MIDs on a merchant."""
+
+    merchants: int
+    locations: int
+    payment_schemes: list[MerchantPaymentSchemeCount]
+
+
+class MerchantResponse(BaseModel):
+    """Merchant response model."""
+
+    merchant_ref: UUID4
+    merchant_status: str
+    merchant_metadata: MerchantMetadata
+    merchant_counts: MerchantCounts
+
+    _ = validator("merchant_status", allow_reuse=True)(string_must_not_be_blank)

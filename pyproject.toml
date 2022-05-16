@@ -24,18 +24,16 @@ uvicorn = "^0.17.5"
 black = "^22.1.0"
 pylint = "^2.12.2"
 mypy = "^0.931"
-pytest = "^7.0.1"
 ptpython = "^3.0.20"
 isort = "^5.10.1"
 types-ujson = "^4.2.1"
 ipython = "^8.0.1"
-pytest-cov = "^3.0.0"
 coverage = "^6.3.2"
 types-requests = "^2.27.12"
-pytest-mock = "^3.7.0"
 amazing-printer = "^0.1.0"
 types-PyYAML = "^6.0.5"
 watchgod = "^0.8.2"
+ward = "^0.66.0-beta.0"
 
 [tool.poetry.group.cmd.dependencies]
 PyYAML = "^6.0"
@@ -77,12 +75,16 @@ good-names = [
     "v",   # pydantic validator value field
 ]
 
+[tool.ward]
+order = "random"
+
 [tool.coverage.run]
 omit = [
+    "tests/*",
     "*/piccolo_migrations/*",  # migrations aren't run in tests currently
     "*/piccolo_app.py",        # just piccolo ORM configuration, nothing to test
     "*/tables.py",             # table definitions are not directly tested
     "bullsquid/log_conf.py",   # log_conf sets up a complex log intercept that is hard to test
     "bullsquid/api/app.py",    # api app initialisation sets up db pools and so on that are hard to test
-    "bullsquid/cmd/*.py",          # TEMPORARY: command line tools are not tested right now
+    "bullsquid/cmd/*.py",      # TEMPORARY: command line tools are not tested right now
 ]

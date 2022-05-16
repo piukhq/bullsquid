@@ -1,10 +1,10 @@
 """Ward fixture functions."""
-from typing import Generator, TypeVar
+from typing import Generator
 
 from asyncpg import DuplicateTableError
 from fastapi.testclient import TestClient
 from piccolo.conf.apps import Finder
-from piccolo.table import Table, create_tables, drop_tables
+from piccolo.table import create_tables, drop_tables
 from piccolo.utils.warnings import colored_warning
 from ward import Scope, fixture
 
@@ -42,9 +42,6 @@ def database() -> Generator[None, None, None]:
         raise
     yield
     drop_tables(*tables)
-
-
-TModel_co = TypeVar("TModel_co", bound=Table, covariant=True)
 
 
 @fixture

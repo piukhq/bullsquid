@@ -111,7 +111,6 @@ class MerchantPaymentSchemeCount(BaseModel):
 class MerchantCounts(BaseModel):
     """Counts of merchants, locations, and MIDs on a merchant."""
 
-    merchants: int
     locations: int
     payment_schemes: list[MerchantPaymentSchemeCount]
 

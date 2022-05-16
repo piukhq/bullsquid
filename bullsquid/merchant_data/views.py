@@ -52,7 +52,7 @@ async def create_plan_response(
             icon_url=plan.icon_url,
         ),
         plan_counts=PlanCounts(
-            merchants=0,
+            merchants=await db.count_merchants(plan_ref=plan.pk),
             locations=0,
             payment_schemes=[
                 PlanPaymentSchemeCount(
@@ -79,7 +79,6 @@ async def create_merchant_response(
             location_label=merchant.location_label,
         ),
         merchant_counts=MerchantCounts(
-            merchants=0,
             locations=0,
             payment_schemes=[
                 MerchantPaymentSchemeCount(

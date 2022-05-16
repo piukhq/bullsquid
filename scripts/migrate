@@ -1,8 +1,4 @@
 #!/bin/sh
 . scripts/_common
 
-info 'Running migrations...'
 piccolo migrations forward all
-hr
-
-info 'Done!'

@@ -1,8 +1,7 @@
 #!/bin/sh
 . scripts/_common
 
-info 'Running tests...'
-piccolo tester run --pytest_args="--cov=bullsquid --cov-report=xml --cov-report=term"
-hr
-
-info 'Done!'
+export PICCOLO_CONF=piccolo_conf_test
+coverage run -m ward --progress-style bar "$@"
+coverage xml
+coverage report --skip-covered --skip-empty

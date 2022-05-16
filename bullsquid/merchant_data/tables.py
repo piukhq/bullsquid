@@ -44,6 +44,8 @@ class PaymentScheme(Table):
     """Represents a payment scheme such as Visa or Amex."""
 
     slug = Text(primary_key=True)
+    code = Integer(required=True, unique=True)
+    label = Text(required=True)
 
 
 class Location(Table):
@@ -66,7 +68,7 @@ class Location(Table):
 class PrimaryMID(Table):
     """Represents a merchant identifier."""
 
-    class PaymentEnrolmentStatus(Enum):
+    class PaymentEnrolmentStatus(str, Enum):
         """Current status of the MID with payment schemes."""
 
         UNKNOWN = "unknown"
@@ -74,7 +76,7 @@ class PrimaryMID(Table):
         ENROLLED = "enrolled"
         REMOVED = "removed"
 
-    class TXMStatus(Enum):
+    class TXMStatus(str, Enum):
         """Current status of the MID in transaction matching."""
 
         NOT_ONBOARDED = "not_onboarded"

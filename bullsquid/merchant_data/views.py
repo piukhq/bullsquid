@@ -4,17 +4,20 @@ from uuid import UUID
 
 from fastapi import APIRouter
 from piccolo.table import Table
-from starlette import status
 
 from bullsquid.api.errors import APIMultiError, ResourceNotFoundError, UniqueError
-from bullsquid.merchant_data import db
+from bullsquid.merchant_data import db, tables
 from bullsquid.merchant_data.models import (
-    Location,
-    LocationWithPK,
     Merchant,
-    MerchantWithPK,
+    MerchantCounts,
+    MerchantMetadata,
+    MerchantPaymentSchemeCount,
+    MerchantResponse,
     Plan,
-    PlanWithPK,
+    PlanCounts,
+    PlanMetadata,
+    PlanPaymentSchemeCount,
+    PlanResponse,
 )
 
 router = APIRouter(prefix="/v1", tags=["Merchant Data Management"])
@@ -35,14 +38,73 @@ async def field_is_unique(
     return not await model.exists().where(field == value)
 
 
-@router.get("/plans", response_model=list[PlanWithPK])
-async def list_plans() -> list[dict]:
+async def create_plan_response(
+    plan: tables.Plan, payment_schemes: list[tables.PaymentScheme]
+) -> PlanResponse:
+    """Creates a PlanResponse instance from the given plan object."""
+    return PlanResponse(
+        plan_ref=plan.pk,
+        plan_status=plan.status,
+        plan_metadata=PlanMetadata(
+            name=plan.name,
+            plan_id=plan.plan_id,
+            slug=plan.slug,
+            icon_url=plan.icon_url,
+        ),
+        plan_counts=PlanCounts(
+            merchants=0,
+            locations=0,
+            payment_schemes=[
+                PlanPaymentSchemeCount(
+                    label=payment_scheme.label,
+                    scheme_code=payment_scheme.code,
+                    count=0,
+                )
+                for payment_scheme in payment_schemes
+            ],
+        ),
+    )
+
+
+async def create_merchant_response(
+    merchant: tables.Merchant, payment_schemes: list[tables.PaymentScheme]
+) -> MerchantResponse:
+    """Creates a MerchantResponse instance from the given merchant object."""
+    return MerchantResponse(
+        merchant_ref=merchant.pk,
+        merchant_status=merchant.status,
+        merchant_metadata=MerchantMetadata(
+            name=merchant.name,
+            icon_url=merchant.icon_url,
+            location_label=merchant.location_label,
+        ),
+        merchant_counts=MerchantCounts(
+            merchants=0,
+            locations=0,
+            payment_schemes=[
+                MerchantPaymentSchemeCount(
+                    label=payment_scheme.label,
+                    scheme_code=payment_scheme.code,
+                    count=0,
+                )
+                for payment_scheme in payment_schemes
+            ],
+        ),
+    )
+
+
+@router.get("/plans", response_model=list[PlanResponse])
+async def list_plans() -> list[PlanResponse]:
     """List all plans."""
-    return [l.to_dict() for l in await db.list_plans()]
+    payment_schemes = await db.list_payment_schemes()
+    return [
+        await create_plan_response(plan, payment_schemes)
+        for plan in await db.list_plans()
+    ]
 
 
-@router.post("/plans", response_model=PlanWithPK)
-async def create_plan(plan_data: Plan) -> dict:
+@router.post("/plans", response_model=PlanResponse)
+async def create_plan(plan_data: Plan) -> PlanResponse:
     """Create a new plan."""
     plan_data = plan_data.dict()
     if errors := [
@@ -53,11 +115,11 @@ async def create_plan(plan_data: Plan) -> dict:
         raise APIMultiError(errors)
 
     plan = await db.create_plan(plan_data)
-    return plan.to_dict()
+    return await create_plan_response(plan, await db.list_payment_schemes())
 
 
-@router.put("/plans/{plan_ref}", response_model=PlanWithPK)
-async def update_plan(plan_ref: UUID, plan_data: Plan) -> dict:
+@router.put("/plans/{plan_ref}", response_model=PlanResponse)
+async def update_plan(plan_ref: UUID, plan_data: Plan) -> PlanResponse:
     """Update a plan's details."""
     plan_data = plan_data.dict()
     if errors := [
@@ -74,16 +136,10 @@ async def update_plan(plan_ref: UUID, plan_data: Plan) -> dict:
             loc=("path", "plan_ref"), resource_name="Plan"
         ) from ex
 
-    return plan.to_dict()
+    return await create_plan_response(plan, await db.list_payment_schemes())
 
 
-@router.get("/merchants", response_model=list[MerchantWithPK])
-async def list_merchants() -> list[dict]:
-    """List all Merchants."""
-    return [m.to_dict() for m in await db.list_merchants()]
-
-
-@router.post("/plans/{plan_ref}/merchants", response_model=MerchantWithPK)
+@router.post("/plans/{plan_ref}/merchants", response_model=MerchantResponse)
 async def create_merchant(plan_ref: UUID, merchant_data: Merchant) -> dict:
     """Add a new merchant to a plan."""
     try:
@@ -93,97 +149,9 @@ async def create_merchant(plan_ref: UUID, merchant_data: Merchant) -> dict:
             loc=("path", "plan_ref"), resource_name="Plan"
         ) from ex
 
-    # TODO(cl): perform this check in db layer
-    if await db.Merchant.exists().where(
-        db.Merchant.name == merchant_data.name, db.Merchant.plan == plan
-    ):
+    if not await field_is_unique(db.Merchant, "name", merchant_data.name):
         raise UniqueError(loc=("body", "name"))
 
     merchant = await db.create_merchant(merchant_data.dict(), plan=plan)
 
-    return merchant.to_dict()
-
-
-@router.put("/merchants/{merchant_ref}", response_model=MerchantWithPK)
-async def update_merchant(merchant_ref: UUID, merchant_data: Merchant) -> dict:
-    """Update a merchant's details."""
-    merchant_data = merchant_data.dict()
-    if errors := [
-        UniqueError(loc=("body", field))
-        for field in ["name", "slug", "plan_id"]
-        if not await field_is_unique(
-            db.Merchant, field, merchant_data[field], pk=merchant_ref
-        )
-    ]:
-        raise APIMultiError(errors)
-
-    try:
-        merchant = await db.update_merchant(merchant_ref, merchant_data)
-    except db.NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=("path", "merchant_ref"), resource_name="Merchant"
-        ) from ex
-
-    return merchant.to_dict()
-
-
-@router.delete(
-    "/merchants/{merchant_ref}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    responses={status.HTTP_404_NOT_FOUND: {}},
-)
-async def delete_merchant(merchant_ref: UUID) -> None:
-    """Delete a merchant."""
-    try:
-        await db.delete_merchant(merchant_ref)
-    except db.NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=("path", "merchant_ref"), resource_name="Merchant"
-        ) from ex
-
-
-@router.post("/merchants/{merchant_ref}/locations", response_model=LocationWithPK)
-async def create_location(merchant_ref: UUID, location_data: Location) -> dict:
-    """Create a location for a merchant."""
-    try:
-        merchant = await db.get_merchant(merchant_ref)
-    except db.NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=("path", "merchant_ref"), resource_name="Merchant"
-        ) from ex
-
-    if await db.Location.exists().where(
-        db.Location.merchant == merchant,
-        db.Location.location_id == location_data.location_id,
-    ):
-        raise UniqueError(loc=("body", "location_id"))
-
-    location = await db.create_location(location_data.dict(), merchant=merchant)
-    return location.to_dict()
-
-
-@router.put(
-    "/merchants/{merchant_ref}/locations/{location_ref}",
-    response_model=LocationWithPK,
-)
-async def update_location(
-    merchant_ref: UUID, location_ref: UUID, location_data: Location
-) -> dict:
-    """Update a locations's details."""
-    try:
-        merchant = await db.get_merchant(merchant_ref)
-    except db.NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=("path", "merchant_ref"), resource_name="Merchant"
-        ) from ex
-
-    try:
-        location = await db.update_location(
-            location_ref, location_data.dict(), merchant=merchant
-        )
-    except db.NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=("path", "location_ref"), resource_name="Location"
-        ) from ex
-
-    return location.to_dict()
+    return await create_merchant_response(merchant, await db.list_payment_schemes())

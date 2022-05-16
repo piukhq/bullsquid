@@ -1,13 +1,20 @@
 """Test merchant data API endpoints that operate on plans."""
 
+import random
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from ward import test
 
 from bullsquid.merchant_data import db
-from bullsquid.merchant_data.tables import PaymentScheme, Plan
-from tests.factories import payment_schemes, plan, plan_factory, three_plans
+from bullsquid.merchant_data.tables import Merchant, PaymentScheme, Plan
+from tests.factories import (
+    merchant_factory,
+    payment_schemes,
+    plan,
+    plan_factory,
+    three_plans,
+)
 from tests.fixtures import auth_header, database, test_client
 from tests.helpers import (
     assert_is_not_found_error,
@@ -16,8 +23,9 @@ from tests.helpers import (
 )
 
 
-def plan_to_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict:
+async def plan_to_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict:
     """Convert a plan to its expected JSON representation."""
+    merchant_count = await Merchant.count().where(Merchant.plan == plan)
     return {
         "plan_ref": str(plan.pk),
         "plan_status": plan.status,
@@ -28,7 +36,7 @@ def plan_to_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict:
             "icon_url": plan.icon_url,
         },
         "plan_counts": {
-            "merchants": 0,
+            "merchants": merchant_count,
             "locations": 0,
             "payment_schemes": [
                 {
@@ -42,7 +50,7 @@ def plan_to_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict:
     }
 
 
-@test("can list plans")
+@test("can list plans with no merchants")
 async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
@@ -51,7 +59,23 @@ async def _(
 ) -> None:
     resp = test_client.get("/api/v1/plans", headers=auth_header)
     assert resp.ok
-    assert resp.json() == [plan_to_json(plan, payment_schemes) for plan in plans]
+    assert resp.json() == [await plan_to_json(plan, payment_schemes) for plan in plans]
+
+
+@test("can list plans with merchants")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    plans: list[dict] = three_plans,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
+) -> None:
+    for plan in plans:
+        for _ in range(random.randint(1, 3)):
+            await merchant_factory(plan=plan)
+
+    resp = test_client.get("/api/v1/plans", headers=auth_header)
+    assert resp.ok
+    assert resp.json() == [await plan_to_json(plan, payment_schemes) for plan in plans]
 
 
 @test("can create a plan")
@@ -73,7 +97,7 @@ async def _(
     )
     assert resp.ok
     plan = await db.get_plan(resp.json()["plan_ref"])
-    assert resp.json() == plan_to_json(plan, payment_schemes)
+    assert resp.json() == await plan_to_json(plan, payment_schemes)
 
 
 @test("unable to create a plan with a duplicate name")
@@ -194,7 +218,7 @@ async def _(
     )
     assert resp.ok
     plan = await db.get_plan(plan.pk)
-    assert resp.json() == plan_to_json(plan, payment_schemes)
+    assert resp.json() == await plan_to_json(plan, payment_schemes)
     assert plan.name == new_details.name
     assert plan.plan_id == new_details.plan_id
     assert plan.slug == new_details.slug

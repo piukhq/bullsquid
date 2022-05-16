@@ -1,4 +1,6 @@
 """Model factories that clear the table after each test."""
+from typing import Any, Mapping
+
 from piccolo.testing.model_builder import ModelBuilder
 from ward import fixture
 
@@ -6,20 +8,28 @@ from bullsquid.merchant_data.tables import Merchant, PaymentScheme, Plan
 from tests.fixtures import database
 
 
-async def plan_factory(persist: bool = True) -> Plan:
+async def plan_factory(*, persist: bool = True, **defaults: Mapping[str, Any]) -> Plan:
     """Creates and returns a plan."""
     return await ModelBuilder.build(
         Plan,
-        defaults={"icon_url": "https://example.com/icon.png"},
+        defaults={
+            "icon_url": "https://example.com/icon.png",
+            **defaults,  # type: ignore
+        },
         persist=persist,
     )
 
 
-async def merchant_factory(persist: bool = True) -> Merchant:
+async def merchant_factory(
+    *, persist: bool = True, **defaults: Mapping[str, Any]
+) -> Merchant:
     """Creates and returns a merchant."""
     return await ModelBuilder.build(
         Merchant,
-        defaults={"icon_url": "https://example.com/icon.png"},
+        defaults={
+            "icon_url": "https://example.com/icon.png",
+            **defaults,  # type: ignore
+        },
         persist=persist,
     )
 

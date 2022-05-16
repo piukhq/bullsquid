@@ -33,7 +33,6 @@ def merchant_to_json(merchant: Merchant, payment_schemes: list[PaymentScheme]) -
             "location_label": merchant.location_label,
         },
         "merchant_counts": {
-            "merchants": 0,
             "locations": 0,
             "payment_schemes": [
                 {

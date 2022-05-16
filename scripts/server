@@ -1,8 +1,4 @@
 #!/bin/sh
 . scripts/_common
 
-info 'Starting API.'
 python asgi.py
-hr
-
-info 'Done!'

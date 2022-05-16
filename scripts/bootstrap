@@ -63,4 +63,5 @@ ensure_postgres() {
 install
 ensure_postgres
 poetry run scripts/migrate
+hr
 load_fixtures

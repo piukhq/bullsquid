@@ -5,7 +5,7 @@ from piccolo.columns import UUID, Boolean, ForeignKey, Integer, Text, Timestampt
 from piccolo.table import Table
 
 
-class PlanStatus(Enum):
+class PlanStatus(str, Enum):
     """Status enum used for plans and merchants."""
 
     ACTIVE = "active"  # live, available for use
@@ -14,6 +14,23 @@ class PlanStatus(Enum):
     SUSPENDED = "suspended"  # temporarily hidden
     PENDING_DELETION = "pending_deletion"  # delete in progress
     DELETED = "deleted"  # soft deleted
+
+
+class PaymentEnrolmentStatus(str, Enum):
+    """Current status of a MID with payment schemes."""
+
+    UNKNOWN = "unknown"
+    ENROLLING = "enrolling"
+    ENROLLED = "enrolled"
+    REMOVED = "removed"
+
+
+class TXMStatus(str, Enum):
+    """Current status of a MID in transaction matching."""
+
+    NOT_ONBOARDED = "not_onboarded"
+    ONBOARDED = "onboarded"
+    OFFBOARDED = "offboarded"
 
 
 class Plan(Table):
@@ -67,21 +84,6 @@ class Location(Table):
 
 class PrimaryMID(Table):
     """Represents a merchant identifier."""
-
-    class PaymentEnrolmentStatus(str, Enum):
-        """Current status of the MID with payment schemes."""
-
-        UNKNOWN = "unknown"
-        ENROLLING = "enrolling"
-        ENROLLED = "enrolled"
-        REMOVED = "removed"
-
-    class TXMStatus(str, Enum):
-        """Current status of the MID in transaction matching."""
-
-        NOT_ONBOARDED = "not_onboarded"
-        ONBOARDED = "onboarded"
-        OFFBOARDED = "offboarded"
 
     pk = UUID(primary_key=True)
     mid = Text(unique=True)

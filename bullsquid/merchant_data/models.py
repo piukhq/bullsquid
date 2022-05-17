@@ -1,4 +1,6 @@
 """Defines pydantic models used to translate between the database and the API."""
+from datetime import datetime
+
 from pydantic import UUID4
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import HttpUrl, validator
@@ -124,3 +126,33 @@ class MerchantResponse(BaseModel):
     merchant_counts: MerchantCounts
 
     _ = validator("merchant_status", allow_reuse=True)(string_must_not_be_blank)
+
+
+class PrimaryMIDMetadata(BaseModel):
+    """Primary MID metadata response model."""
+
+    payment_scheme_code: int
+    mid: str
+    visa_bin: str
+    payment_enrolment_status: str
+
+    _ = validator("mid", "visa_bin", "payment_enrolment_status", allow_reuse=True)(
+        string_must_not_be_blank
+    )
+
+
+class PrimaryMIDResponse(BaseModel):
+    """Primary MID response model"""
+
+    mid_ref: UUID4
+    mid_metadata: PrimaryMIDMetadata
+    date_added: datetime
+    txm_status: str
+
+    _ = validator("txm_status", allow_reuse=True)(string_must_not_be_blank)
+
+
+class PrimaryMIDListResponse(BaseModel):
+    """Response model for a list of primary MIDs."""
+
+    mids: list[PrimaryMIDResponse]

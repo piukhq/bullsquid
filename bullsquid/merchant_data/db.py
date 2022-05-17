@@ -1,14 +1,16 @@
 """Database access layer."""
-from typing import Any, Mapping
+from datetime import datetime
+from typing import Any, Mapping, TypedDict
+from uuid import UUID
 
-from bullsquid.merchant_data.tables import Merchant, PaymentScheme, Plan
+from bullsquid.merchant_data.tables import Merchant, PaymentScheme, Plan, PrimaryMID
 
 
 class NoSuchRecord(Exception):
     """Raised when the requested record could not be found."""
 
 
-async def get_plan(pk: str) -> Plan:
+async def get_plan(pk: UUID) -> Plan:
     """Return a plan by its primary key. Raises NoSuchRecord if `pk` is not found."""
     plan = await Plan.objects().get(Plan.pk == pk)
     if not plan:
@@ -28,7 +30,7 @@ async def create_plan(fields: Mapping[str, Any]) -> Plan:
     return plan
 
 
-async def update_plan(pk: str, fields: Mapping[str, Any]) -> Plan:
+async def update_plan(pk: UUID, fields: Mapping[str, Any]) -> Plan:
     """Update an existing merchant with the given fields."""
     plan = await get_plan(pk)
     for key, value in fields.items():
@@ -37,7 +39,7 @@ async def update_plan(pk: str, fields: Mapping[str, Any]) -> Plan:
     return plan
 
 
-async def get_merchant(pk: str, *, plan_ref: str) -> Merchant:
+async def get_merchant(pk: UUID, *, plan_ref: UUID) -> Merchant:
     """Return a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
     merchant = (
         await Merchant.objects()
@@ -54,7 +56,7 @@ async def list_merchants() -> list[Merchant]:
     return await Merchant.objects()
 
 
-async def count_merchants(plan_ref: str) -> int:
+async def count_merchants(plan_ref: UUID) -> int:
     """Return a count of merchants in a plan."""
     return await Merchant.count().where(Merchant.plan == plan_ref)
 
@@ -67,7 +69,7 @@ async def create_merchant(fields: Mapping[str, Any], *, plan: Plan) -> Merchant:
 
 
 async def update_merchant(
-    pk: str, fields: Mapping[str, Any], *, plan_ref: str
+    pk: UUID, fields: Mapping[str, Any], *, plan_ref: UUID
 ) -> Merchant:
     """Update an existing merchant with the given fields."""
     merchant = await get_merchant(pk, plan_ref=plan_ref)
@@ -77,7 +79,7 @@ async def update_merchant(
     return merchant
 
 
-async def delete_merchant(pk: str, *, plan_ref: str) -> None:
+async def delete_merchant(pk: UUID, *, plan_ref: UUID) -> None:
     """Delete a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
     merchant = await get_merchant(pk, plan_ref=plan_ref)
     await merchant.remove()
@@ -86,3 +88,34 @@ async def delete_merchant(pk: str, *, plan_ref: str) -> None:
 async def list_payment_schemes() -> list[PaymentScheme]:
     """Return a list of all payment schemes."""
     return await PaymentScheme.objects()
+
+
+PrimaryMIDResult = TypedDict(
+    "PrimaryMIDResult",
+    {
+        "pk": UUID,
+        "payment_scheme.code": int,
+        "mid": str,
+        "visa_bin": str,
+        "payment_enrolment_status": str,
+        "date_added": datetime,
+        "txm_status": str,
+    },
+)
+
+
+async def list_primary_mids(
+    *, plan_ref: UUID, merchant_ref: UUID
+) -> list[PrimaryMIDResult]:
+    """Return a list of all primary MIDs on the given merchant."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+
+    return await PrimaryMID.select(
+        PrimaryMID.pk,
+        PrimaryMID.payment_scheme.code,
+        PrimaryMID.mid,
+        PrimaryMID.visa_bin,
+        PrimaryMID.payment_enrolment_status,
+        PrimaryMID.date_added,
+        PrimaryMID.txm_status,
+    ).where(PrimaryMID.merchant == merchant)

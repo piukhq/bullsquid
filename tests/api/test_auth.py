@@ -14,7 +14,7 @@ def _(
     auth_header: dict = auth_header,
 ) -> None:
     resp = test_client.get("/api/v1/plans", headers=auth_header)
-    assert resp.ok
+    assert resp.ok, resp.json()
 
 
 @test("invalid auth header format returns 401 unauthorized")

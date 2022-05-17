@@ -58,7 +58,7 @@ async def _(
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     resp = test_client.get("/api/v1/plans", headers=auth_header)
-    assert resp.ok
+    assert resp.ok, resp.json()
     assert resp.json() == [await plan_to_json(plan, payment_schemes) for plan in plans]
 
 
@@ -74,7 +74,7 @@ async def _(
             await merchant_factory(plan=plan)
 
     resp = test_client.get("/api/v1/plans", headers=auth_header)
-    assert resp.ok
+    assert resp.ok, resp.json()
     assert resp.json() == [await plan_to_json(plan, payment_schemes) for plan in plans]
 
 
@@ -95,7 +95,7 @@ async def _(
             "icon_url": plan.icon_url,
         },
     )
-    assert resp.ok
+    assert resp.ok, resp.json()
     plan = await db.get_plan(resp.json()["plan_ref"])
     assert resp.json() == await plan_to_json(plan, payment_schemes)
 
@@ -216,7 +216,7 @@ async def _(
             "icon_url": new_details.icon_url,
         },
     )
-    assert resp.ok
+    assert resp.ok, resp.json()
     plan = await db.get_plan(plan.pk)
     assert resp.json() == await plan_to_json(plan, payment_schemes)
     assert plan.name == new_details.name

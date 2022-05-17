@@ -18,6 +18,9 @@ from bullsquid.merchant_data.models import (
     PlanMetadata,
     PlanPaymentSchemeCount,
     PlanResponse,
+    PrimaryMIDListResponse,
+    PrimaryMIDMetadata,
+    PrimaryMIDResponse,
 )
 
 router = APIRouter(prefix="/v1", tags=["Merchant Data Management"])
@@ -92,6 +95,28 @@ async def create_merchant_response(
     )
 
 
+async def create_primary_mid_list_response(
+    primary_mids: list[db.PrimaryMIDResult],
+) -> PrimaryMIDListResponse:
+    """Creates a PrimaryMIDListResponse instance from the given primary MIDs."""
+    return PrimaryMIDListResponse(
+        mids=[
+            PrimaryMIDResponse(
+                mid_ref=mid["pk"],
+                mid_metadata=PrimaryMIDMetadata(
+                    payment_scheme_code=mid["payment_scheme.code"],
+                    mid=mid["mid"],
+                    visa_bin=mid["visa_bin"],
+                    payment_enrolment_status=mid["payment_enrolment_status"],
+                ),
+                date_added=mid["date_added"],
+                txm_status=mid["txm_status"],
+            )
+            for mid in primary_mids
+        ]
+    )
+
+
 @router.get("/plans", response_model=list[PlanResponse])
 async def list_plans() -> list[PlanResponse]:
     """List all plans."""
@@ -154,3 +179,15 @@ async def create_merchant(plan_ref: UUID, merchant_data: Merchant) -> dict:
     merchant = await db.create_merchant(merchant_data.dict(), plan=plan)
 
     return await create_merchant_response(merchant, await db.list_payment_schemes())
+
+
+@router.get(
+    "/plans/{plan_ref}/merchants/{merchant_ref}/mids",
+    response_model=PrimaryMIDListResponse,
+)
+async def list_primary_mids(
+    plan_ref: UUID, merchant_ref: UUID
+) -> PrimaryMIDListResponse:
+    """List all primary MIDs for a merchant."""
+    mids = await db.list_primary_mids(plan_ref=plan_ref, merchant_ref=merchant_ref)
+    return await create_primary_mid_list_response(mids)

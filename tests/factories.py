@@ -4,7 +4,7 @@ from typing import Any, Mapping
 from piccolo.testing.model_builder import ModelBuilder
 from ward import fixture
 
-from bullsquid.merchant_data.tables import Merchant, PaymentScheme, Plan
+from bullsquid.merchant_data.tables import Merchant, PaymentScheme, Plan, PrimaryMID
 from tests.fixtures import database
 
 
@@ -34,6 +34,17 @@ async def merchant_factory(
     )
 
 
+async def primary_mid_factory(
+    *, persist: bool = True, **defaults: Mapping[str, Any]
+) -> Merchant:
+    """Creates and returns a primary MID."""
+    return await ModelBuilder.build(
+        PrimaryMID,
+        defaults=defaults,  # type: ignore
+        persist=persist,
+    )
+
+
 @fixture
 async def plan(_: None = database) -> Plan:
     """Creates and returns a plan."""
@@ -54,8 +65,14 @@ async def merchant(_: None = database) -> Merchant:
 
 @fixture
 async def three_merchants(_: None = database) -> list[Merchant]:
-    """Creates and returns three merchants with the given defaults."""
+    """Creates and returns three merchants."""
     return [await merchant_factory() for _ in range(3)]
+
+
+@fixture
+async def primary_mid(_: None = database) -> PrimaryMID:
+    """Creates and returns a primary MID."""
+    return await primary_mid_factory()
 
 
 @fixture

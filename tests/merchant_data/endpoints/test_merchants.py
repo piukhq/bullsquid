@@ -55,7 +55,7 @@ async def _(
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     resp = test_client.get("/api/v1/merchants", headers=auth_header)
-    assert resp.ok
+    assert resp.ok, resp.json()
     assert resp.json() == [
         merchant_to_json(merchant, payment_schemes) for merchant in merchants
     ]
@@ -78,7 +78,7 @@ async def _(
             "location_label": merchant.location_label,
         },
     )
-    assert resp.ok
+    assert resp.ok, resp.json()
     merchant = await db.get_merchant(resp.json()["merchant_ref"], plan_ref=plan.pk)
     assert resp.json() == merchant_to_json(merchant, payment_schemes)
 
@@ -178,7 +178,7 @@ async def _(
             "icon_url": new_details.icon_url,
         },
     )
-    assert resp.ok
+    assert resp.ok, resp.json()
     merchant = await db.get_merchant(merchant.pk, plan_ref=merchant.plan)
     assert resp.json() == merchant_to_json(merchant, payment_schemes)
     assert merchant.name == new_details.name

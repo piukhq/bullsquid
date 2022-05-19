@@ -4,7 +4,10 @@ from typing import Any, Mapping
 from piccolo.testing.model_builder import ModelBuilder
 from ward import fixture
 
-from bullsquid.merchant_data.tables import Merchant, PaymentScheme, Plan, PrimaryMID
+from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from tests.fixtures import database
 
 
@@ -73,6 +76,12 @@ async def three_merchants(_: None = database) -> list[Merchant]:
 async def primary_mid(_: None = database) -> PrimaryMID:
     """Creates and returns a primary MID."""
     return await primary_mid_factory()
+
+
+@fixture
+async def three_primary_mids(_: None = database) -> list[PrimaryMID]:
+    """Creates and returns three primary MIDs."""
+    return [await primary_mid_factory() for _ in range(3)]
 
 
 @fixture

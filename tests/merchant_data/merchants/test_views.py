@@ -5,8 +5,10 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 from ward import skip, test
 
-from bullsquid.merchant_data import db
-from bullsquid.merchant_data.tables import Merchant, PaymentScheme, Plan
+from bullsquid.merchant_data.merchants.db import get_merchant
+from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.plans.tables import Plan
 from tests.factories import (
     merchant,
     merchant_factory,
@@ -79,7 +81,7 @@ async def _(
         },
     )
     assert resp.ok, resp.json()
-    merchant = await db.get_merchant(resp.json()["merchant_ref"], plan_ref=plan.pk)
+    merchant = await get_merchant(resp.json()["merchant_ref"], plan_ref=plan.pk)
     assert resp.json() == merchant_to_json(merchant, payment_schemes)
 
 
@@ -179,7 +181,7 @@ async def _(
         },
     )
     assert resp.ok, resp.json()
-    merchant = await db.get_merchant(merchant.pk, plan_ref=merchant.plan)
+    merchant = await get_merchant(merchant.pk, plan_ref=merchant.plan)
     assert resp.json() == merchant_to_json(merchant, payment_schemes)
     assert merchant.name == new_details.name
     assert merchant.merchant_id == new_details.merchant_id

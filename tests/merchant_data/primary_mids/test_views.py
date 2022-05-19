@@ -5,7 +5,10 @@ from operator import itemgetter
 from fastapi.testclient import TestClient
 from ward import test
 
-from bullsquid.merchant_data.tables import Merchant, PaymentScheme, Plan, PrimaryMID
+from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from tests.factories import primary_mid, primary_mid_factory, three_merchants
 from tests.fixtures import auth_header, database, test_client
 

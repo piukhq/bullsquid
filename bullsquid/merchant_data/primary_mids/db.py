@@ -5,6 +5,8 @@ from typing import TypedDict
 from uuid import UUID
 
 from bullsquid.merchant_data.merchants.db import get_merchant
+from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
+from bullsquid.merchant_data.primary_mids.models import PrimaryMIDMetadata
 
 from .tables import PrimaryMID
 
@@ -37,3 +39,32 @@ async def list_primary_mids(
         PrimaryMID.date_added,
         PrimaryMID.txm_status,
     ).where(PrimaryMID.merchant == merchant)
+
+
+async def create_primary_mid(
+    mid_data: PrimaryMIDMetadata,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> PrimaryMIDResult:
+    """Create a primary MID for the given merchant."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    payment_scheme = await get_payment_scheme_by_code(mid_data.payment_scheme_code)
+    mid = PrimaryMID(
+        mid=mid_data.mid,
+        visa_bin=mid_data.visa_bin,
+        payment_scheme=payment_scheme,
+        payment_enrolment_status=mid_data.payment_enrolment_status,
+        merchant=merchant,
+    )
+    await mid.save()
+
+    return {
+        "pk": mid.pk,
+        "payment_scheme.code": payment_scheme.code,
+        "mid": mid.mid,
+        "visa_bin": mid.visa_bin,
+        "payment_enrolment_status": mid.payment_enrolment_status,
+        "date_added": mid.date_added,
+        "txm_status": mid.txm_status,
+    }

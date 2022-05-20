@@ -47,10 +47,10 @@ def _() -> None:
 
 @test("ResourceNotFoundError is formatted correctly")
 def _() -> None:
-    ex = ResourceNotFoundError(loc=("test", "loc"), resource_name="TestResource")
+    ex = ResourceNotFoundError(loc=["test", "loc"], resource_name="TestResource")
     expected = [
         {
-            "loc": ("test", "loc"),
+            "loc": ["test", "loc"],
             "msg": "TestResource not found.",
             "type": "ref_error",
         }
@@ -60,10 +60,10 @@ def _() -> None:
 
 @test("UniqueError is formatted correctly")
 def _() -> None:
-    ex = UniqueError(loc=("test", "loc"))
+    ex = UniqueError(loc=["test", "loc"])
     expected = [
         {
-            "loc": ("test", "loc"),
+            "loc": ["test", "loc"],
             "msg": "Field must be unique: test.loc.",
             "type": "unique_error",
         }
@@ -75,18 +75,18 @@ def _() -> None:
 def _() -> None:
     ex = APIMultiError(
         [
-            ResourceNotFoundError(loc=("test", "loc"), resource_name="TestResource"),
-            UniqueError(loc=("test", "loc")),
+            ResourceNotFoundError(loc=["test", "loc"], resource_name="TestResource"),
+            UniqueError(loc=["test", "loc"]),
         ]
     )
     expected = [
         {
-            "loc": ("test", "loc"),
+            "loc": ["test", "loc"],
             "msg": "TestResource not found.",
             "type": "ref_error",
         },
         {
-            "loc": ("test", "loc"),
+            "loc": ["test", "loc"],
             "msg": "Field must be unique: test.loc.",
             "type": "unique_error",
         },

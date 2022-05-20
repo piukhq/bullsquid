@@ -65,7 +65,7 @@ async def _(plan_data: CreatePlanRequest) -> PlanResponse:
     """Create a new plan."""
     plan_data = plan_data.dict()
     if errors := [
-        UniqueError(loc=("body", field))
+        UniqueError(loc=["body", field])
         for field in ["name", "slug", "plan_id"]
         if not await field_is_unique(Plan, field, plan_data[field])
     ]:
@@ -80,7 +80,7 @@ async def _(plan_ref: UUID, plan_data: CreatePlanRequest) -> PlanResponse:
     """Update a plan's details."""
     plan_data = plan_data.dict()
     if errors := [
-        UniqueError(loc=("body", field))
+        UniqueError(loc=["body", field])
         for field in ["name", "slug", "plan_id"]
         if not await field_is_unique(Plan, field, plan_data[field], pk=plan_ref)
     ]:

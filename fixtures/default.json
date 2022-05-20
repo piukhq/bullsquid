@@ -45,6 +45,35 @@
                 "slug": "wasabi-club",
                 "status": "active"
             }
+        ],
+        "Merchant": [
+            {
+                "icon_url": "https://api.gb.bink.com/content/media/hermes/schemes/Iceland_Logo.png",
+                "is_deleted": false,
+                "location_label": "Stores",
+                "name": "Iceland",
+                "pk": "549d6769-9416-499b-85f2-22336cff4bd8",
+                "plan": "0ce27edd-34b2-4630-b653-193e9f5947be",
+                "status": "active"
+            },
+            {
+                "icon_url": "https://api.gb.bink.com/content/media/hermes/schemes/Harvey_Nichols_Logo.png",
+                "is_deleted": false,
+                "location_label": "Stores",
+                "name": "Harvey Nichols",
+                "pk": "27ac26ca-4113-4a06-aa8a-7d68510f738f",
+                "plan": "e9538964-ba55-42fb-852c-3ae37e2adcb8",
+                "status": "active"
+            },
+            {
+                "icon_url": "https://api.gb.bink.com/content/media/hermes/schemes/Wasabi_Logo.png",
+                "is_deleted": false,
+                "location_label": "Restaurants",
+                "name": "Wasabi",
+                "pk": "e691df97-4361-4e3d-a223-49bd29c6d01f",
+                "plan": "ce2c7875-48d4-4d52-893d-2c671f0cf22a",
+                "status": "active"
+            }
         ]
     }
 }

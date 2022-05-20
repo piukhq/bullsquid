@@ -40,7 +40,7 @@ class APIError(HTTPException):
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     error = "api_error"
     message = "An error occurred while processing your request."
-    loc: tuple[str, ...] | None = None
+    loc: list[str] | None = None
 
     def __init__(self) -> None:
         """Initialize the exception."""
@@ -71,7 +71,7 @@ class ResourceNotFoundError(APIError):
     status_code = status.HTTP_404_NOT_FOUND
     error = "ref_error"
 
-    def __init__(self, *, loc: tuple[str, ...], resource_name: str) -> None:
+    def __init__(self, *, loc: list[str], resource_name: str) -> None:
         self.loc = loc
         self.message = f"{resource_name} not found."
         super().__init__()
@@ -83,7 +83,7 @@ class UniqueError(APIError):
     status_code = status.HTTP_409_CONFLICT
     error = "unique_error"
 
-    def __init__(self, *, loc: tuple[str, ...]) -> None:
+    def __init__(self, *, loc: list[str]) -> None:
         self.loc = loc
         self.message = f"Field must be unique: {'.'.join(loc)}."
         super().__init__()

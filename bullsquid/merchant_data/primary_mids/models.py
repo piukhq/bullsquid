@@ -14,12 +14,19 @@ class PrimaryMIDMetadata(BaseModel):
 
     payment_scheme_code: int
     mid: str
-    visa_bin: str
+    visa_bin: str | None
     payment_enrolment_status: str
 
     _ = validator("mid", "visa_bin", "payment_enrolment_status", allow_reuse=True)(
         string_must_not_be_blank
     )
+
+
+class CreatePrimaryMIDRequest(BaseModel):
+    """Request model for creating a primary MID."""
+
+    onboard: bool
+    mid_metadata: PrimaryMIDMetadata
 
 
 class PrimaryMIDResponse(BaseModel):

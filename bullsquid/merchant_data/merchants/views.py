@@ -56,11 +56,11 @@ async def _(plan_ref: UUID, merchant_data: CreateMerchantRequest) -> dict:
         plan = await get_plan(plan_ref)
     except NoSuchRecord as ex:
         raise ResourceNotFoundError(
-            loc=("path", "plan_ref"), resource_name="Plan"
+            loc=["path", "plan_ref"], resource_name="Plan"
         ) from ex
 
     if not await field_is_unique(Merchant, "name", merchant_data.name):
-        raise UniqueError(loc=("body", "name"))
+        raise UniqueError(loc=["body", "name"])
 
     merchant = await create_merchant(merchant_data.dict(), plan=plan)
 

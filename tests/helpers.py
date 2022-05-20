@@ -22,7 +22,7 @@ def assert_is_uniqueness_error(resp: Response, *, loc: list[str]) -> None:
 
 
 def assert_is_missing_field_error(resp: Response, *, loc: list[str]) -> None:
-    """Asserts that the response is a uniqueness error."""
+    """Asserts that the response is a missing field error."""
     expect.assert_is_not(resp.ok, True, f"Expected an error status code: {resp}")
     expect.assert_equal(
         resp.status_code,
@@ -34,7 +34,7 @@ def assert_is_missing_field_error(resp: Response, *, loc: list[str]) -> None:
     expect.assert_equal(len(detail), 1, "Expected a single error")
     expect.assert_equal(detail[0]["loc"], loc, "Expected the error location to match")
     expect.assert_equal(
-        detail[0]["type"], "value_error", "Expected the error type to match"
+        detail[0]["type"], "value_error.missing", "Expected the error type to match"
     )
 
 
@@ -69,4 +69,23 @@ def assert_is_value_error(resp: Response, *, loc: list[str]) -> None:
     expect.assert_equal(detail[0]["loc"], loc, "Expected the error location to match")
     expect.assert_equal(
         detail[0]["type"], "value_error", "Expected the error type to match"
+    )
+
+
+def assert_is_null_error(resp: Response, *, loc: list[str]) -> None:
+    """Asserts that the response is a "null not allowed" error."""
+    expect.assert_is_not(resp.ok, True, f"Expected an error status code: {resp}")
+    expect.assert_equal(
+        resp.status_code,
+        status.HTTP_422_UNPROCESSABLE_ENTITY,
+        f"Expected status code to be 404: {resp}",
+    )
+
+    detail = resp.json()["detail"]
+    expect.assert_equal(len(detail), 1, "Expected a single error")
+    expect.assert_equal(detail[0]["loc"], loc, "Expected the error location to match")
+    expect.assert_equal(
+        detail[0]["type"],
+        "type_error.none.not_allowed",
+        "Expected the error type to match",
     )

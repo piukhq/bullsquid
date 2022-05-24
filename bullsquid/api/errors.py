@@ -26,10 +26,12 @@ def error_response(
     return JSONResponse(
         status_code=status_code,
         content={
-            "detail": {
-                "msg": message,
-                "event_id": event_id,
-            }
+            "detail": [
+                {
+                    "msg": message,
+                    "event_id": event_id,
+                }
+            ]
         },
     )
 

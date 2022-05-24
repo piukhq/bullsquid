@@ -20,10 +20,12 @@ def _() -> None:
 
     assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert json.loads(resp.body) == {
-        "detail": {
-            "msg": "Unable to process request due to an internal error.",
-            "event_id": None,
-        }
+        "detail": [
+            {
+                "msg": "Unable to process request due to an internal error.",
+                "event_id": None,
+            }
+        ]
     }
 
 
@@ -38,10 +40,12 @@ def _() -> None:
 
     assert resp.status_code == status.HTTP_418_IM_A_TEAPOT
     assert json.loads(resp.body) == {
-        "detail": {
-            "msg": "I'm a teapot",
-            "event_id": None,
-        }
+        "detail": [
+            {
+                "msg": "I'm a teapot",
+                "event_id": None,
+            }
+        ]
     }
 
 

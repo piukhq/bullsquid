@@ -2,9 +2,9 @@ from piccolo.apps.migrations.auto.migration_manager import MigrationManager
 from piccolo.columns.column_types import Integer, Text
 from piccolo.columns.indexes import IndexMethod
 
-ID = "2022-05-11T16:53:42:122451"
+ID = "2022-05-24T11:11:21:677169"
 VERSION = "0.71.1"
-DESCRIPTION = "add code and label fields to payment scheme"
+DESCRIPTION = "add code and label to payment schemes"
 
 
 async def forwards():
@@ -23,7 +23,7 @@ async def forwards():
             "default": 0,
             "null": False,
             "primary_key": False,
-            "unique": True,
+            "unique": False,
             "index": False,
             "index_method": IndexMethod.btree,
             "choices": None,

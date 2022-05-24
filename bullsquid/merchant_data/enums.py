@@ -2,8 +2,8 @@
 from enum import Enum
 
 
-class PlanStatus(str, Enum):
-    """Status enum used for plans and merchants."""
+class ResourceStatus(str, Enum):
+    """Status enum shared between most publishable/deletable resources."""
 
     ACTIVE = "active"  # live, available for use
     DRAFT = "draft"  # actively being set up

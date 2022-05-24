@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import TypedDict
 from uuid import UUID
 
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
 from bullsquid.merchant_data.primary_mids.models import PrimaryMIDMetadata
@@ -68,3 +69,13 @@ async def create_primary_mid(
         "date_added": mid.date_added,
         "txm_status": mid.txm_status,
     }
+
+
+async def update_primary_mids_status(
+    mid_refs: list[UUID], *, status: ResourceStatus, plan_ref: UUID, merchant_ref: UUID
+) -> None:
+    """Updates the status for a list of primary MIDs on a merchant."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    await PrimaryMID.update(status=status).where(
+        PrimaryMID.pk.is_in(mid_refs), PrimaryMID.merchant == merchant
+    )

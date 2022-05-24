@@ -3,9 +3,11 @@ import random
 from operator import itemgetter
 from uuid import uuid4
 
+from fastapi import status
 from fastapi.testclient import TestClient
 from ward import test
 
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
@@ -18,7 +20,7 @@ from tests.factories import (
     primary_mid_factory,
     three_merchants,
 )
-from tests.fixtures import auth_header, database, test_client
+from tests.fixtures import auth_header, test_client
 from tests.helpers import (
     assert_is_missing_field_error,
     assert_is_not_found_error,
@@ -361,3 +363,26 @@ async def _(
     )
 
     assert_is_null_error(resp, loc=["body", "mid_metadata", "mid"])
+
+
+@test("can delete a single MID")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+) -> None:
+    primary_mid = await primary_mid_factory(merchant=merchant)
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        headers=auth_header,
+        json=[str(primary_mid.pk)],
+    )
+
+    mid_status = (
+        await PrimaryMID.select(PrimaryMID.status)
+        .where(PrimaryMID.pk == primary_mid.pk)
+        .first()
+    )["status"]
+
+    assert resp.status_code == status.HTTP_204_NO_CONTENT
+    assert mid_status == ResourceStatus.PENDING_DELETION

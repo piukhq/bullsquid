@@ -76,6 +76,6 @@ async def update_primary_mids_status(
 ) -> None:
     """Updates the status for a list of primary MIDs on a merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
-    await PrimaryMID.update(status=status).where(
+    await PrimaryMID.update({PrimaryMID.status: status}).where(
         PrimaryMID.pk.is_in(mid_refs), PrimaryMID.merchant == merchant
     )

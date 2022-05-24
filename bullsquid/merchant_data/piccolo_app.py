@@ -21,7 +21,8 @@ APP_CONFIG = AppConfig(
             "bullsquid.merchant_data.payment_schemes.tables",
             "bullsquid.merchant_data.plans.tables",
             "bullsquid.merchant_data.primary_mids.tables",
-        ]
+        ],
+        exclude_imported=True,
     ),
     migration_dependencies=[],
     commands=[],

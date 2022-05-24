@@ -2,12 +2,18 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.merchant_data.db import NoSuchRecord, field_is_unique
+from bullsquid.merchant_data.enums import ResourceStatus
 
-from .db import PrimaryMIDResult, create_primary_mid, list_primary_mids
+from .db import (
+    PrimaryMIDResult,
+    create_primary_mid,
+    list_primary_mids,
+    update_primary_mids_status,
+)
 from .models import (
     CreatePrimaryMIDRequest,
     PrimaryMIDListResponse,
@@ -79,3 +85,14 @@ async def _(
         ) from ex
 
     return await create_primary_mid_response(mid)
+
+
+@router.post("/deletion", status_code=status.HTTP_204_NO_CONTENT)
+async def _(plan_ref: UUID, merchant_ref: UUID, mid_refs: list[UUID]) -> None:
+    """Remove a number of primary MIDs from a merchant."""
+    await update_primary_mids_status(
+        mid_refs,
+        status=ResourceStatus.PENDING_DELETION,
+        plan_ref=plan_ref,
+        merchant_ref=merchant_ref,
+    )

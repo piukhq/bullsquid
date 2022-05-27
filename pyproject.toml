@@ -25,6 +25,7 @@ requests = "^2.27.1"
 uvicorn = "^0.17.6"
 qbert = "^0.1.4"
 aiohttp = {extras = ["speedups"], version = "^3.8.1"}
+url-normalize = "^1.4.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.3.0"

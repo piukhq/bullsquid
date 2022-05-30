@@ -15,7 +15,7 @@ from bullsquid.api.errors import (
 
 @test("error response with default args is formatted correctly")
 def _() -> None:
-    with patch("bullsquid.api.errors.logger"):  # suppress logger output
+    with patch("bullsquid.api.errors.logger"):
         resp = error_response(Exception("Test exception"))
 
     assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -31,7 +31,7 @@ def _() -> None:
 
 @test("error response with custom args is formatted correctly")
 def _() -> None:
-    with patch("bullsquid.api.errors.logger"):  # suppress logger output
+    with patch("bullsquid.api.errors.logger"):
         resp = error_response(
             Exception("Test exception"),
             status_code=status.HTTP_418_IM_A_TEAPOT,

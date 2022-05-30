@@ -1,5 +1,5 @@
 """Merchant table definitions."""
-from piccolo.columns import UUID, Boolean, ForeignKey, Text
+from piccolo.columns import UUID, ForeignKey, Text
 from piccolo.table import Table
 
 from bullsquid.merchant_data.enums import ResourceStatus

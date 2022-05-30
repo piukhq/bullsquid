@@ -11,4 +11,6 @@ DB = PostgresEngine(
     log_queries=settings.trace_queries,
 )
 
-APP_REGISTRY = AppRegistry(apps=["bullsquid.merchant_data.piccolo_app"])
+APP_REGISTRY = AppRegistry(
+    apps=["bullsquid.merchant_data.piccolo_app", "qbert.piccolo_app"]
+)

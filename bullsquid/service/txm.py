@@ -29,12 +29,10 @@ class TXMServiceInterface(ServiceInterface):
         """Offboard MIDs from Harmonia."""
         mids = await PrimaryMID.select(
             PrimaryMID.mid,
-            PrimaryMID.merchant.plan.slug.as_alias("loyalty_plan"),
             PrimaryMID.payment_scheme.slug.as_alias("payment_scheme"),
-            PrimaryMID.location.location_id.as_alias("location_id"),
         ).where(PrimaryMID.pk.is_in(mid_refs))
 
-        return await self.post("/txm/mids/deletion", {"mids": mids})
+        return await self.post("/txm/mids/deletion", {"mids": mids, "locations": []})
 
 
 def create_txm_service_interface() -> TXMServiceInterface | MagicMock:

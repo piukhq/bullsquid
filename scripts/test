@@ -2,6 +2,11 @@
 . scripts/_common
 
 export PICCOLO_CONF=piccolo_conf_test
+export debug=true
+export api_key=test-api-key-123
+unset txm_base_url
+unset txm_api_key
+
 coverage run -m ward --progress-style bar "$@"
 coverage xml
 coverage report --skip-covered --skip-empty

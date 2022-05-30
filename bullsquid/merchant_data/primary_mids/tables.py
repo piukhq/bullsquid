@@ -1,5 +1,5 @@
 """Primary MID table definitions."""
-from piccolo.columns import UUID, Boolean, ForeignKey, Text, Timestamptz
+from piccolo.columns import UUID, ForeignKey, Text, Timestamptz
 from piccolo.table import Table
 
 from bullsquid.merchant_data.enums import (
@@ -24,6 +24,8 @@ class PrimaryMID(Table):
         choices=PaymentEnrolmentStatus, default=PaymentEnrolmentStatus.UNKNOWN
     )
     txm_status = Text(choices=TXMStatus, default=TXMStatus.NOT_ONBOARDED)
-    status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE, index=True, null=False)
+    status = Text(
+        choices=ResourceStatus, default=ResourceStatus.ACTIVE, index=True, null=False
+    )
     merchant = ForeignKey(Merchant, required=True, null=False)
     location = ForeignKey(Location, null=True, default=None)

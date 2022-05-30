@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TypedDict
 from uuid import UUID
 
-from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
 from bullsquid.merchant_data.primary_mids.models import PrimaryMIDMetadata
@@ -39,7 +39,33 @@ async def list_primary_mids(
         PrimaryMID.payment_enrolment_status,
         PrimaryMID.date_added,
         PrimaryMID.txm_status,
-    ).where(PrimaryMID.merchant == merchant)
+    ).where(
+        PrimaryMID.merchant == merchant, PrimaryMID.status != ResourceStatus.DELETED
+    )
+
+
+async def filter_onboarded_mid_refs(
+    mid_refs: list[UUID], *, plan_ref: UUID, merchant_ref: UUID
+) -> tuple[list[UUID], list[UUID]]:
+    """
+    Split the given list of primary MID refs into onboarded and not onboarded/offboarded.
+    """
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    return [
+        result["pk"]
+        for result in await PrimaryMID.select(PrimaryMID.pk).where(
+            PrimaryMID.pk.is_in(mid_refs),
+            PrimaryMID.merchant == merchant,
+            PrimaryMID.txm_status == TXMStatus.ONBOARDED,
+        )
+    ], [
+        result["pk"]
+        for result in await PrimaryMID.select(PrimaryMID.pk).where(
+            PrimaryMID.pk.is_in(mid_refs),
+            PrimaryMID.merchant == merchant,
+            PrimaryMID.txm_status != TXMStatus.ONBOARDED,
+        )
+    ]
 
 
 async def create_primary_mid(

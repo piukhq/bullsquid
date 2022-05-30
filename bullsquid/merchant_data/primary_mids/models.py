@@ -2,9 +2,11 @@
 
 
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import UUID4, validator
 
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.models import BaseModel
 from bullsquid.merchant_data.validators import string_must_not_be_blank
 
@@ -44,3 +46,16 @@ class PrimaryMIDListResponse(BaseModel):
     """Response model for a list of primary MIDs."""
 
     mids: list[PrimaryMIDResponse]
+
+
+class PrimaryMIDDeletionResponse(BaseModel):
+    """Response model for a deletion of a primary MID."""
+
+    mid_ref: UUID
+    status: ResourceStatus
+
+
+class PrimaryMIDDeletionListResponse(BaseModel):
+    """Response model for the deletion of primary MIDs."""
+
+    mids: list[PrimaryMIDDeletionResponse]

@@ -18,12 +18,12 @@ async def any_missing_migrations() -> list[MigrationStatus]:
     return [status for status in statuses if not status.has_ran]
 
 
-@router.get("/livez", status_code=204, response_class=Response)
+@router.get("/livez", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 async def liveness_check() -> None:
     """Liveness check. Returns 204 No Content if the server is alive."""
 
 
-@router.get("/readyz", status_code=200, response_model=ReadinessResult)
+@router.get("/readyz", status_code=status.HTTP_200_OK, response_model=ReadinessResult)
 async def readiness_check() -> dict:
     """
     Readiness check. Returns 200 OK if all required services are reachable,

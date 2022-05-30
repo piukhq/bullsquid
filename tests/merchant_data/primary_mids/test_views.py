@@ -5,13 +5,15 @@ from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
+from qbert.tables import Job
 from ward import test
 
-from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.tasks import OffboardAndDeletePrimaryMIDs, OnboardPrimaryMIDs
 from tests.factories import (
     merchant,
     payment_schemes,
@@ -76,6 +78,35 @@ async def _(
     assert resp.json() == {"mids": [await primary_mid_to_json(primary_mid)]}
 
 
+@test("deleted mids are not listed")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    primary_mid: PrimaryMID = primary_mid,
+) -> None:
+    # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
+    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+
+    merchant_ref, plan_ref = itemgetter("merchant", "merchant.plan")(
+        await PrimaryMID.select(
+            PrimaryMID.merchant,
+            PrimaryMID.merchant.plan,
+        )
+        .where(PrimaryMID.pk == primary_mid.pk)
+        .first()
+    )
+
+    # create a deleted primary MID that shouldn't be in the response
+    await primary_mid_factory(status=ResourceStatus.DELETED, merchant=merchant_ref)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/mids", headers=auth_header
+    )
+
+    assert resp.ok, resp.json()
+    assert resp.json() == {"mids": [await primary_mid_to_json(primary_mid)]}
+
+
 @test("can list primary mids from a specific plan")
 async def _(
     test_client: TestClient = test_client,
@@ -130,7 +161,7 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
-@test("can create a primary MID on a merchant")
+@test("can create a primary MID on a merchant without onboarding")
 async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
@@ -153,12 +184,49 @@ async def _(
     )
     assert resp.ok, resp.json()
 
-    expected = (
-        await PrimaryMID.objects()
-        .where(PrimaryMID.pk == resp.json()["mid_ref"])
-        .first()
-    )
+    mid_ref = resp.json()["mid_ref"]
+
+    expected = await PrimaryMID.objects().where(PrimaryMID.pk == mid_ref).first()
     assert resp.json() == await primary_mid_to_json(expected)
+
+    assert not await Job.exists().where(
+        Job.message_type == OnboardPrimaryMIDs.__name__,
+        Job.message == OnboardPrimaryMIDs(mid_refs=[mid_ref]).dict(),
+    )
+
+
+@test("can create and onboard a primary MID on a merchant")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+    payment_schemes: PaymentScheme = payment_schemes,
+) -> None:
+    primary_mid = await primary_mid_factory(persist=False)
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
+        headers=auth_header,
+        json={
+            "onboard": True,
+            "mid_metadata": {
+                "payment_scheme_code": payment_schemes[0].code,
+                "mid": primary_mid.mid,
+                "visa_bin": primary_mid.visa_bin,
+                "payment_enrolment_status": primary_mid.payment_enrolment_status,
+            },
+        },
+    )
+    assert resp.ok, resp.json()
+
+    mid_ref = resp.json()["mid_ref"]
+
+    expected = await PrimaryMID.objects().where(PrimaryMID.pk == mid_ref).first()
+    assert resp.json() == await primary_mid_to_json(expected)
+
+    assert await Job.exists().where(
+        Job.message_type == OnboardPrimaryMIDs.__name__,
+        Job.message == OnboardPrimaryMIDs(mid_refs=[mid_ref]).dict(),
+    )
 
 
 @test("can create a primary MID without a Visa BIN")
@@ -365,13 +433,15 @@ async def _(
     assert_is_null_error(resp, loc=["body", "mid_metadata", "mid"])
 
 
-@test("can delete a single MID")
+@test("a MID that is not onboarded is deleted and no qbert job is created")
 async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
     merchant: Merchant = merchant,
 ) -> None:
-    primary_mid = await primary_mid_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
+    )
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
         headers=auth_header,
@@ -384,5 +454,70 @@ async def _(
         .first()
     )["status"]
 
-    assert resp.status_code == status.HTTP_204_NO_CONTENT
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    assert mid_status == ResourceStatus.DELETED
+
+    assert not await Job.exists().where(
+        Job.message_type == OffboardAndDeletePrimaryMIDs.__name__,
+        Job.message == OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]).dict(),
+    )
+
+
+@test("a MID that is offboarded is deleted and no qbert job is created")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+) -> None:
+    primary_mid = await primary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.OFFBOARDED
+    )
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        headers=auth_header,
+        json=[str(primary_mid.pk)],
+    )
+
+    mid_status = (
+        await PrimaryMID.select(PrimaryMID.status)
+        .where(PrimaryMID.pk == primary_mid.pk)
+        .first()
+    )["status"]
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    assert mid_status == ResourceStatus.DELETED
+
+    assert not await Job.exists().where(
+        Job.message_type == OffboardAndDeletePrimaryMIDs.__name__,
+        Job.message == OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]).dict(),
+    )
+
+
+@test("a MID that is onboarded goes to pending deletion and a qbert job is created")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+) -> None:
+    primary_mid = await primary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.ONBOARDED
+    )
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        headers=auth_header,
+        json=[str(primary_mid.pk)],
+    )
+
+    mid_status = (
+        await PrimaryMID.select(PrimaryMID.status)
+        .where(PrimaryMID.pk == primary_mid.pk)
+        .first()
+    )["status"]
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED
     assert mid_status == ResourceStatus.PENDING_DELETION
+
+    assert await Job.exists().where(
+        Job.message_type == OffboardAndDeletePrimaryMIDs.__name__,
+        Job.message == OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]).dict(),
+    )

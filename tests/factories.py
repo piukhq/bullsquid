@@ -4,6 +4,7 @@ from typing import Any, Mapping
 from piccolo.testing.model_builder import ModelBuilder
 from ward import fixture
 
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
@@ -41,6 +42,10 @@ async def primary_mid_factory(
     *, persist: bool = True, **defaults: Mapping[str, Any]
 ) -> Merchant:
     """Creates and returns a primary MID."""
+    defaults = {
+        "status": ResourceStatus.ACTIVE,
+        **defaults,
+    }
     return await ModelBuilder.build(
         PrimaryMID,
         defaults=defaults,  # type: ignore

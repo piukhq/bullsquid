@@ -1,6 +1,7 @@
 """Ward fixture functions."""
 from typing import Generator
 
+from aioresponses import aioresponses
 from asyncpg import DuplicateTableError
 from fastapi.testclient import TestClient
 from piccolo.conf.apps import Finder
@@ -49,3 +50,12 @@ def test_client() -> TestClient:
     """Creates a FastAPI test client for the app."""
     app = create_app()
     return TestClient(app)
+
+
+@fixture
+def mock_responses() -> Generator[aioresponses, None, None]:
+    """
+    Mock responses for all external API requests.
+    """
+    with aioresponses() as mock:
+        yield mock

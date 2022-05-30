@@ -17,7 +17,14 @@
             "name": "Python: Tests",
             "type": "python",
             "request": "launch",
-            "module": "scripts.test",
+            "module": "ward",
+            "args": [
+                "--fail-limit",
+                "1"
+            ],
+            "env": {
+                "PICCOLO_CONF": "piccolo_conf_test"
+            }
         }
     ]
 }

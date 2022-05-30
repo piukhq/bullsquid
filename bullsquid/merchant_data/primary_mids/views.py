@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, status
 
+from bullsquid import tasks
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.merchant_data.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.enums import ResourceStatus
@@ -11,11 +12,14 @@ from bullsquid.merchant_data.enums import ResourceStatus
 from .db import (
     PrimaryMIDResult,
     create_primary_mid,
+    filter_onboarded_mid_refs,
     list_primary_mids,
     update_primary_mids_status,
 )
 from .models import (
     CreatePrimaryMIDRequest,
+    PrimaryMIDDeletionListResponse,
+    PrimaryMIDDeletionResponse,
     PrimaryMIDListResponse,
     PrimaryMIDMetadata,
     PrimaryMIDResponse,
@@ -84,15 +88,47 @@ async def _(
             loc=["path", "merchant_ref"], resource_name="Merchant"
         ) from ex
 
+    if mid_data.onboard:
+        await tasks.queue.push(tasks.OnboardPrimaryMIDs(mid_refs=[mid["pk"]]))
+
     return await create_primary_mid_response(mid)
 
 
-@router.post("/deletion", status_code=status.HTTP_204_NO_CONTENT)
-async def _(plan_ref: UUID, merchant_ref: UUID, mid_refs: list[UUID]) -> None:
+@router.post("/deletion", status_code=status.HTTP_202_ACCEPTED)
+async def _(
+    plan_ref: UUID, merchant_ref: UUID, mid_refs: list[UUID]
+) -> PrimaryMIDDeletionListResponse:
     """Remove a number of primary MIDs from a merchant."""
-    await update_primary_mids_status(
-        mid_refs,
-        status=ResourceStatus.PENDING_DELETION,
-        plan_ref=plan_ref,
-        merchant_ref=merchant_ref,
+
+    onboarded, not_onboarded = await filter_onboarded_mid_refs(
+        mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+    if onboarded:
+        await update_primary_mids_status(
+            onboarded,
+            status=ResourceStatus.PENDING_DELETION,
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+        await tasks.queue.push(tasks.OffboardAndDeletePrimaryMIDs(mid_refs=onboarded))
+
+    if not_onboarded:
+        await update_primary_mids_status(
+            not_onboarded,
+            status=ResourceStatus.DELETED,
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+
+    return PrimaryMIDDeletionListResponse(
+        mids=[
+            PrimaryMIDDeletionResponse(
+                mid_ref=mid_ref, status=ResourceStatus.PENDING_DELETION
+            )
+            for mid_ref in onboarded
+        ]
+        + [
+            PrimaryMIDDeletionResponse(mid_ref=mid_ref, status=ResourceStatus.DELETED)
+            for mid_ref in not_onboarded
+        ]
     )

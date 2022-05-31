@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import TypedDict
 from uuid import UUID
 
+from bullsquid.merchant_data.db import NoSuchRecord
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
@@ -51,6 +52,11 @@ async def filter_onboarded_mid_refs(
     Split the given list of primary MID refs into onboarded and not onboarded/offboarded.
     """
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+
+    count = await PrimaryMID.count().where(PrimaryMID.pk.is_in(mid_refs))
+    if count != len(mid_refs):
+        raise NoSuchRecord
+
     return [
         result["pk"]
         for result in await PrimaryMID.select(PrimaryMID.pk).where(

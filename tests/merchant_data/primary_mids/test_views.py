@@ -521,3 +521,34 @@ async def _(
         Job.message_type == OffboardAndDeletePrimaryMIDs.__name__,
         Job.message == OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]).dict(),
     )
+
+
+@test("deleting a MID that doesn't exist gives a useful error")
+def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+) -> None:
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        headers=auth_header,
+        json=[str(uuid4())],
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "mid_refs"])
+
+
+@test("sending a delete MIDs request with an empty body does nothing")
+def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+) -> None:
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        headers=auth_header,
+        json=[],
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    assert resp.json() == {"mids": []}

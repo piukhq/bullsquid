@@ -100,9 +100,18 @@ async def _(
 ) -> PrimaryMIDDeletionListResponse:
     """Remove a number of primary MIDs from a merchant."""
 
-    onboarded, not_onboarded = await filter_onboarded_mid_refs(
-        mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
-    )
+    if not mid_refs:
+        return PrimaryMIDDeletionListResponse(mids=[])
+
+    try:
+        onboarded, not_onboarded = await filter_onboarded_mid_refs(
+            mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError(
+            loc=["body", "mid_refs"], resource_name="PrimaryMID"
+        ) from ex
+
     if onboarded:
         await update_primary_mids_status(
             onboarded,

@@ -1,7 +1,8 @@
 """Location table definitions."""
-from piccolo.columns import UUID, Boolean, ForeignKey, Text
+from piccolo.columns import UUID, Boolean, ForeignKey, Text, Timestamptz
 from piccolo.table import Table
 
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
 
 
@@ -19,4 +20,6 @@ class Location(Table):
     country = Text(null=True, default=None)
     postcode = Text(null=True, default=None)
     merchant_internal_id = Text(null=True, default=None)
+    date_added = Timestamptz()
+    status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE)
     merchant = ForeignKey(Merchant, required=True)

@@ -15,4 +15,4 @@ class MerchantIdentifier(Table):
     name = Text(required=True)
     date_added = Timestamptz()
     is_deleted = Boolean(default=False)
-    merchant = ForeignKey(Merchant, required=True, null=False)
+    merchant = ForeignKey(Merchant, required=True)

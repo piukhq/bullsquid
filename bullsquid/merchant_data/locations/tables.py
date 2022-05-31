@@ -19,4 +19,4 @@ class Location(Table):
     country = Text(null=True, default=None)
     postcode = Text(null=True, default=None)
     merchant_internal_id = Text(null=True, default=None)
-    merchant = ForeignKey(Merchant, required=True, null=False)
+    merchant = ForeignKey(Merchant, required=True)

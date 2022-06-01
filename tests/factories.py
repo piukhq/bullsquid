@@ -14,13 +14,10 @@ from tests.fixtures import database
 
 async def plan_factory(*, persist: bool = True, **defaults: Mapping[str, Any]) -> Plan:
     """Creates and returns a plan."""
-    defaults = {
-        "status": ResourceStatus.ACTIVE,
-        **defaults,
-    }
     return await ModelBuilder.build(
         Plan,
         defaults={
+            "status": ResourceStatus.ACTIVE,
             "icon_url": "https://example.com/icon.png",
             **defaults,  # type: ignore
         },
@@ -32,13 +29,10 @@ async def merchant_factory(
     *, persist: bool = True, **defaults: Mapping[str, Any]
 ) -> Merchant:
     """Creates and returns a merchant."""
-    defaults = {
-        "status": ResourceStatus.ACTIVE,
-        **defaults,
-    }
     return await ModelBuilder.build(
         Merchant,
         defaults={
+            "status": ResourceStatus.ACTIVE,
             "icon_url": "https://example.com/icon.png",
             **defaults,  # type: ignore
         },
@@ -50,13 +44,12 @@ async def primary_mid_factory(
     *, persist: bool = True, **defaults: Mapping[str, Any]
 ) -> Merchant:
     """Creates and returns a primary MID."""
-    defaults = {
-        "status": ResourceStatus.ACTIVE,
-        **defaults,
-    }
     return await ModelBuilder.build(
         PrimaryMID,
-        defaults=defaults,  # type: ignore
+        defaults={
+            "status": ResourceStatus.ACTIVE,
+            **defaults,  # type: ignore
+        },
         persist=persist,
     )
 

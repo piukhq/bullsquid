@@ -49,18 +49,33 @@ def merchant_to_json(merchant: Merchant, payment_schemes: list[PaymentScheme]) -
 
 
 @test("can list merchants")
-@skip("not yet implemented")
 async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
-    merchants: list[dict] = three_merchants,
+    plan: Plan = plan,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
-    resp = test_client.get("/api/v1/merchants", headers=auth_header)
+    merchants = [
+        await merchant_factory(plan=plan),
+        await merchant_factory(plan=plan),
+        await merchant_factory(plan=plan),
+    ]
+
+    resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants", headers=auth_header)
     assert resp.ok, resp.json()
     assert resp.json() == [
         merchant_to_json(merchant, payment_schemes) for merchant in merchants
     ]
+
+
+@test("listing merchants on a non-existent plan returns a 404")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    resp = test_client.get(f"/api/v1/plans/{uuid4()}/merchants", headers=auth_header)
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("can create a merchant")

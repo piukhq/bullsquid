@@ -5,6 +5,7 @@ from uuid import UUID
 
 from bullsquid.merchant_data.db import NoSuchRecord
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
 
 from .tables import Merchant
@@ -22,14 +23,20 @@ async def get_merchant(pk: UUID, *, plan_ref: UUID) -> Merchant:
     return merchant
 
 
-async def list_merchants() -> list[Merchant]:
+async def list_merchants(plan_ref: UUID) -> list[Merchant]:
     """Return a list of all merchants."""
-    return await Merchant.objects().where(Merchant.status != ResourceStatus.DELETED)
+    plan = await get_plan(plan_ref)
+    return await Merchant.objects().where(
+        Merchant.plan == plan.pk, Merchant.status != ResourceStatus.DELETED
+    )
 
 
 async def count_merchants(plan_ref: UUID) -> int:
     """Return a count of merchants in a plan."""
-    return await Merchant.count().where(Merchant.plan == plan_ref)
+    plan = await get_plan(plan_ref)
+    return await Merchant.count().where(
+        Merchant.plan == plan.pk, Merchant.status != ResourceStatus.DELETED
+    )
 
 
 async def create_merchant(fields: Mapping[str, Any], *, plan: Plan) -> Merchant:

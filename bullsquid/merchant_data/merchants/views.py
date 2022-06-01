@@ -10,7 +10,7 @@ from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
 
-from .db import create_merchant
+from .db import create_merchant, list_merchants
 from .models import (
     CreateMerchantRequest,
     MerchantCountsResponse,
@@ -47,6 +47,23 @@ async def create_merchant_response(
             ],
         ),
     )
+
+
+@router.get("", response_model=list[MerchantResponse])
+async def _(plan_ref: UUID) -> list[dict]:
+    """List merchants on a plan."""
+    try:
+        merchants = await list_merchants(plan_ref)
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError(
+            loc=["path", "plan_ref"], resource_name="Plan"
+        ) from ex
+
+    payment_schemes = await list_payment_schemes()
+    return [
+        await create_merchant_response(merchant, payment_schemes)
+        for merchant in merchants
+    ]
 
 
 @router.post("", response_model=MerchantResponse)

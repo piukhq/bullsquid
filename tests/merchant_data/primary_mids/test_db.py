@@ -1,7 +1,4 @@
 """Test primary MIDs database access layer."""
-from datetime import timezone
-
-from pydantic import MissingDiscriminator
 from ward import test
 
 from bullsquid.merchant_data.merchants.tables import Merchant

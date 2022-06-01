@@ -14,6 +14,10 @@ from tests.fixtures import database
 
 async def plan_factory(*, persist: bool = True, **defaults: Mapping[str, Any]) -> Plan:
     """Creates and returns a plan."""
+    defaults = {
+        "status": ResourceStatus.ACTIVE,
+        **defaults,
+    }
     return await ModelBuilder.build(
         Plan,
         defaults={
@@ -28,6 +32,10 @@ async def merchant_factory(
     *, persist: bool = True, **defaults: Mapping[str, Any]
 ) -> Merchant:
     """Creates and returns a merchant."""
+    defaults = {
+        "status": ResourceStatus.ACTIVE,
+        **defaults,
+    }
     return await ModelBuilder.build(
         Merchant,
         defaults={

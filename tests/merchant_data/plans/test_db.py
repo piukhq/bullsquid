@@ -4,6 +4,7 @@ from uuid import uuid4
 from ward import raises, test
 
 from bullsquid.merchant_data.db import NoSuchRecord
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.plans.db import (
     create_plan,
     get_plan,
@@ -11,7 +12,7 @@ from bullsquid.merchant_data.plans.db import (
     update_plan,
 )
 from bullsquid.merchant_data.plans.tables import Plan
-from tests.factories import plan, three_plans
+from tests.factories import plan, plan_factory, three_plans
 from tests.fixtures import database
 
 
@@ -40,6 +41,16 @@ async def _(
 ) -> None:
     plans = await list_plans()
     assert len(plans) == 3
+
+
+@test("listing plans does not include deleted resources")
+async def _(_dB: None = database) -> None:
+    await plan_factory()
+    await plan_factory(status=ResourceStatus.DELETED)
+    await plan_factory()
+
+    plans = await list_plans()
+    assert len(plans) == 2
 
 
 @test("can create a plan")

@@ -3,6 +3,7 @@ from typing import Any, Mapping
 from uuid import UUID
 
 from bullsquid.merchant_data.db import NoSuchRecord
+from bullsquid.merchant_data.enums import ResourceStatus
 
 from .tables import Plan
 
@@ -17,7 +18,7 @@ async def get_plan(pk: UUID) -> Plan:
 
 async def list_plans() -> list[Plan]:
     """Return a list of all plans."""
-    return await Plan.objects()
+    return await Plan.objects().where(Plan.status != ResourceStatus.DELETED)
 
 
 async def create_plan(fields: Mapping[str, Any]) -> Plan:

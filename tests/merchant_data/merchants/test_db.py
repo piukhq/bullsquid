@@ -4,6 +4,7 @@ from uuid import uuid4
 from ward import raises, test
 
 from bullsquid.merchant_data.db import NoSuchRecord
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.db import (
     create_merchant,
     delete_merchant,
@@ -13,7 +14,7 @@ from bullsquid.merchant_data.merchants.db import (
 )
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
-from tests.factories import merchant, plan, three_merchants
+from tests.factories import merchant, merchant_factory, plan, three_merchants
 from tests.fixtures import database
 
 
@@ -59,6 +60,18 @@ async def _(
 ) -> None:
     merchants = await list_merchants()
     assert len(merchants) == 3
+
+
+@test("listing merchants does not include deleted records")
+async def _(
+    _db: None = database,
+) -> None:
+    await merchant_factory()
+    await merchant_factory(status=ResourceStatus.DELETED)
+    await merchant_factory()
+
+    merchants = await list_merchants()
+    assert len(merchants) == 2
 
 
 @test("can create a merchant")

@@ -17,21 +17,21 @@ bullsquid-worker = "bullsquid.cmd.worker:main"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-piccolo = {extras = ["postgres", "orjson"], version = "^0.74.4"}
+piccolo = {extras = ["orjson", "postgres"], version = "^0.75.0"}
 fastapi = "^0.78.0"
 loguru = "^0.6.0"
 sentry-sdk = "^1.5.12"
 requests = "^2.27.1"
 uvicorn = "^0.17.6"
-qbert = "^0.1.4"
+qbert = "^0.1.5"
 aiohttp = "^3.8.1"
 url-normalize = "^1.4.3"
 aiodns = "^3.0.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.3.0"
-pylint = "^2.13.9"
-mypy = "^0.960"
+pylint = "^2.14.1"
+mypy = "^0.961"
 ptpython = "^3.0.20"
 isort = "^5.10.1"
 types-ujson = "^4.2.1"
@@ -40,7 +40,7 @@ coverage = "^6.4"
 types-requests = "^2.27.29"
 types-PyYAML = "^6.0.7"
 watchgod = "^0.8.2"
-ward = "^0.66.0-beta.0"
+ward = "^0.66.0b0"
 aioresponses = "^0.7.3"
 
 [tool.poetry.group.cmd.dependencies]

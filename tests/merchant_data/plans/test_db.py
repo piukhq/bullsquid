@@ -44,7 +44,7 @@ async def _(
 
 
 @test("listing plans does not include deleted resources")
-async def _(_dB: None = database) -> None:
+async def _(_db: None = database) -> None:
     await plan_factory()
     await plan_factory(status=ResourceStatus.DELETED)
     await plan_factory()

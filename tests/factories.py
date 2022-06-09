@@ -5,6 +5,7 @@ from piccolo.testing.model_builder import ModelBuilder
 from ward import fixture
 
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
@@ -54,6 +55,20 @@ async def primary_mid_factory(
     )
 
 
+async def identifier_factory(
+    *, persist: bool = True, **defaults: Mapping[str, Any]
+) -> Identifier:
+    """Creates and returns an identifier."""
+    return await ModelBuilder.build(
+        Identifier,
+        defaults={
+            "status": ResourceStatus.ACTIVE,
+            **defaults,  # type: ignore
+        },
+        persist=persist,
+    )
+
+
 @fixture
 async def plan(_: None = database) -> Plan:
     """Creates and returns a plan."""
@@ -88,6 +103,18 @@ async def primary_mid(_: None = database) -> PrimaryMID:
 async def three_primary_mids(_: None = database) -> list[PrimaryMID]:
     """Creates and returns three primary MIDs."""
     return [await primary_mid_factory() for _ in range(3)]
+
+
+@fixture
+async def identifier(_: None = database) -> Identifier:
+    """Creates and returns an identifier."""
+    return await identifier_factory()
+
+
+@fixture
+async def three_identifiers(_: None = database) -> list[Identifier]:
+    """Creates and returns three identifiers."""
+    return [await identifier_factory() for _ in range(3)]
 
 
 @fixture

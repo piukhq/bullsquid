@@ -41,7 +41,8 @@ async def list_primary_mids(
         PrimaryMID.date_added,
         PrimaryMID.txm_status,
     ).where(
-        PrimaryMID.merchant == merchant, PrimaryMID.status != ResourceStatus.DELETED
+        PrimaryMID.merchant == merchant,
+        PrimaryMID.status != ResourceStatus.DELETED,
     )
 
 
@@ -52,6 +53,9 @@ async def filter_onboarded_mid_refs(
     Split the given list of primary MID refs into onboarded and not onboarded/offboarded.
     """
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+
+    # remove duplicates to ensure count mismatches are not caused by duplicate MIDs
+    mid_refs = list(set(mid_refs))
 
     count = await PrimaryMID.count().where(PrimaryMID.pk.is_in(mid_refs))
     if count != len(mid_refs):
@@ -104,7 +108,11 @@ async def create_primary_mid(
 
 
 async def update_primary_mids_status(
-    mid_refs: list[UUID], *, status: ResourceStatus, plan_ref: UUID, merchant_ref: UUID
+    mid_refs: list[UUID],
+    *,
+    status: ResourceStatus,
+    plan_ref: UUID,
+    merchant_ref: UUID,
 ) -> None:
     """Updates the status for a list of primary MIDs on a merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)

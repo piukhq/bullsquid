@@ -2,7 +2,7 @@
 from typing import Any, Mapping
 from uuid import UUID
 
-from bullsquid.merchant_data.db import NoSuchRecord
+from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.enums import ResourceStatus
 
 from .tables import Plan

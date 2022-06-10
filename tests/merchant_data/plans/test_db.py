@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from ward import raises, test
 
-from bullsquid.merchant_data.db import NoSuchRecord
+from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.plans.db import (
     create_plan,

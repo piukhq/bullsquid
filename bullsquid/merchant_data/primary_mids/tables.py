@@ -1,4 +1,3 @@
-# pylint: disable=duplicate-code
 """Primary MID table definitions."""
 from piccolo.columns import UUID, ForeignKey, Text, Timestamptz
 from piccolo.table import Table

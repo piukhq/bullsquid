@@ -6,7 +6,7 @@ from fastapi import APIRouter, status
 
 from bullsquid import tasks
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
-from bullsquid.merchant_data.db import NoSuchRecord, field_is_unique
+from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.enums import ResourceStatus
 
 from .db import (

@@ -10,6 +10,7 @@ from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from tests.fixtures import database
 
 
@@ -47,6 +48,20 @@ async def primary_mid_factory(
     """Creates and returns a primary MID."""
     return await ModelBuilder.build(
         PrimaryMID,
+        defaults={
+            "status": ResourceStatus.ACTIVE,
+            **defaults,  # type: ignore
+        },
+        persist=persist,
+    )
+
+
+async def secondary_mid_factory(
+    *, persist: bool = True, **defaults: Mapping[str, Any]
+) -> Merchant:
+    """Creates and returns a secondary MID."""
+    return await ModelBuilder.build(
+        SecondaryMID,
         defaults={
             "status": ResourceStatus.ACTIVE,
             **defaults,  # type: ignore
@@ -103,6 +118,18 @@ async def primary_mid(_: None = database) -> PrimaryMID:
 async def three_primary_mids(_: None = database) -> list[PrimaryMID]:
     """Creates and returns three primary MIDs."""
     return [await primary_mid_factory() for _ in range(3)]
+
+
+@fixture
+async def secondary_mid(_: None = database) -> SecondaryMID:
+    """Creates and returns a secondary MID."""
+    return await secondary_mid_factory()
+
+
+@fixture
+async def three_secondary_mids(_: None = database) -> list[SecondaryMID]:
+    """Creates and returns three secondary MIDs."""
+    return [await secondary_mid_factory() for _ in range(3)]
 
 
 @fixture

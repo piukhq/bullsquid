@@ -70,6 +70,7 @@ disable = [
     "redefined-outer-name",
     "too-few-public-methods",
     "fixme",
+    "duplicate-code",   # TODO: some of our code is highly similar, would be nice to fix
 ]
 good-names = [
     "pk",  # primary key

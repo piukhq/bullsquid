@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TypedDict
 from uuid import UUID
 
-from bullsquid.merchant_data.db import NoSuchRecord
+from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code

@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, status
 
 from bullsquid.api.errors import ResourceNotFoundError
-from bullsquid.merchant_data.db import NoSuchRecord
+from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.enums import ResourceStatus
 
 from .db import filter_onboarded_identifiers, update_identifiers_status

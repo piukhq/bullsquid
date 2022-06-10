@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from ward import raises, test
 
-from bullsquid.merchant_data.db import NoSuchRecord
+from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.identifiers.db import get_identifier
 from bullsquid.merchant_data.identifiers.tables import Identifier
 from tests.factories import identifier

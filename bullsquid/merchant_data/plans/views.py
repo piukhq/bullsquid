@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter
 
 from bullsquid.api.errors import APIMultiError, ResourceNotFoundError, UniqueError
-from bullsquid.merchant_data.db import NoSuchRecord, field_is_unique
+from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.merchants.db import count_merchants
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme

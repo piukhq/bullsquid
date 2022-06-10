@@ -1,7 +1,7 @@
 """Database operations for identifiers."""
 from uuid import UUID
 
-from bullsquid.merchant_data.db import NoSuchRecord
+from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.merchants.db import get_merchant

@@ -12,5 +12,9 @@ DB = PostgresEngine(
 )
 
 APP_REGISTRY = AppRegistry(
-    apps=["bullsquid.merchant_data.piccolo_app", "qbert.piccolo_app"]
+    apps=[
+        "bullsquid.merchant_data.piccolo_app",
+        "bullsquid.customer_wallet.piccolo_app",
+        "qbert.piccolo_app",
+    ]
 )

@@ -12,8 +12,8 @@ from bullsquid.merchant_data.plans.db import (
     update_plan,
 )
 from bullsquid.merchant_data.plans.tables import Plan
-from tests.factories import plan, plan_factory, three_plans
 from tests.fixtures import database
+from tests.merchant_data.factories import plan, plan_factory, three_plans
 
 
 @test("can get a plan by primary key")

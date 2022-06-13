@@ -5,7 +5,7 @@ from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.primary_mids.db import list_primary_mids
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
-from tests.factories import merchant, primary_mid_factory
+from tests.merchant_data.factories import merchant, primary_mid_factory
 
 
 @test("can list primary mids")

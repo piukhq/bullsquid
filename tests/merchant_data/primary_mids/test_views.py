@@ -14,20 +14,20 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.tasks import OffboardAndDeletePrimaryMIDs, OnboardPrimaryMIDs
-from tests.factories import (
-    merchant,
-    payment_schemes,
-    plan,
-    primary_mid,
-    primary_mid_factory,
-    three_merchants,
-)
 from tests.fixtures import auth_header, test_client
 from tests.helpers import (
     assert_is_missing_field_error,
     assert_is_not_found_error,
     assert_is_null_error,
     assert_is_uniqueness_error,
+)
+from tests.merchant_data.factories import (
+    merchant,
+    payment_schemes,
+    plan,
+    primary_mid,
+    primary_mid_factory,
+    three_merchants,
 )
 
 

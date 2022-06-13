@@ -40,7 +40,7 @@ coverage = "^6.4"
 types-requests = "^2.27.29"
 types-PyYAML = "^6.0.7"
 watchgod = "^0.8.2"
-ward = "^0.66.0b0"
+ward = "^0.66.1b0"
 aioresponses = "^0.7.3"
 
 [tool.poetry.group.cmd.dependencies]

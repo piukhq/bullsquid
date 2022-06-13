@@ -7,8 +7,8 @@ from ward import raises, test
 from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.secondary_mids.db import get_secondary_mid
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from tests.factories import secondary_mid
 from tests.fixtures import database
+from tests.merchant_data.factories import secondary_mid
 
 
 @test("can get a secondary MID")

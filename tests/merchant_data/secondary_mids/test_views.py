@@ -8,9 +8,9 @@ from ward import test
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from tests.factories import merchant, secondary_mid, secondary_mid_factory
 from tests.fixtures import auth_header, test_client
 from tests.helpers import assert_is_not_found_error
+from tests.merchant_data.factories import merchant, secondary_mid, secondary_mid_factory
 
 
 @test("can delete a secondary MID")

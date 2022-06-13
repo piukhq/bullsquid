@@ -1,4 +1,4 @@
-"""Model factories that clear the table after each test."""
+"""Fixtures & factory functions for building merchant data objects."""
 from typing import Any, Mapping
 
 from piccolo.testing.model_builder import ModelBuilder
@@ -14,7 +14,7 @@ from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from tests.fixtures import database
 
 
-async def plan_factory(*, persist: bool = True, **defaults: Mapping[str, Any]) -> Plan:
+async def plan_factory(*, persist: bool = True, **defaults: Any) -> Plan:
     """Creates and returns a plan."""
     return await ModelBuilder.build(
         Plan,
@@ -27,9 +27,7 @@ async def plan_factory(*, persist: bool = True, **defaults: Mapping[str, Any]) -
     )
 
 
-async def merchant_factory(
-    *, persist: bool = True, **defaults: Mapping[str, Any]
-) -> Merchant:
+async def merchant_factory(*, persist: bool = True, **defaults: Any) -> Merchant:
     """Creates and returns a merchant."""
     return await ModelBuilder.build(
         Merchant,
@@ -42,9 +40,7 @@ async def merchant_factory(
     )
 
 
-async def primary_mid_factory(
-    *, persist: bool = True, **defaults: Mapping[str, Any]
-) -> Merchant:
+async def primary_mid_factory(*, persist: bool = True, **defaults: Any) -> Merchant:
     """Creates and returns a primary MID."""
     return await ModelBuilder.build(
         PrimaryMID,
@@ -56,9 +52,7 @@ async def primary_mid_factory(
     )
 
 
-async def secondary_mid_factory(
-    *, persist: bool = True, **defaults: Mapping[str, Any]
-) -> Merchant:
+async def secondary_mid_factory(*, persist: bool = True, **defaults: Any) -> Merchant:
     """Creates and returns a secondary MID."""
     return await ModelBuilder.build(
         SecondaryMID,
@@ -70,9 +64,7 @@ async def secondary_mid_factory(
     )
 
 
-async def identifier_factory(
-    *, persist: bool = True, **defaults: Mapping[str, Any]
-) -> Identifier:
+async def identifier_factory(*, persist: bool = True, **defaults: Any) -> Identifier:
     """Creates and returns an identifier."""
     return await ModelBuilder.build(
         Identifier,

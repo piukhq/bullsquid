@@ -4,6 +4,8 @@ from typing import Any, TypedDict
 
 from piccolo.utils.encoding import dump_json
 
+from bullsquid.db import paginate
+
 from .tables import UserLookup
 
 
@@ -19,14 +21,14 @@ class UserLookupResult(TypedDict):
 
 
 async def list_user_lookups(
-    auth_id: str, *, n: int = 5, p: int = 0
+    auth_id: str, *, n: int, p: int = 1
 ) -> list[UserLookupResult]:
     """
     Get a list of user lookups for the given auth_id, sorted most recent to
     least recent.
     """
-    return (
-        await UserLookup.select(
+    return await paginate(
+        UserLookup.select(
             UserLookup.user_id,
             UserLookup.channel,
             UserLookup.display_text,
@@ -35,11 +37,10 @@ async def list_user_lookups(
             UserLookup.updated_at,
         )
         .where(UserLookup.auth_id == auth_id)
-        .order_by(UserLookup.updated_at, ascending=False)
-        .limit(n)
-        .offset(p * n)
-        .output(load_json=True)
-    )
+        .order_by(UserLookup.updated_at, ascending=False),
+        n=n,
+        p=p,
+    ).output(load_json=True)
 
 
 async def upsert_user_lookup(
@@ -50,8 +51,8 @@ async def upsert_user_lookup(
     display_text: str,
     lookup_type: str,
     criteria: Any,
-    n: int = 5,
-    p: int = 0,
+    n: int,
+    p: int = 1,
 ) -> list[UserLookupResult]:
     """
     Create or update a user lookup.

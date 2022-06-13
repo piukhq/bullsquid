@@ -8,11 +8,7 @@ from ward import test
 
 from bullsquid.customer_wallet.db import list_user_lookups, upsert_user_lookup
 from bullsquid.customer_wallet.tables import UserLookup
-from tests.customer_wallet.factories import (
-    three_user_lookups,
-    user_lookup,
-    user_lookup_factory,
-)
+from tests.customer_wallet.factories import user_lookup, user_lookup_factory
 from tests.fixtures import database
 
 
@@ -32,6 +28,7 @@ async def _(_db: None = database) -> None:
         display_text="test display text",
         lookup_type="jwt",
         criteria="test-token",
+        n=5,
     )
 
     lookup = (
@@ -61,6 +58,7 @@ async def _(user_lookup: UserLookup = user_lookup) -> None:
         display_text="new-display-text",
         lookup_type="new-type",
         criteria="new-criteria",
+        n=5,
     )
 
     updated_lookup = (
@@ -92,7 +90,7 @@ async def _(user_lookup: UserLookup = user_lookup) -> None:
 async def _(user_lookup: UserLookup = user_lookup) -> None:
     new_lookup = await user_lookup_factory(auth_id=user_lookup.auth_id)
 
-    assert await list_user_lookups(user_lookup.auth_id) == [
+    assert await list_user_lookups(user_lookup.auth_id, n=5) == [
         {
             "user_id": new_lookup.user_id,
             "channel": new_lookup.channel,
@@ -119,6 +117,7 @@ async def _(user_lookup: UserLookup = user_lookup) -> None:
         display_text=user_lookup.display_text,
         lookup_type=user_lookup.lookup_type,
         criteria=load_json(user_lookup.criteria),
+        n=5,
     )
 
     lookup = (
@@ -130,7 +129,7 @@ async def _(user_lookup: UserLookup = user_lookup) -> None:
         .first()
     )
 
-    assert await list_user_lookups(user_lookup.auth_id) == [
+    assert await list_user_lookups(user_lookup.auth_id, n=5) == [
         {
             "user_id": user_lookup.user_id,
             "channel": user_lookup.channel,
@@ -178,7 +177,7 @@ async def _(_db: None = database) -> None:
     lookups = [await user_lookup_factory(auth_id=auth_id) for _ in range(5)]
     lookups.sort(key=lambda l: l.updated_at, reverse=True)
 
-    results = await list_user_lookups(auth_id, n=2, p=2)
+    results = await list_user_lookups(auth_id, n=2, p=3)
     assert results == [
         {
             "user_id": lookup.user_id,

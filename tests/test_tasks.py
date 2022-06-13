@@ -15,8 +15,8 @@ from bullsquid.tasks import (
     queue,
     run_worker,
 )
-from tests.factories import primary_mid, primary_mid_factory
 from tests.fixtures import database
+from tests.merchant_data.factories import primary_mid, primary_mid_factory
 
 
 @test("run_worker executes jobs")

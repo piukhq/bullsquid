@@ -14,8 +14,13 @@ from bullsquid.merchant_data.merchants.db import (
 )
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
-from tests.factories import merchant, merchant_factory, plan, three_merchants
 from tests.fixtures import database
+from tests.merchant_data.factories import (
+    merchant,
+    merchant_factory,
+    plan,
+    three_merchants,
+)
 
 
 @test("can get a merchant by primary key")

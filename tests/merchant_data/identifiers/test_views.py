@@ -9,9 +9,9 @@ from ward import skip, test
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.merchants.tables import Merchant
-from tests.factories import identifier, identifier_factory, merchant
 from tests.fixtures import auth_header, test_client
 from tests.helpers import assert_is_not_found_error
+from tests.merchant_data.factories import identifier, identifier_factory, merchant
 
 
 @test("can delete an identifier")

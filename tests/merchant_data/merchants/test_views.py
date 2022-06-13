@@ -9,18 +9,18 @@ from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
-from tests.factories import (
-    merchant,
-    merchant_factory,
-    payment_schemes,
-    plan,
-    three_merchants,
-)
 from tests.fixtures import auth_header, database, test_client
 from tests.helpers import (
     assert_is_not_found_error,
     assert_is_uniqueness_error,
     assert_is_value_error,
+)
+from tests.merchant_data.factories import (
+    merchant,
+    merchant_factory,
+    payment_schemes,
+    plan,
+    three_merchants,
 )
 
 

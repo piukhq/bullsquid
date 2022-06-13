@@ -31,8 +31,8 @@ def paginate(query: Select, *, n: int, p: int) -> Select:
     `n` controls how many results are in the page.
     `p` controls which page of results is returned, starting with page #1.
     """
-    if n < 0:
-        raise ValueError("n must be >= 0")
+    if n < 1:
+        raise ValueError("n must be >= 1")
 
     if p < 1:
         raise ValueError("p must be >= 1")

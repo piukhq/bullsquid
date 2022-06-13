@@ -5,7 +5,7 @@ from typing import Any, Mapping
 from piccolo.testing.model_builder import ModelBuilder
 from ward import fixture
 
-from bullsquid.customer_wallet.tables import UserLookup
+from bullsquid.customer_wallet.user_lookups.tables import UserLookup
 from tests.fixtures import database
 
 

@@ -76,6 +76,8 @@ good-names = [
     "pk",  # primary key
     "ex",  # exception
     "v",   # pydantic validator value field
+    "n",   # pagination limit
+    "p",   # pagination page
 ]
 
 [tool.ward]

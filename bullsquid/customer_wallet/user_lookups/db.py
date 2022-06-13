@@ -53,7 +53,7 @@ async def upsert_user_lookup(
     criteria: Any,
     n: int,
     p: int = 1,
-) -> list[UserLookupResult]:
+) -> tuple[list[UserLookupResult], bool]:
     """
     Create or update a user lookup.
 
@@ -65,6 +65,7 @@ async def upsert_user_lookup(
     `n` and `p` are used to paginate the results.
 
     Returns the full list of user lookups as per `list_user_lookups(auth_id, n=n, p=p)`.
+    Also returns a boolean indicating if a new record was created.
     """
     # piccolo will automatically serialize dicts and lists, but if you give a
     # string to a JSON field it assumes it's a JSON string already. since
@@ -82,7 +83,8 @@ async def upsert_user_lookup(
             UserLookup.criteria: criteria,
         },
     )
-    if not lookup._was_created:  # pylint: disable=protected-access
+    created = lookup._was_created  # pylint: disable=protected-access
+    if not created:
         await UserLookup.update(
             {
                 UserLookup.lookup_type: lookup_type,
@@ -91,4 +93,4 @@ async def upsert_user_lookup(
             }
         ).where(where)
 
-    return await list_user_lookups(auth_id, n=n, p=p)
+    return await list_user_lookups(auth_id, n=n, p=p), created

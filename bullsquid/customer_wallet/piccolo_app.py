@@ -13,7 +13,7 @@ CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 APP_CONFIG = AppConfig(
     app_name="customer_wallet",
     migrations_folder_path=os.path.join(CURRENT_DIRECTORY, "piccolo_migrations"),
-    table_classes=table_finder(["bullsquid.customer_wallet.tables"]),
+    table_classes=table_finder(["bullsquid.customer_wallet.user_lookups.tables"]),
     migration_dependencies=[],
     commands=[],
 )

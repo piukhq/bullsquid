@@ -6,8 +6,11 @@ from datetime import timezone
 from piccolo.utils.encoding import load_json
 from ward import test
 
-from bullsquid.customer_wallet.db import list_user_lookups, upsert_user_lookup
-from bullsquid.customer_wallet.tables import UserLookup
+from bullsquid.customer_wallet.user_lookups.db import (
+    list_user_lookups,
+    upsert_user_lookup,
+)
+from bullsquid.customer_wallet.user_lookups.tables import UserLookup
 from tests.customer_wallet.factories import user_lookup, user_lookup_factory
 from tests.fixtures import database
 
@@ -21,7 +24,7 @@ async def _(_db: None = database) -> None:
         UserLookup.auth_id == auth_id, UserLookup.user_id == user_id
     )
 
-    lookups = await upsert_user_lookup(
+    lookups, created = await upsert_user_lookup(
         auth_id,
         user_id=user_id,
         channel="test-channel",
@@ -30,6 +33,8 @@ async def _(_db: None = database) -> None:
         criteria="test-token",
         n=5,
     )
+
+    assert created
 
     lookup = (
         await UserLookup.select(UserLookup.updated_at)
@@ -51,7 +56,7 @@ async def _(_db: None = database) -> None:
 
 @test("upserting an existing user lookup updates the lookup info and not the user info")
 async def _(user_lookup: UserLookup = user_lookup) -> None:
-    lookups = await upsert_user_lookup(
+    lookups, created = await upsert_user_lookup(
         user_lookup.auth_id,
         user_id=user_lookup.user_id,
         channel="new-channel",
@@ -60,6 +65,8 @@ async def _(user_lookup: UserLookup = user_lookup) -> None:
         criteria="new-criteria",
         n=5,
     )
+
+    assert not created
 
     updated_lookup = (
         await UserLookup.select(UserLookup.updated_at)

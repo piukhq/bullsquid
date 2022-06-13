@@ -10,7 +10,8 @@ from starlette.responses import JSONResponse
 
 from bullsquid.api.auth import check_api_key
 from bullsquid.api.errors import error_response
-from bullsquid.merchant_data.router import router as merchant_router
+from bullsquid.customer_wallet.router import router as customer_wallet_router
+from bullsquid.merchant_data.router import router as merchant_data_router
 from bullsquid.status.views import router as status_api
 
 
@@ -31,7 +32,12 @@ def create_app() -> FastAPI:
     )
     app.include_router(status_api, tags=["Status"])
     app.include_router(
-        merchant_router,
+        merchant_data_router,
+        prefix="/api/v1",
+        dependencies=[Depends(check_api_key)],
+    )
+    app.include_router(
+        customer_wallet_router,
         prefix="/api/v1",
         dependencies=[Depends(check_api_key)],
     )

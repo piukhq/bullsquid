@@ -56,7 +56,8 @@ async def list_plans() -> list[PlanResponse]:
     """List all plans."""
     payment_schemes = await list_payment_schemes()
     return [
-        await create_plan_response(plan, payment_schemes) for plan in await db.list_plans()
+        await create_plan_response(plan, payment_schemes)
+        for plan in await db.list_plans()
     ]
 
 

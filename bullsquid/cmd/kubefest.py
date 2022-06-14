@@ -11,6 +11,7 @@ Options:
     --version   Show version.
 """
 import re
+from typing import Any
 
 import yaml
 from docopt import docopt
@@ -26,6 +27,14 @@ METADATA_NAME = f"bullsquid-api.{NAMESPACE}.svc.cluster.local"
 
 PATH_PARAM_PATTERN = re.compile(r"\{.*?\}")
 PATH_PARAM_REPLACEMENT = r"[^/]*"
+
+
+class Dumper(yaml.Dumper):  # pylint: disable=too-many-ancestors
+    """YAML dumper that indents list keys."""
+
+    def increase_indent(self, *_args: Any, flow: bool = False, **_kwargs: Any) -> Any:
+        """Indent everything by the same amount."""
+        return super().increase_indent(flow=flow, indentless=False)
 
 
 class APIEndpoint(BaseModel):
@@ -101,7 +110,11 @@ def main() -> None:
     endpoints = get_endpoints(spec)
     if args["service-profile"]:
         service_profile = generate_service_profile(endpoints)
-        print(yaml.dump(service_profile, explicit_start=True, sort_keys=False))
+        print(
+            yaml.dump(
+                service_profile, explicit_start=True, sort_keys=False, Dumper=Dumper
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -3,13 +3,13 @@ from fastapi import APIRouter, Header, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from .db import UserLookupResult, list_user_lookups, upsert_user_lookup
+from . import db
 from .models import LookupResponse, User, UserLookupRequest, UserLookupResponse
 
 router = APIRouter(prefix="/user_lookups")
 
 
-def make_user_lookup_response(result: UserLookupResult) -> UserLookupResponse:
+def make_user_lookup_response(result: db.UserLookupResult) -> UserLookupResponse:
     """Turns the result of a user lookup query into an API response."""
     return UserLookupResponse(
         user=User(
@@ -26,14 +26,15 @@ def make_user_lookup_response(result: UserLookupResult) -> UserLookupResponse:
 
 
 @router.get("")
-async def _(
+async def list_user_lookups(
     user: str = Header(),
     n: int = Query(default=5),
     p: int = Query(default=1),
 ) -> list[UserLookupResponse]:
+    """List user lookups for the given user header."""
     return [
         make_user_lookup_response(result)
-        for result in await list_user_lookups(user, n=n, p=p)
+        for result in await db.list_user_lookups(user, n=n, p=p)
     ]
 
 
@@ -44,13 +45,14 @@ async def _(
         status.HTTP_201_CREATED: {"model": list[UserLookupResponse]},
     },
 )
-async def _(
+async def upsert_user_lookup(
     user_lookup: UserLookupRequest,
     user: str = Header(),
     n: int = Query(default=5),
     p: int = Query(default=1),
 ) -> JSONResponse:
-    results, created = await upsert_user_lookup(
+    """Upsert a user lookup for the given user header."""
+    results, created = await db.upsert_user_lookup(
         user,
         user_id=user_lookup.user.user_id,
         channel=user_lookup.user.channel,

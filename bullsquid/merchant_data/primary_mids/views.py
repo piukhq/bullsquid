@@ -9,13 +9,7 @@ from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.enums import ResourceStatus
 
-from .db import (
-    PrimaryMIDResult,
-    create_primary_mid,
-    filter_onboarded_mid_refs,
-    list_primary_mids,
-    update_primary_mids_status,
-)
+from . import db
 from .models import (
     CreatePrimaryMIDRequest,
     PrimaryMIDDeletionListResponse,
@@ -30,7 +24,7 @@ router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/mids")
 
 
 async def create_primary_mid_response(
-    primary_mid: PrimaryMIDResult,
+    primary_mid: db.PrimaryMIDResult,
 ) -> PrimaryMIDResponse:
     """Creates a PrimaryMIDResponse instance from the given primary MID."""
     return PrimaryMIDResponse(
@@ -47,7 +41,7 @@ async def create_primary_mid_response(
 
 
 async def create_primary_mid_list_response(
-    primary_mids: list[PrimaryMIDResult],
+    primary_mids: list[db.PrimaryMIDResult],
 ) -> PrimaryMIDListResponse:
     """Creates a PrimaryMIDListResponse instance from the given primary MIDs."""
     return PrimaryMIDListResponse(
@@ -56,10 +50,12 @@ async def create_primary_mid_list_response(
 
 
 @router.get("", response_model=PrimaryMIDListResponse)
-async def _(plan_ref: UUID, merchant_ref: UUID) -> PrimaryMIDListResponse:
+async def list_primary_mids(
+    plan_ref: UUID, merchant_ref: UUID
+) -> PrimaryMIDListResponse:
     """List all primary MIDs for a merchant."""
     try:
-        mids = await list_primary_mids(plan_ref=plan_ref, merchant_ref=merchant_ref)
+        mids = await db.list_primary_mids(plan_ref=plan_ref, merchant_ref=merchant_ref)
     except NoSuchRecord as ex:
         # the combination of plan & merchant refs did not lead to a merchant.
         raise ResourceNotFoundError(
@@ -70,7 +66,7 @@ async def _(plan_ref: UUID, merchant_ref: UUID) -> PrimaryMIDListResponse:
 
 
 @router.post("", response_model=PrimaryMIDResponse)
-async def _(
+async def create_primary_mid(
     plan_ref: UUID, merchant_ref: UUID, mid_data: CreatePrimaryMIDRequest
 ) -> PrimaryMIDResponse:
     """Create a primary MID for a merchant."""
@@ -79,7 +75,7 @@ async def _(
         raise UniqueError(loc=["body", "mid_metadata", "mid"])
 
     try:
-        mid = await create_primary_mid(
+        mid = await db.create_primary_mid(
             mid_data.mid_metadata, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
@@ -95,7 +91,7 @@ async def _(
 
 
 @router.post("/deletion", status_code=status.HTTP_202_ACCEPTED)
-async def _(
+async def delete_primary_mids(
     plan_ref: UUID, merchant_ref: UUID, mid_refs: list[UUID]
 ) -> PrimaryMIDDeletionListResponse:
     """Remove a number of primary MIDs from a merchant."""
@@ -104,7 +100,7 @@ async def _(
         return PrimaryMIDDeletionListResponse(mids=[])
 
     try:
-        onboarded, not_onboarded = await filter_onboarded_mid_refs(
+        onboarded, not_onboarded = await db.filter_onboarded_mid_refs(
             mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
@@ -113,7 +109,7 @@ async def _(
         ) from ex
 
     if onboarded:
-        await update_primary_mids_status(
+        await db.update_primary_mids_status(
             onboarded,
             status=ResourceStatus.PENDING_DELETION,
             plan_ref=plan_ref,
@@ -122,7 +118,7 @@ async def _(
         await tasks.queue.push(tasks.OffboardAndDeletePrimaryMIDs(mid_refs=onboarded))
 
     if not_onboarded:
-        await update_primary_mids_status(
+        await db.update_primary_mids_status(
             not_onboarded,
             status=ResourceStatus.DELETED,
             plan_ref=plan_ref,

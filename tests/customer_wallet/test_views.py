@@ -33,6 +33,57 @@ def user_lookup_resp_json(user_lookup: UserLookup) -> dict[str, Any]:
     return json
 
 
+@test("can list user lookups with default pagination")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    auth_id = "test-authed-user-1"
+    lookups = [await user_lookup_factory(auth_id=auth_id) for _ in range(5)]
+    lookups = [
+        await UserLookup.objects()
+        .get(UserLookup.id == lookup.id)
+        .output(load_json=True)
+        for lookup in lookups
+    ]
+    resp = test_client.get(
+        "/api/v1/customer_wallet/user_lookups",
+        headers={"user": auth_id, **auth_header},
+    )
+    assert resp.status_code == status.HTTP_200_OK
+
+    expected = [user_lookup_resp_json(lookup) for lookup in reversed(lookups)]
+    assert resp.json() == expected
+
+
+@test("can list user lookups with custom pagination")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    auth_id = "test-authed-user-1"
+    lookups = [await user_lookup_factory(auth_id=auth_id) for _ in range(5)]
+    lookups = [
+        await UserLookup.objects()
+        .get(UserLookup.id == lookup.id)
+        .output(load_json=True)
+        for lookup in lookups
+    ]
+    resp = test_client.get(
+        "/api/v1/customer_wallet/user_lookups",
+        params={"n": 2, "p": 2},
+        headers={"user": auth_id, **auth_header},
+    )
+    assert resp.status_code == status.HTTP_200_OK
+
+    expected = [
+        user_lookup_resp_json(lookup) for lookup in list(reversed(lookups))[2:4]
+    ]
+    assert resp.json() == expected
+
+
 @test("can upsert customer lookups with default pagination")
 async def _(
     _db: None = database,

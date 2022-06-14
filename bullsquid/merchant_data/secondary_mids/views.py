@@ -7,14 +7,14 @@ from bullsquid.api.errors import ResourceNotFoundError
 from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.enums import ResourceStatus
 
-from .db import filter_onboarded_secondary_mids, update_secondary_mids_status
+from . import db
 from .models import SecondaryMIDDeletionListResponse, SecondaryMIDDeletionResponse
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/secondary_mids")
 
 
 @router.post("/deletion", status_code=status.HTTP_202_ACCEPTED)
-async def _(
+async def delete_secondary_mids(
     plan_ref: UUID, merchant_ref: UUID, secondary_mid_refs: list[UUID]
 ) -> SecondaryMIDDeletionListResponse:
     """Remove a number of secondary MIDs from a merchant."""
@@ -22,7 +22,7 @@ async def _(
         return SecondaryMIDDeletionListResponse(secondary_mids=[])
 
     try:
-        onboarded, not_onboarded = await filter_onboarded_secondary_mids(
+        onboarded, not_onboarded = await db.filter_onboarded_secondary_mids(
             secondary_mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
@@ -31,7 +31,7 @@ async def _(
         ) from ex
 
     if onboarded:
-        await update_secondary_mids_status(
+        await db.update_secondary_mids_status(
             onboarded,
             status=ResourceStatus.PENDING_DELETION,
             plan_ref=plan_ref,
@@ -41,7 +41,7 @@ async def _(
         # await tasks.queue.push(tasks.OffboardAndDeleteSecondaryMIDs(secondary_mid_refs=onboarded))
 
     if not_onboarded:
-        await update_secondary_mids_status(
+        await db.update_secondary_mids_status(
             not_onboarded,
             status=ResourceStatus.DELETED,
             plan_ref=plan_ref,

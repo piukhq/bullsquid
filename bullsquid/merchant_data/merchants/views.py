@@ -10,7 +10,7 @@ from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
 
-from .db import create_merchant, list_merchants
+from . import db
 from .models import (
     CreateMerchantRequest,
     MerchantCountsResponse,
@@ -50,10 +50,10 @@ async def create_merchant_response(
 
 
 @router.get("", response_model=list[MerchantResponse])
-async def _(plan_ref: UUID) -> list[dict]:
+async def list_merchants(plan_ref: UUID) -> list[dict]:
     """List merchants on a plan."""
     try:
-        merchants = await list_merchants(plan_ref)
+        merchants = await db.list_merchants(plan_ref)
     except NoSuchRecord as ex:
         raise ResourceNotFoundError(
             loc=["path", "plan_ref"], resource_name="Plan"
@@ -67,7 +67,7 @@ async def _(plan_ref: UUID) -> list[dict]:
 
 
 @router.post("", response_model=MerchantResponse)
-async def _(plan_ref: UUID, merchant_data: CreateMerchantRequest) -> dict:
+async def create_merchant(plan_ref: UUID, merchant_data: CreateMerchantRequest) -> dict:
     """Add a new merchant to a plan."""
     try:
         plan = await get_plan(plan_ref)
@@ -79,6 +79,6 @@ async def _(plan_ref: UUID, merchant_data: CreateMerchantRequest) -> dict:
     if not await field_is_unique(Merchant, "name", merchant_data.name):
         raise UniqueError(loc=["body", "name"])
 
-    merchant = await create_merchant(merchant_data.dict(), plan=plan)
+    merchant = await db.create_merchant(merchant_data.dict(), plan=plan)
 
     return await create_merchant_response(merchant, await list_payment_schemes())

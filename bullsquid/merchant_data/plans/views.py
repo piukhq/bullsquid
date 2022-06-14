@@ -10,7 +10,7 @@ from bullsquid.merchant_data.merchants.db import count_merchants
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 
-from .db import create_plan, list_plans, update_plan
+from . import db
 from .models import (
     CreatePlanRequest,
     PlanCountsResponse,
@@ -52,16 +52,16 @@ async def create_plan_response(
 
 
 @router.get("", response_model=list[PlanResponse])
-async def _() -> list[PlanResponse]:
+async def list_plans() -> list[PlanResponse]:
     """List all plans."""
     payment_schemes = await list_payment_schemes()
     return [
-        await create_plan_response(plan, payment_schemes) for plan in await list_plans()
+        await create_plan_response(plan, payment_schemes) for plan in await db.list_plans()
     ]
 
 
 @router.post("", response_model=PlanResponse)
-async def _(plan_data: CreatePlanRequest) -> PlanResponse:
+async def create_plan(plan_data: CreatePlanRequest) -> PlanResponse:
     """Create a new plan."""
     plan_data = plan_data.dict()
     if errors := [
@@ -71,12 +71,12 @@ async def _(plan_data: CreatePlanRequest) -> PlanResponse:
     ]:
         raise APIMultiError(errors)
 
-    plan = await create_plan(plan_data)
+    plan = await db.create_plan(plan_data)
     return await create_plan_response(plan, await list_payment_schemes())
 
 
 @router.put("/{plan_ref}", response_model=PlanResponse)
-async def _(plan_ref: UUID, plan_data: CreatePlanRequest) -> PlanResponse:
+async def update_plan(plan_ref: UUID, plan_data: CreatePlanRequest) -> PlanResponse:
     """Update a plan's details."""
     plan_data = plan_data.dict()
     if errors := [
@@ -87,7 +87,7 @@ async def _(plan_ref: UUID, plan_data: CreatePlanRequest) -> PlanResponse:
         raise APIMultiError(errors)
 
     try:
-        plan = await update_plan(plan_ref, plan_data)
+        plan = await db.update_plan(plan_ref, plan_data)
     except NoSuchRecord as ex:
         raise ResourceNotFoundError(
             loc=("path", "plan_ref"), resource_name="Plan"

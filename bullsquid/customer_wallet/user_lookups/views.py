@@ -3,7 +3,7 @@ from fastapi import APIRouter, Header, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from .db import UserLookupResult, upsert_user_lookup
+from .db import UserLookupResult, list_user_lookups, upsert_user_lookup
 from .models import LookupResponse, User, UserLookupRequest, UserLookupResponse
 
 router = APIRouter(prefix="/user_lookups")
@@ -23,6 +23,18 @@ def make_user_lookup_response(result: UserLookupResult) -> UserLookupResponse:
             datetime=result["updated_at"],
         ),
     )
+
+
+@router.get("")
+async def _(
+    user: str = Header(),
+    n: int = Query(default=5),
+    p: int = Query(default=1),
+) -> list[UserLookupResponse]:
+    return [
+        make_user_lookup_response(result)
+        for result in await list_user_lookups(user, n=n, p=p)
+    ]
 
 
 @router.put(

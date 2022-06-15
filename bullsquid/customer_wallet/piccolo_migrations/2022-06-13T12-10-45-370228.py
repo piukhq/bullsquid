@@ -5,7 +5,7 @@ from piccolo.columns.indexes import IndexMethod
 
 ID = "2022-06-13T12:10:45:370228"
 VERSION = "0.74.4"
-DESCRIPTION = ""
+DESCRIPTION = "add user lookup table"
 
 
 async def forwards():

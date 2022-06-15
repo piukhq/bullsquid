@@ -7,7 +7,7 @@ class UserLookup(Table):
     """Stores user lookups, uniquely identified by user_id."""
 
     auth_id = Text(index=True)
-    user_id = Text(unique=True)
+    user_id = Text()
     channel = Text()
     display_text = Text()
     lookup_type = Text()

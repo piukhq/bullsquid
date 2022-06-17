@@ -3,14 +3,76 @@ from uuid import UUID
 
 from fastapi import APIRouter, status
 
-from bullsquid.api.errors import ResourceNotFoundError
-from bullsquid.db import NoSuchRecord
+from bullsquid.api.errors import ResourceNotFoundError, UniqueError
+from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 from . import db
-from .models import SecondaryMIDDeletionListResponse, SecondaryMIDDeletionResponse
+from .models import (
+    CreateSecondaryMIDRequest,
+    SecondaryMIDDeletionListResponse,
+    SecondaryMIDDeletionResponse,
+    SecondaryMIDMetadata,
+    SecondaryMIDResponse,
+)
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/secondary_mids")
+
+
+async def create_secondary_mid_response(
+    secondary_mid: db.SecondaryMIDResult,
+) -> SecondaryMIDResponse:
+    """Creates a SecondaryMIDResponse instance from the given secondary MID."""
+    return SecondaryMIDResponse(
+        secondary_mid_ref=secondary_mid["pk"],
+        secondary_mid_metadata=SecondaryMIDMetadata(
+            payment_scheme_code=secondary_mid["payment_scheme.code"],
+            secondary_mid=secondary_mid["secondary_mid"],
+            payment_scheme_store_name=secondary_mid["payment_scheme_store_name"],
+            payment_enrolment_status=secondary_mid["payment_enrolment_status"],
+        ),
+        secondary_mid_status=secondary_mid["status"],
+        date_added=secondary_mid["date_added"],
+        txm_status=secondary_mid["txm_status"],
+    )
+
+
+@router.post("", response_model=SecondaryMIDResponse)
+async def create_secondary_mid(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    secondary_mid_data: CreateSecondaryMIDRequest,
+) -> SecondaryMIDResponse:
+    """Create a secondary MID for a merchant."""
+
+    if not await field_is_unique(
+        SecondaryMID,
+        "secondary_mid",
+        secondary_mid_data.secondary_mid_metadata.secondary_mid,
+    ):
+        raise UniqueError(loc=["body", "secondary_mid_metadata", "secondary_mid"])
+
+    try:
+        secondary_mid = await db.create_secondary_mid(
+            secondary_mid_data.secondary_mid_metadata,
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+    except NoSuchRecord as ex:
+        # the combination of plan & merchant refs did not lead to a merchant.
+        raise ResourceNotFoundError(
+            loc=["path", "merchant_ref"], resource_name="Merchant"
+        ) from ex
+
+    if secondary_mid_data.onboard:
+        # TODO: implement once harmonia has support for secondary MID onboarding.
+        # await tasks.queue.push(
+        #     tasks.OnboardSecondaryMIDs(secondary_mid_refs=[secondary_mid["pk"]])
+        # )
+        ...
+
+    return await create_secondary_mid_response(secondary_mid)
 
 
 @router.post("/deletion", status_code=status.HTTP_202_ACCEPTED)

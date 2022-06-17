@@ -16,7 +16,7 @@ class SecondaryMID(Table):
 
     pk = UUID(primary_key=True)
     secondary_mid = Text(unique=True, required=True)
-    store_name = Text(null=True, default=None)
+    payment_scheme_store_name = Text(null=True, default=None)
     payment_scheme = ForeignKey(PaymentScheme, required=True)
     date_added = Timestamptz()
     payment_enrolment_status = Text(

@@ -166,7 +166,7 @@ async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
     merchant: Merchant = merchant,
-    payment_schemes: PaymentScheme = payment_schemes,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
@@ -200,7 +200,7 @@ async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
     merchant: Merchant = merchant,
-    payment_schemes: PaymentScheme = payment_schemes,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
@@ -234,7 +234,7 @@ async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
     merchant: Merchant = merchant,
-    payment_schemes: PaymentScheme = payment_schemes,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
@@ -264,7 +264,7 @@ async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
     merchant: Merchant = merchant,
-    payment_schemes: PaymentScheme = payment_schemes,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
@@ -289,7 +289,7 @@ async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
     plan: Plan = plan,
-    payment_schemes: PaymentScheme = payment_schemes,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
@@ -314,7 +314,7 @@ async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
     merchant: Merchant = merchant,
-    payment_schemes: PaymentScheme = payment_schemes,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
     existing_mid: PrimaryMID = primary_mid,
 ) -> None:
     new_mid = await primary_mid_factory(persist=False)
@@ -389,7 +389,7 @@ async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
     merchant: Merchant = merchant,
-    payment_schemes: PaymentScheme = payment_schemes,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
@@ -413,7 +413,7 @@ async def _(
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
     merchant: Merchant = merchant,
-    payment_schemes: PaymentScheme = payment_schemes,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(

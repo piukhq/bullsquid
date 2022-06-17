@@ -12,7 +12,7 @@ from bullsquid.merchant_data.validators import string_must_not_be_blank
 
 
 class PrimaryMIDMetadata(BaseModel):
-    """Primary MID metadata response model."""
+    """Primary MID metadata model."""
 
     payment_scheme_code: int
     mid: str

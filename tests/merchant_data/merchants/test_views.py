@@ -20,12 +20,15 @@ from tests.merchant_data.factories import (
     merchant_factory,
     payment_schemes,
     plan,
+    plan_factory,
     three_merchants,
 )
 
 
-def merchant_to_json(merchant: Merchant, payment_schemes: list[PaymentScheme]) -> dict:
-    """Convert a merchant to its expected JSON representation."""
+def merchant_list_to_json(
+    merchant: Merchant, payment_schemes: list[PaymentScheme]
+) -> dict:
+    """Convert a merchant to its expected list JSON representation."""
     return {
         "merchant_ref": str(merchant.pk),
         "merchant_status": merchant.status,
@@ -48,6 +51,25 @@ def merchant_to_json(merchant: Merchant, payment_schemes: list[PaymentScheme]) -
     }
 
 
+async def merchant_detail_to_json(merchant: Merchant) -> dict:
+    """Convert a merchant to its expected detail JSON representation."""
+    plan: Plan = await merchant.get_related(Merchant.plan)
+    return {
+        "merchant_ref": str(merchant.pk),
+        "plan_metadata": {
+            "name": plan.name,
+            "plan_id": plan.plan_id,
+            "slug": plan.slug,
+            "icon_url": plan.icon_url,
+        },
+        "merchant_metadata": {
+            "name": merchant.name,
+            "icon_url": merchant.icon_url,
+            "location_label": merchant.location_label,
+        },
+    }
+
+
 @test("can list merchants")
 async def _(
     test_client: TestClient = test_client,
@@ -64,7 +86,7 @@ async def _(
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants", headers=auth_header)
     assert resp.ok, resp.json()
     assert resp.json() == [
-        merchant_to_json(merchant, payment_schemes) for merchant in merchants
+        merchant_list_to_json(merchant, payment_schemes) for merchant in merchants
     ]
 
 
@@ -76,6 +98,45 @@ async def _(
 ) -> None:
     resp = test_client.get(f"/api/v1/plans/{uuid4()}/merchants", headers=auth_header)
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+@test("can get merchant details")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}", headers=auth_header
+    )
+    assert resp.ok, resp.json()
+    assert resp.json() == await merchant_detail_to_json(merchant)
+
+
+@test("getting merchant details from a non-existent plan returns a 404")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+) -> None:
+    resp = test_client.get(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}", headers=auth_header
+    )
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("getting details from a non-existent merchant returns a 404")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    plan: Plan = plan,
+) -> None:
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}", headers=auth_header
+    )
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
 @test("can create a merchant")
@@ -97,7 +158,7 @@ async def _(
     )
     assert resp.ok, resp.json()
     merchant = await get_merchant(resp.json()["merchant_ref"], plan_ref=plan.pk)
-    assert resp.json() == merchant_to_json(merchant, payment_schemes)
+    assert resp.json() == merchant_list_to_json(merchant, payment_schemes)
 
 
 @test("unable to create a merchant with a duplicate name")
@@ -197,7 +258,7 @@ async def _(
     )
     assert resp.ok, resp.json()
     merchant = await get_merchant(merchant.pk, plan_ref=merchant.plan)
-    assert resp.json() == merchant_to_json(merchant, payment_schemes)
+    assert resp.json() == merchant_list_to_json(merchant, payment_schemes)
     assert merchant.name == new_details.name
     assert merchant.merchant_id == new_details.merchant_id
     assert merchant.slug == new_details.slug

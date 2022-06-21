@@ -2,6 +2,7 @@
 from pydantic import UUID4, validator
 
 from bullsquid.merchant_data.models import BaseModel
+from bullsquid.merchant_data.plans.models import PlanMetadataResponse
 from bullsquid.merchant_data.validators import FlexibleUrl, string_must_not_be_blank
 
 
@@ -42,7 +43,7 @@ class MerchantCountsResponse(BaseModel):
     payment_schemes: list[MerchantPaymentSchemeCountResponse]
 
 
-class MerchantResponse(BaseModel):
+class MerchantOverviewResponse(BaseModel):
     """Merchant response model."""
 
     merchant_ref: UUID4
@@ -51,3 +52,11 @@ class MerchantResponse(BaseModel):
     merchant_counts: MerchantCountsResponse
 
     _ = validator("merchant_status", allow_reuse=True)(string_must_not_be_blank)
+
+
+class MerchantDetailResponse(BaseModel):
+    """Merchant detail response model."""
+
+    merchant_ref: UUID4
+    plan_metadata: PlanMetadataResponse
+    merchant_metadata: MerchantMetadataResponse

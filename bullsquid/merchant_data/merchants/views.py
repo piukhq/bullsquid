@@ -9,32 +9,40 @@ from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
+from bullsquid.merchant_data.plans.models import PlanMetadataResponse
+from bullsquid.merchant_data.plans.tables import Plan
 
 from . import db
 from .models import (
     CreateMerchantRequest,
     MerchantCountsResponse,
+    MerchantDetailResponse,
     MerchantMetadataResponse,
+    MerchantOverviewResponse,
     MerchantPaymentSchemeCountResponse,
-    MerchantResponse,
 )
 from .tables import Merchant
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants")
 
 
-async def create_merchant_response(
+def create_merchant_metadata_response(merchant: Merchant) -> MerchantMetadataResponse:
+    """Creates a MerchantMetadataResponse instance from the given merchant object."""
+    return MerchantMetadataResponse(
+        name=merchant.name,
+        icon_url=merchant.icon_url,
+        location_label=merchant.location_label,
+    )
+
+
+async def create_merchant_overview_response(
     merchant: Merchant, payment_schemes: list[PaymentScheme]
-) -> MerchantResponse:
-    """Creates a MerchantResponse instance from the given merchant object."""
-    return MerchantResponse(
+) -> MerchantOverviewResponse:
+    """Creates a MerchantOverviewResponse instance from the given merchant object."""
+    return MerchantOverviewResponse(
         merchant_ref=merchant.pk,
         merchant_status=merchant.status,
-        merchant_metadata=MerchantMetadataResponse(
-            name=merchant.name,
-            icon_url=merchant.icon_url,
-            location_label=merchant.location_label,
-        ),
+        merchant_metadata=create_merchant_metadata_response(merchant),
         merchant_counts=MerchantCountsResponse(
             locations=0,
             payment_schemes=[
@@ -49,8 +57,24 @@ async def create_merchant_response(
     )
 
 
-@router.get("", response_model=list[MerchantResponse])
-async def list_merchants(plan_ref: UUID) -> list[dict]:
+async def create_merchant_detail_response(
+    merchant: Merchant, plan: Plan
+) -> MerchantDetailResponse:
+    """Creates a MerchantDetailResponse instance from the given merchant object."""
+    return MerchantDetailResponse(
+        merchant_ref=merchant.pk,
+        plan_metadata=PlanMetadataResponse(
+            name=plan.name,
+            plan_id=plan.plan_id,
+            slug=plan.slug,
+            icon_url=plan.icon_url,
+        ),
+        merchant_metadata=create_merchant_metadata_response(merchant),
+    )
+
+
+@router.get("", response_model=list[MerchantOverviewResponse])
+async def list_merchants(plan_ref: UUID) -> list[MerchantOverviewResponse]:
     """List merchants on a plan."""
     try:
         merchants = await db.list_merchants(plan_ref)
@@ -61,12 +85,26 @@ async def list_merchants(plan_ref: UUID) -> list[dict]:
 
     payment_schemes = await list_payment_schemes()
     return [
-        await create_merchant_response(merchant, payment_schemes)
+        await create_merchant_overview_response(merchant, payment_schemes)
         for merchant in merchants
     ]
 
 
-@router.post("", response_model=MerchantResponse)
+@router.get("/{merchant_ref}", response_model=MerchantDetailResponse)
+async def get_merchant(plan_ref: UUID, merchant_ref: UUID) -> MerchantDetailResponse:
+    """Get merchant details."""
+    try:
+        merchant = await db.get_merchant(merchant_ref, plan_ref=plan_ref)
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError(
+            loc=["path", "merchant_ref"], resource_name="Merchant"
+        ) from ex
+
+    plan = await merchant.get_related(Merchant.plan)
+    return await create_merchant_detail_response(merchant, plan)
+
+
+@router.post("", response_model=MerchantOverviewResponse)
 async def create_merchant(plan_ref: UUID, merchant_data: CreateMerchantRequest) -> dict:
     """Add a new merchant to a plan."""
     try:
@@ -81,4 +119,6 @@ async def create_merchant(plan_ref: UUID, merchant_data: CreateMerchantRequest) 
 
     merchant = await db.create_merchant(merchant_data.dict(), plan=plan)
 
-    return await create_merchant_response(merchant, await list_payment_schemes())
+    return await create_merchant_overview_response(
+        merchant, await list_payment_schemes()
+    )

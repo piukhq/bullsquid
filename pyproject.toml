@@ -80,6 +80,10 @@ good-names = [
     "p",   # pagination page
 ]
 
+[tool.pyright]
+reportGeneralTypeIssues = false
+reportPrivateImportUsage = false
+
 [tool.ward]
 order = "random"
 

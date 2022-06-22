@@ -56,6 +56,23 @@ async def list_secondary_mids(
     return [await create_secondary_mid_response(mid) for mid in secondary_mids]
 
 
+@router.get("/{secondary_mid_ref}", response_model=SecondaryMIDResponse)
+async def get_secondary_mid_details(
+    plan_ref: UUID, merchant_ref: UUID, secondary_mid_ref: UUID
+) -> SecondaryMIDResponse:
+    """Returns details of a single secondary MID."""
+    try:
+        mid = await db.get_secondary_mid(
+            secondary_mid_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError(
+            loc=["path", "secondary_mid_ref"], resource_name="Secondary MID"
+        ) from ex
+
+    return await create_secondary_mid_response(mid)
+
+
 @router.post("", response_model=SecondaryMIDResponse)
 async def create_secondary_mid(
     plan_ref: UUID,
@@ -107,7 +124,7 @@ async def delete_secondary_mids(
         )
     except NoSuchRecord as ex:
         raise ResourceNotFoundError(
-            loc=["body", "secondary_mid_refs"], resource_name="SecondaryMID"
+            loc=["body", "secondary_mid_refs"], resource_name="Secondary MID"
         ) from ex
 
     if onboarded:

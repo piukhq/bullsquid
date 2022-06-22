@@ -1,5 +1,5 @@
 """Fixtures & factory functions for building merchant data objects."""
-from typing import Any, Mapping
+from typing import Any
 
 from piccolo.testing.model_builder import ModelBuilder
 from ward import fixture
@@ -40,7 +40,7 @@ async def merchant_factory(*, persist: bool = True, **defaults: Any) -> Merchant
     )
 
 
-async def primary_mid_factory(*, persist: bool = True, **defaults: Any) -> Merchant:
+async def primary_mid_factory(*, persist: bool = True, **defaults: Any) -> PrimaryMID:
     """Creates and returns a primary MID."""
     return await ModelBuilder.build(
         PrimaryMID,
@@ -52,7 +52,9 @@ async def primary_mid_factory(*, persist: bool = True, **defaults: Any) -> Merch
     )
 
 
-async def secondary_mid_factory(*, persist: bool = True, **defaults: Any) -> Merchant:
+async def secondary_mid_factory(
+    *, persist: bool = True, **defaults: Any
+) -> SecondaryMID:
     """Creates and returns a secondary MID."""
     return await ModelBuilder.build(
         SecondaryMID,

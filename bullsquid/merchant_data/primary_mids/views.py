@@ -105,7 +105,7 @@ async def delete_primary_mids(
         )
     except NoSuchRecord as ex:
         raise ResourceNotFoundError(
-            loc=["body", "mid_refs"], resource_name="PrimaryMID"
+            loc=["body", "mid_refs"], resource_name="Primary MID"
         ) from ex
 
     if onboarded:

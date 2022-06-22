@@ -12,7 +12,7 @@ from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from tests.fixtures import auth_header, test_client
+from tests.fixtures import auth_header, database, test_client
 from tests.helpers import (
     assert_is_missing_field_error,
     assert_is_not_found_error,
@@ -21,8 +21,10 @@ from tests.helpers import (
 )
 from tests.merchant_data.factories import (
     merchant,
+    merchant_factory,
     payment_schemes,
     plan,
+    plan_factory,
     secondary_mid,
     secondary_mid_factory,
     three_merchants,
@@ -165,6 +167,73 @@ async def _(
     )
 
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can get secondary MID details")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}",
+        headers=auth_header,
+    )
+
+    assert resp.status_code == 200, resp.json()
+
+    mid_ref = resp.json()["secondary_mid_ref"]
+    expected = await SecondaryMID.objects().where(SecondaryMID.pk == mid_ref).first()
+    assert resp.json() == await secondary_mid_to_json(expected)
+
+
+@test("can't get secondary MID details from a non-existant secondary MID")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/{uuid4()}",
+        headers=auth_header,
+    )
+    assert_is_not_found_error(resp, loc=["path", "secondary_mid_ref"])
+
+
+@test("can't get secondary MID details from a non-existant merchant")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/secondary_mids/{secondary_mid.pk}",
+        headers=auth_header,
+    )
+    assert_is_not_found_error(resp, loc=["path", "secondary_mid_ref"])
+
+
+@test("can't get secondary MID details from a non-existant plan")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    merchant = await merchant_factory()
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}",
+        headers=auth_header,
+    )
+    assert_is_not_found_error(resp, loc=["path", "secondary_mid_ref"])
 
 
 @test("can create a secondary MID on a merchant without onboarding")

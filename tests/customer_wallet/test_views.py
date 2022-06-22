@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import status
 from fastapi.testclient import TestClient
+from requests import Response
 from ward import test
 
 from bullsquid.customer_wallet.user_lookups.tables import UserLookup
@@ -93,6 +94,8 @@ async def _(
     auth_id = "test-authed-user-1"
     lookups = []
 
+    resp: Response | None = None
+    lookup: UserLookup | None = None
     for _ in range(10):
         user_id = secrets.token_urlsafe()
         lookup = await user_lookup_factory(persist=False, user_id=user_id)
@@ -113,6 +116,7 @@ async def _(
         )
 
     assert lookup is not None
+    assert resp is not None
 
     assert resp.status_code == status.HTTP_201_CREATED
 
@@ -130,6 +134,8 @@ async def _(
     auth_id = "test-authed-user-1"
     lookups = []
 
+    resp: Response | None = None
+    lookup: UserLookup | None = None
     for _ in range(10):
         user_id = secrets.token_urlsafe()
         lookup = await user_lookup_factory(persist=False, user_id=user_id)
@@ -151,6 +157,7 @@ async def _(
         )
 
     assert lookup is not None
+    assert resp is not None
 
     assert resp.status_code == status.HTTP_201_CREATED
 

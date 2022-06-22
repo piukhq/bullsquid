@@ -1,4 +1,6 @@
 """Tests for secondary MID API endpoints."""
+import random
+from operator import itemgetter
 from uuid import uuid4
 
 from fastapi import status
@@ -23,6 +25,7 @@ from tests.merchant_data.factories import (
     plan,
     secondary_mid,
     secondary_mid_factory,
+    three_merchants,
 )
 
 
@@ -46,6 +49,122 @@ async def secondary_mid_to_json(mid: SecondaryMID) -> dict:
         "date_added": mid.date_added.isoformat(),
         "txm_status": mid.txm_status,
     }
+
+
+@test("can list secondary MIDs")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    secondary_mid: SecondaryMID = secondary_mid,
+) -> None:
+    # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
+    secondary_mid = await SecondaryMID.objects().get(
+        SecondaryMID.pk == secondary_mid.pk
+    )
+
+    merchant_ref, plan_ref = itemgetter("merchant", "merchant.plan")(
+        await SecondaryMID.select(
+            SecondaryMID.merchant,
+            SecondaryMID.merchant.plan,
+        )
+        .where(SecondaryMID.pk == secondary_mid.pk)
+        .first()
+    )
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/secondary_mids",
+        headers=auth_header,
+    )
+
+    assert resp.ok, resp.json()
+    assert resp.json() == [await secondary_mid_to_json(secondary_mid)]
+
+
+@test("deleted mids are not listed")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    secondary_mid: SecondaryMID = secondary_mid,
+) -> None:
+    # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
+    secondary_mid = await SecondaryMID.objects().get(
+        SecondaryMID.pk == secondary_mid.pk
+    )
+
+    merchant_ref, plan_ref = itemgetter("merchant", "merchant.plan")(
+        await SecondaryMID.select(
+            SecondaryMID.merchant,
+            SecondaryMID.merchant.plan,
+        )
+        .where(SecondaryMID.pk == secondary_mid.pk)
+        .first()
+    )
+
+    # create a deleted secondary MID that shouldn't be in the response
+    await secondary_mid_factory(status=ResourceStatus.DELETED, merchant=merchant_ref)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/secondary_mids",
+        headers=auth_header,
+    )
+
+    assert resp.ok, resp.json()
+    assert resp.json() == [await secondary_mid_to_json(secondary_mid)]
+
+
+@test("can list secondary MIDs from a specific plan")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchants: list[Merchant] = three_merchants,
+) -> None:
+    for merchant in merchants:
+        for _ in range(random.randint(1, 3)):
+            await secondary_mid_factory(merchant=merchant)
+
+    plan_ref = (await Plan.select(Plan.pk).where(Plan.pk == merchants[0].plan).first())[
+        "pk"
+    ]
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan_ref}/merchants/{merchants[0].pk}/secondary_mids",
+        headers=auth_header,
+    )
+
+    expected = await SecondaryMID.objects().where(SecondaryMID.merchant == merchants[0])
+
+    assert resp.ok, resp.json()
+    assert resp.json() == [
+        await secondary_mid_to_json(secondary_mid) for secondary_mid in expected
+    ]
+
+
+@test("can't list secondary MIDs on a plan that doesn't exist")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+) -> None:
+    resp = test_client.get(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/secondary_mids",
+        headers=auth_header,
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can't list secondary MIDs on a merchant that doesn't exist")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    plan: Plan = plan,
+) -> None:
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/secondary_mids",
+        headers=auth_header,
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
 @test("can create a secondary MID on a merchant without onboarding")
@@ -111,7 +230,7 @@ async def _(
     expected = await SecondaryMID.objects().where(SecondaryMID.pk == mid_ref).first()
     assert resp.json() == await secondary_mid_to_json(expected)
 
-    # TODO: uncomment when harmonia supports secondary mid onboarding.
+    # TODO: uncomment when harmonia supports secondary MID onboarding.
     # assert await Job.exists().where(
     #     Job.message_type == OnboardSecondaryMIDs.__name__,
     #     Job.message == OnboardSecondaryMIDs(secondary_mid_refs=[secondary_mid_ref]).dict(),

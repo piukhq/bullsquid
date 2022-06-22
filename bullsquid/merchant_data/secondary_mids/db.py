@@ -26,6 +26,27 @@ SecondaryMIDResult = TypedDict(
 )
 
 
+async def list_secondary_mids(
+    *, plan_ref: UUID, merchant_ref: UUID
+) -> list[SecondaryMIDResult]:
+    """Return a list of all secondary MIDs on the given merchant."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+
+    return await SecondaryMID.select(
+        SecondaryMID.pk,
+        SecondaryMID.payment_scheme.code,
+        SecondaryMID.secondary_mid,
+        SecondaryMID.payment_scheme_store_name,
+        SecondaryMID.payment_enrolment_status,
+        SecondaryMID.date_added,
+        SecondaryMID.txm_status,
+        SecondaryMID.status,
+    ).where(
+        SecondaryMID.merchant == merchant,
+        SecondaryMID.status != ResourceStatus.DELETED,
+    )
+
+
 async def get_secondary_mid(pk: UUID) -> SecondaryMID:
     """Returns a secondary MID."""
     secondary_mid = await SecondaryMID.objects().get(SecondaryMID.pk == pk)

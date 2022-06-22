@@ -51,11 +51,11 @@ def _() -> None:
 
 @test("ResourceNotFoundError is formatted correctly")
 def _() -> None:
-    ex = ResourceNotFoundError(loc=["test", "loc"], resource_name="TestResource")
+    ex = ResourceNotFoundError(loc=["test", "loc"], resource_name="Test resource")
     expected = [
         {
             "loc": ["test", "loc"],
-            "msg": "TestResource not found.",
+            "msg": "Test resource not found.",
             "type": "ref_error",
         }
     ]
@@ -79,14 +79,14 @@ def _() -> None:
 def _() -> None:
     ex = APIMultiError(
         [
-            ResourceNotFoundError(loc=["test", "loc"], resource_name="TestResource"),
+            ResourceNotFoundError(loc=["test", "loc"], resource_name="Test resource"),
             UniqueError(loc=["test", "loc"]),
         ]
     )
     expected = [
         {
             "loc": ["test", "loc"],
-            "msg": "TestResource not found.",
+            "msg": "Test resource not found.",
             "type": "ref_error",
         },
         {

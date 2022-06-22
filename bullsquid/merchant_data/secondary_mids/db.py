@@ -4,7 +4,11 @@ from typing import TypedDict
 from uuid import UUID
 
 from bullsquid.db import NoSuchRecord
-from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.enums import (
+    PaymentEnrolmentStatus,
+    ResourceStatus,
+    TXMStatus,
+)
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
 from bullsquid.merchant_data.secondary_mids.models import SecondaryMIDMetadata
@@ -18,10 +22,10 @@ SecondaryMIDResult = TypedDict(
         "payment_scheme.code": int,
         "secondary_mid": str,
         "payment_scheme_store_name": str,
-        "payment_enrolment_status": str,
+        "payment_enrolment_status": PaymentEnrolmentStatus,
         "date_added": datetime,
-        "txm_status": str,
-        "status": str,
+        "txm_status": TXMStatus,
+        "status": ResourceStatus,
     },
 )
 
@@ -47,9 +51,30 @@ async def list_secondary_mids(
     )
 
 
-async def get_secondary_mid(pk: UUID) -> SecondaryMID:
+async def get_secondary_mid(
+    pk: UUID, *, plan_ref: UUID, merchant_ref: UUID
+) -> SecondaryMIDResult:
     """Returns a secondary MID."""
-    secondary_mid = await SecondaryMID.objects().get(SecondaryMID.pk == pk)
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+
+    secondary_mid = (
+        await SecondaryMID.select(
+            SecondaryMID.pk,
+            SecondaryMID.payment_scheme.code,
+            SecondaryMID.secondary_mid,
+            SecondaryMID.payment_scheme_store_name,
+            SecondaryMID.payment_enrolment_status,
+            SecondaryMID.date_added,
+            SecondaryMID.txm_status,
+            SecondaryMID.status,
+        )
+        .where(
+            SecondaryMID.pk == pk,
+            SecondaryMID.merchant == merchant,
+            SecondaryMID.status != ResourceStatus.DELETED,
+        )
+        .first()
+    )
     if not secondary_mid:
         raise NoSuchRecord
 

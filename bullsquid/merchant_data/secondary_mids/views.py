@@ -38,6 +38,24 @@ async def create_secondary_mid_response(
     )
 
 
+@router.get("", response_model=list[SecondaryMIDResponse])
+async def list_secondary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> list[SecondaryMIDResponse]:
+    """Lists all secondary MIDs for a merchant."""
+    try:
+        secondary_mids = await db.list_secondary_mids(
+            plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError(
+            loc=["path", "merchant_ref"], resource_name="Merchant"
+        ) from ex
+
+    return [await create_secondary_mid_response(mid) for mid in secondary_mids]
+
+
 @router.post("", response_model=SecondaryMIDResponse)
 async def create_secondary_mid(
     plan_ref: UUID,

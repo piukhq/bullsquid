@@ -5,6 +5,8 @@ from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
 from loguru import logger
 
+from bullsquid.db import NoSuchRecord
+from bullsquid.naming import get_pretty_table_name, get_ref_name
 from settings import settings
 
 
@@ -77,6 +79,19 @@ class ResourceNotFoundError(APIError):
         self.loc = loc
         self.message = f"{resource_name} not found."
         super().__init__()
+
+    @staticmethod
+    def from_no_such_record(
+        ex: NoSuchRecord, *, loc: list[str], plural: bool = False
+    ) -> "ResourceNotFoundError":
+        """
+        Returns a ResourceNotFoundError with the correct location and resource
+        name from the given NoSuchRecord exception.
+        """
+        return ResourceNotFoundError(
+            loc=loc + [get_ref_name(ex.table, plural=plural)],
+            resource_name=get_pretty_table_name(ex.table),
+        )
 
 
 class UniqueError(APIError):

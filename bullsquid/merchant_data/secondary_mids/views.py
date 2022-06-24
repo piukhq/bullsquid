@@ -6,6 +6,8 @@ from fastapi import APIRouter, status
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 from . import db
@@ -49,9 +51,7 @@ async def list_secondary_mids(
             plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=["path", "merchant_ref"], resource_name="Merchant"
-        ) from ex
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
     return [await create_secondary_mid_response(mid) for mid in secondary_mids]
 
@@ -66,9 +66,7 @@ async def get_secondary_mid_details(
             secondary_mid_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=["path", "secondary_mid_ref"], resource_name="Secondary MID"
-        ) from ex
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
     return await create_secondary_mid_response(mid)
 
@@ -95,10 +93,12 @@ async def create_secondary_mid(
             merchant_ref=merchant_ref,
         )
     except NoSuchRecord as ex:
-        # the combination of plan & merchant refs did not lead to a merchant.
-        raise ResourceNotFoundError(
-            loc=["path", "merchant_ref"], resource_name="Merchant"
-        ) from ex
+        loc = (
+            ["path"]
+            if ex.table in [Plan, Merchant]
+            else ["body", "secondary_mid_metadata"]
+        )
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
 
     if secondary_mid_data.onboard:
         # TODO: implement once harmonia has support for secondary MID onboarding.
@@ -123,9 +123,9 @@ async def delete_secondary_mids(
             secondary_mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=["body", "secondary_mid_refs"], resource_name="Secondary MID"
-        ) from ex
+        loc = ["body"] if ex.table == SecondaryMID else ["path"]
+        plural = ex.table == SecondaryMID
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc, plural=plural)
 
     if onboarded:
         await db.update_secondary_mids_status(

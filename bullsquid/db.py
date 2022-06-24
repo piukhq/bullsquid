@@ -9,6 +9,10 @@ from piccolo.table import Table
 class NoSuchRecord(Exception):
     """Raised when the requested record could not be found."""
 
+    def __init__(self, table: Type[Table], *args: Any):
+        super().__init__(*args)
+        self.table = table
+
 
 async def field_is_unique(
     model: Type[Table], field: str, value: Any, *, pk: UUID | None = None

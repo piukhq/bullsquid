@@ -145,7 +145,7 @@ async def _(
         headers=auth_header,
     )
 
-    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("can't list primary MIDs on a merchant that doesn't exist")
@@ -281,7 +281,7 @@ async def _(
         },
     )
 
-    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("can't create a primary MID on a merchant that does not exist")

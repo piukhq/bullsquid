@@ -76,7 +76,7 @@ async def get_secondary_mid(
         .first()
     )
     if not secondary_mid:
-        raise NoSuchRecord
+        raise NoSuchRecord(SecondaryMID)
 
     return secondary_mid
 
@@ -94,7 +94,7 @@ async def filter_onboarded_secondary_mids(
 
     count = await SecondaryMID.count().where(SecondaryMID.pk.is_in(secondary_mid_refs))
     if count != len(secondary_mid_refs):
-        raise NoSuchRecord
+        raise NoSuchRecord(SecondaryMID)
 
     return [
         result["pk"]

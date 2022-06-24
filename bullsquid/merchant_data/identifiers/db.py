@@ -11,7 +11,7 @@ async def get_identifier(pk: UUID) -> Identifier:
     """Returns an identifier."""
     identifier = await Identifier.objects().get(Identifier.pk == pk)
     if not identifier:
-        raise NoSuchRecord
+        raise NoSuchRecord(Identifier)
 
     return identifier
 
@@ -29,7 +29,7 @@ async def filter_onboarded_identifiers(
 
     count = await Identifier.count().where(Identifier.pk.is_in(identifier_refs))
     if count != len(identifier_refs):
-        raise NoSuchRecord
+        raise NoSuchRecord(Identifier)
 
     return [
         result["pk"]

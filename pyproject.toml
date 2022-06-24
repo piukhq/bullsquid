@@ -27,6 +27,7 @@ qbert = "^0.1.4"
 aiohttp = "^3.8.1"
 url-normalize = "^1.4.3"
 aiodns = "^3.0.0"
+inflection = "^0.5.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.3.0"

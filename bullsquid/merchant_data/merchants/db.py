@@ -13,13 +13,12 @@ from .tables import Merchant
 
 async def get_merchant(pk: UUID, *, plan_ref: UUID) -> Merchant:
     """Return a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
+    plan = await get_plan(plan_ref)
     merchant = (
-        await Merchant.objects()
-        .where(Merchant.pk == pk, Merchant.plan == plan_ref)
-        .first()
+        await Merchant.objects().where(Merchant.pk == pk, Merchant.plan == plan).first()
     )
     if not merchant:
-        raise NoSuchRecord
+        raise NoSuchRecord(Merchant)
     return merchant
 
 

@@ -152,7 +152,7 @@ async def _(
         headers=auth_header,
     )
 
-    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("can't list secondary MIDs on a merchant that doesn't exist")
@@ -218,7 +218,7 @@ async def _(
         f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/secondary_mids/{secondary_mid.pk}",
         headers=auth_header,
     )
-    assert_is_not_found_error(resp, loc=["path", "secondary_mid_ref"])
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
 @test("can't get secondary MID details from a non-existant plan")
@@ -233,7 +233,7 @@ async def _(
         f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}",
         headers=auth_header,
     )
-    assert_is_not_found_error(resp, loc=["path", "secondary_mid_ref"])
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("can create a secondary MID on a merchant without onboarding")
@@ -358,7 +358,7 @@ async def _(
         },
     )
 
-    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("can't create a secondary MID on a merchant that does not exist")
@@ -461,6 +461,32 @@ async def _(
     )
 
     assert_is_null_error(
+        resp, loc=["body", "secondary_mid_metadata", "payment_scheme_code"]
+    )
+
+
+@test("can't create a secondary MID with an invalid payment scheme code")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+) -> None:
+    new_mid = await secondary_mid_factory(persist=False)
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids",
+        headers=auth_header,
+        json={
+            "onboard": False,
+            "secondary_mid_metadata": {
+                "payment_scheme_code": 9,
+                "secondary_mid": new_mid.secondary_mid,
+                "payment_scheme_store_name": new_mid.payment_scheme_store_name,
+                "payment_enrolment_status": new_mid.payment_enrolment_status,
+            },
+        },
+    )
+
+    assert_is_not_found_error(
         resp, loc=["body", "secondary_mid_metadata", "payment_scheme_code"]
     )
 

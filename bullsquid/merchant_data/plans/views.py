@@ -90,8 +90,6 @@ async def update_plan(plan_ref: UUID, plan_data: CreatePlanRequest) -> PlanRespo
     try:
         plan = await db.update_plan(plan_ref, plan_data)
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=("path", "plan_ref"), resource_name="Plan"
-        ) from ex
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
     return await create_plan_response(plan, await list_payment_schemes())

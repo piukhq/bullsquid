@@ -12,7 +12,7 @@ async def get_plan(pk: UUID) -> Plan:
     """Return a plan by its primary key. Raises NoSuchRecord if `pk` is not found."""
     plan = await Plan.objects().get(Plan.pk == pk)
     if not plan:
-        raise NoSuchRecord
+        raise NoSuchRecord(Plan)
     return plan
 
 

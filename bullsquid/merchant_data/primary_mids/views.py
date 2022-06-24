@@ -8,6 +8,8 @@ from bullsquid import tasks
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.plans.tables import Plan
 
 from . import db
 from .models import (
@@ -57,10 +59,7 @@ async def list_primary_mids(
     try:
         mids = await db.list_primary_mids(plan_ref=plan_ref, merchant_ref=merchant_ref)
     except NoSuchRecord as ex:
-        # the combination of plan & merchant refs did not lead to a merchant.
-        raise ResourceNotFoundError(
-            loc=["path", "merchant_ref"], resource_name="Merchant"
-        ) from ex
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
     return await create_primary_mid_list_response(mids)
 
@@ -79,10 +78,8 @@ async def create_primary_mid(
             mid_data.mid_metadata, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
-        # the combination of plan & merchant refs did not lead to a merchant.
-        raise ResourceNotFoundError(
-            loc=["path", "merchant_ref"], resource_name="Merchant"
-        ) from ex
+        loc = ["path"] if ex.table in [Plan, Merchant] else ["body", "mid_metadata"]
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
 
     if mid_data.onboard:
         await tasks.queue.push(tasks.OnboardPrimaryMIDs(mid_refs=[mid["pk"]]))
@@ -104,9 +101,9 @@ async def delete_primary_mids(
             mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=["body", "mid_refs"], resource_name="Primary MID"
-        ) from ex
+        loc = ["body"] if ex.table == PrimaryMID else ["path"]
+        plural = ex.table == PrimaryMID
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc, plural=plural)
 
     if onboarded:
         await db.update_primary_mids_status(

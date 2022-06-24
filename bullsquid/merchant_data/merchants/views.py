@@ -79,9 +79,7 @@ async def list_merchants(plan_ref: UUID) -> list[MerchantOverviewResponse]:
     try:
         merchants = await db.list_merchants(plan_ref)
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=["path", "plan_ref"], resource_name="Plan"
-        ) from ex
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
     payment_schemes = await list_payment_schemes()
     return [
@@ -96,9 +94,7 @@ async def get_merchant(plan_ref: UUID, merchant_ref: UUID) -> MerchantDetailResp
     try:
         merchant = await db.get_merchant(merchant_ref, plan_ref=plan_ref)
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=["path", "merchant_ref"], resource_name="Merchant"
-        ) from ex
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
     plan = await merchant.get_related(Merchant.plan)
     return await create_merchant_detail_response(merchant, plan)
@@ -110,9 +106,7 @@ async def create_merchant(plan_ref: UUID, merchant_data: CreateMerchantRequest) 
     try:
         plan = await get_plan(plan_ref)
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=["path", "plan_ref"], resource_name="Plan"
-        ) from ex
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
     if not await field_is_unique(Merchant, "name", merchant_data.name):
         raise UniqueError(loc=["body", "name"])

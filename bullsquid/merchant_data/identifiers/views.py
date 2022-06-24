@@ -6,6 +6,7 @@ from fastapi import APIRouter, status
 from bullsquid.api.errors import ResourceNotFoundError
 from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.identifiers.tables import Identifier
 
 from . import db
 from .models import IdentifierDeletionListResponse, IdentifierDeletionResponse
@@ -26,9 +27,9 @@ async def delete_identifiers(
             identifier_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError(
-            loc=["body", "identifier_refs"], resource_name="Identifier"
-        ) from ex
+        plural = ex.table == Identifier
+        loc = ["body"] if ex.table == Identifier else ["path"]
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc, plural=plural)
 
     if onboarded:
         await db.update_identifiers_status(

@@ -61,7 +61,7 @@ def assert_is_value_error(resp: Response, *, loc: list[str]) -> None:
     expect.assert_equal(
         resp.status_code,
         status.HTTP_422_UNPROCESSABLE_ENTITY,
-        f"Expected status code to be 404: {resp}",
+        f"Expected status code to be 422: {resp}",
     )
 
     detail = resp.json()["detail"]
@@ -78,7 +78,7 @@ def assert_is_null_error(resp: Response, *, loc: list[str]) -> None:
     expect.assert_equal(
         resp.status_code,
         status.HTTP_422_UNPROCESSABLE_ENTITY,
-        f"Expected status code to be 404: {resp}",
+        f"Expected status code to be 422: {resp}",
     )
 
     detail = resp.json()["detail"]

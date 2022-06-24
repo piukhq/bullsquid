@@ -124,7 +124,7 @@ async def _(
     resp = test_client.get(
         f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}", headers=auth_header
     )
-    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("getting details from a non-existent merchant returns a 404")

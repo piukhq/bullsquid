@@ -59,7 +59,7 @@ async def filter_onboarded_mid_refs(
 
     count = await PrimaryMID.count().where(PrimaryMID.pk.is_in(mid_refs))
     if count != len(mid_refs):
-        raise NoSuchRecord
+        raise NoSuchRecord(PrimaryMID)
 
     return [
         result["pk"]

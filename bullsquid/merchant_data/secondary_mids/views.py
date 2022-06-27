@@ -22,7 +22,7 @@ from .models import (
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/secondary_mids")
 
 
-async def create_secondary_mid_response(
+def create_secondary_mid_response(
     secondary_mid: db.SecondaryMIDResult,
 ) -> SecondaryMIDResponse:
     """Creates a SecondaryMIDResponse instance from the given secondary MID."""
@@ -53,7 +53,7 @@ async def list_secondary_mids(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
-    return [await create_secondary_mid_response(mid) for mid in secondary_mids]
+    return [create_secondary_mid_response(mid) for mid in secondary_mids]
 
 
 @router.get("/{secondary_mid_ref}", response_model=SecondaryMIDResponse)
@@ -68,7 +68,7 @@ async def get_secondary_mid_details(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
-    return await create_secondary_mid_response(mid)
+    return create_secondary_mid_response(mid)
 
 
 @router.post("", response_model=SecondaryMIDResponse)
@@ -107,7 +107,7 @@ async def create_secondary_mid(
         # )
         ...
 
-    return await create_secondary_mid_response(secondary_mid)
+    return create_secondary_mid_response(secondary_mid)
 
 
 @router.post("/deletion", status_code=status.HTTP_202_ACCEPTED)

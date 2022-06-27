@@ -13,7 +13,7 @@ class Identifier(Table):
     pk = UUID(primary_key=True)
     value = Text(required=True, unique=True)
     payment_scheme = ForeignKey(PaymentScheme, required=True)
-    name = Text(required=True)
+    payment_scheme_merchant_name = Text(required=True)
     date_added = Timestamptz()
     txm_status = Text(choices=TXMStatus, default=TXMStatus.NOT_ONBOARDED)
     status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE)

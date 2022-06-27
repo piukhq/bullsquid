@@ -126,8 +126,8 @@ async def create_secondary_mid(
     )
     secondary_mid = SecondaryMID(
         secondary_mid=secondary_mid_data.secondary_mid,
-        payment_scheme_store_name=secondary_mid_data.payment_scheme_store_name,
         payment_scheme=payment_scheme,
+        payment_scheme_store_name=secondary_mid_data.payment_scheme_store_name,
         payment_enrolment_status=secondary_mid_data.payment_enrolment_status,
         merchant=merchant,
     )

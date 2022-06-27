@@ -3,15 +3,284 @@ from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from qbert.tables import Job
-from ward import skip, test
+from ward import test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.plans.tables import Plan
 from tests.fixtures import auth_header, test_client
-from tests.helpers import assert_is_not_found_error
-from tests.merchant_data.factories import identifier, identifier_factory, merchant
+from tests.helpers import (
+    assert_is_missing_field_error,
+    assert_is_not_found_error,
+    assert_is_null_error,
+    assert_is_uniqueness_error,
+)
+from tests.merchant_data.factories import (
+    identifier,
+    identifier_factory,
+    merchant,
+    payment_schemes,
+    plan,
+)
+
+
+async def identifier_to_json(identifier: Identifier) -> dict:
+    """Converts an identifier to its expected JSON representation."""
+    payment_scheme_code = (
+        await PaymentScheme.select(PaymentScheme.code)
+        .where(PaymentScheme.slug == identifier.payment_scheme)
+        .first()
+    )["code"]
+
+    return {
+        "identifier_ref": str(identifier.pk),
+        "identifier_metadata": {
+            "value": identifier.value,
+            "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
+            "payment_scheme_code": payment_scheme_code,
+        },
+        "identifier_status": identifier.status,
+        "date_added": identifier.date_added.isoformat(),
+    }
+
+
+@test("can create an identifier on a merchant without onboarding")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
+) -> None:
+    identifier = await identifier_factory(persist=False)
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        headers=auth_header,
+        json={
+            "onboard": False,
+            "identifier_metadata": {
+                "value": identifier.value,
+                "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
+                "payment_scheme_code": payment_schemes[0].code,
+            },
+        },
+    )
+    assert resp.ok, resp.json()
+
+    identifier_ref = resp.json()["identifier_ref"]
+
+    expected = await Identifier.objects().where(Identifier.pk == identifier_ref).first()
+    assert resp.json() == await identifier_to_json(expected)
+
+    # TODO: uncomment when Harmonia supports identifier onboarding.
+    # assert not await Job.exists().where(
+    #     Job.message_type == OnboardIdentifiers.__name__,
+    #     Job.message == OnboardIdentifiers(identifier_refs=[identifier_ref]).dict(),
+    # )
+
+
+@test("can create and onboard an identifier on a merchant")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
+) -> None:
+    identifier = await identifier_factory(persist=False)
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        headers=auth_header,
+        json={
+            "onboard": True,
+            "identifier_metadata": {
+                "value": identifier.value,
+                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
+            },
+        },
+    )
+    assert resp.ok, resp.json()
+
+    identifier_ref = resp.json()["identifier_ref"]
+
+    expected = await Identifier.objects().where(Identifier.pk == identifier_ref).first()
+    assert resp.json() == await identifier_to_json(expected)
+
+    # TODO: uncomment when Harmonia supports identifier onboarding.
+    # assert await Job.exists().where(
+    #     Job.message_type == OnboardIdentifiers.__name__,
+    #     Job.message == OnboardIdentifiers(identifier_refs=[identifier_ref]).dict(),
+    # )
+
+
+@test("can't create an identifier on a plan that does not exist")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
+) -> None:
+    identifier = await identifier_factory(persist=False)
+    resp = test_client.post(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/identifiers",
+        headers=auth_header,
+        json={
+            "onboard": False,
+            "identifier_metadata": {
+                "value": identifier.value,
+                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
+            },
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+@test("can't create an identifier on a merchant that does not exist")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    plan: Plan = plan,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
+) -> None:
+    identifier = await identifier_factory(persist=False)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/identifiers",
+        headers=auth_header,
+        json={
+            "onboard": False,
+            "identifier_metadata": {
+                "value": identifier.value,
+                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
+            },
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can't create an identifier with a value that already exists")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
+    existing_identifier: Identifier = identifier,
+) -> None:
+    identifier = await identifier_factory(persist=False)
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        headers=auth_header,
+        json={
+            "onboard": False,
+            "identifier_metadata": {
+                "value": existing_identifier.value,
+                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
+            },
+        },
+    )
+
+    assert_is_uniqueness_error(resp, loc=["body", "identifier_metadata", "value"])
+
+
+@test("can't create an identifier with a missing payment scheme code")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+) -> None:
+    identifier = await identifier_factory(persist=False)
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        headers=auth_header,
+        json={
+            "onboard": False,
+            "identifier_metadata": {
+                "value": identifier.value,
+                "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
+            },
+        },
+    )
+
+    assert_is_missing_field_error(
+        resp, loc=["body", "identifier_metadata", "payment_scheme_code"]
+    )
+
+
+@test("can't create an identifier with a null payment scheme code")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+) -> None:
+    identifier = await identifier_factory(persist=False)
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        headers=auth_header,
+        json={
+            "onboard": False,
+            "identifier_metadata": {
+                "value": identifier.value,
+                "payment_scheme_code": None,
+                "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
+            },
+        },
+    )
+
+    assert_is_null_error(
+        resp, loc=["body", "identifier_metadata", "payment_scheme_code"]
+    )
+
+
+@test("can't create an identifier with a missing value")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
+) -> None:
+    identifier = await identifier_factory(persist=False)
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        headers=auth_header,
+        json={
+            "onboard": False,
+            "identifier_metadata": {
+                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
+            },
+        },
+    )
+
+    assert_is_missing_field_error(resp, loc=["body", "identifier_metadata", "value"])
+
+
+@test("can't create an identifier with a null value")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
+) -> None:
+    identifier = await identifier_factory(persist=False)
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        headers=auth_header,
+        json={
+            "onboard": False,
+            "identifier_metadata": {
+                "payment_scheme_code": payment_schemes[0].code,
+                "value": None,
+                "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
+            },
+        },
+    )
+
+    assert_is_null_error(resp, loc=["body", "identifier_metadata", "value"])
 
 
 @test("can delete an identifier")

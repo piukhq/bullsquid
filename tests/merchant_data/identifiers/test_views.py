@@ -12,7 +12,7 @@ from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
-from tests.fixtures import auth_header, test_client
+from tests.fixtures import auth_header, database, test_client
 from tests.helpers import (
     assert_is_missing_field_error,
     assert_is_not_found_error,
@@ -23,8 +23,10 @@ from tests.merchant_data.factories import (
     identifier,
     identifier_factory,
     merchant,
+    merchant_factory,
     payment_schemes,
     plan,
+    plan_factory,
     three_merchants,
 )
 
@@ -159,6 +161,73 @@ async def _(
     )
 
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can get identifier details")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    identifier = await identifier_factory(merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers/{identifier.pk}",
+        headers=auth_header,
+    )
+
+    assert resp.status_code == 200, resp.json()
+
+    identifier_ref = resp.json()["identifier_ref"]
+    expected = await Identifier.objects().where(Identifier.pk == identifier_ref).first()
+    assert resp.json() == await identifier_to_json(expected)
+
+
+@test("can't get identifier details from a non-existant identifier")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers/{uuid4()}",
+        headers=auth_header,
+    )
+    assert_is_not_found_error(resp, loc=["path", "identifier_ref"])
+
+
+@test("can't get identifier details from a non-existant merchant")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    identifier = await identifier_factory(merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/identifiers/{identifier.pk}",
+        headers=auth_header,
+    )
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can't get identifier details from a non-existant plan")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    merchant = await merchant_factory()
+    identifier = await identifier_factory(merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/identifiers/{identifier.pk}",
+        headers=auth_header,
+    )
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("can create an identifier on a merchant without onboarding")

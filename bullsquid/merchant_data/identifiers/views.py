@@ -52,6 +52,21 @@ async def list_identifiers(
     return [create_identifier_response(identifier) for identifier in identifiers]
 
 
+@router.get("/{identifier_ref}", response_model=IdentifierResponse)
+async def get_identifier_details(
+    plan_ref: UUID, merchant_ref: UUID, identifier_ref: UUID
+) -> IdentifierResponse:
+    """Returns details of a single identifier."""
+    try:
+        mid = await db.get_identifier(
+            identifier_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+
+    return create_identifier_response(mid)
+
+
 @router.post("")
 async def create_identifier(
     plan_ref: UUID,

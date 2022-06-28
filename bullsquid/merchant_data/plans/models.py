@@ -3,6 +3,7 @@
 
 from pydantic import UUID4, validator
 
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.models import BaseModel
 from bullsquid.merchant_data.validators import FlexibleUrl, string_must_not_be_blank
 
@@ -51,7 +52,7 @@ class PlanResponse(BaseModel):
     """Plan response model."""
 
     plan_ref: UUID4
-    plan_status: str
+    plan_status: ResourceStatus
     plan_metadata: PlanMetadataResponse
     plan_counts: PlanCountsResponse
 

@@ -6,7 +6,11 @@ from uuid import UUID
 
 from pydantic import UUID4, validator
 
-from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.enums import (
+    PaymentEnrolmentStatus,
+    ResourceStatus,
+    TXMStatus,
+)
 from bullsquid.merchant_data.models import BaseModel
 from bullsquid.merchant_data.validators import string_must_not_be_blank
 
@@ -17,7 +21,7 @@ class PrimaryMIDMetadata(BaseModel):
     payment_scheme_code: int
     mid: str
     visa_bin: str | None
-    payment_enrolment_status: str
+    payment_enrolment_status: PaymentEnrolmentStatus = PaymentEnrolmentStatus.UNKNOWN
 
     _ = validator("mid", "visa_bin", "payment_enrolment_status", allow_reuse=True)(
         string_must_not_be_blank
@@ -37,7 +41,7 @@ class PrimaryMIDResponse(BaseModel):
     mid_ref: UUID4
     mid_metadata: PrimaryMIDMetadata
     date_added: datetime
-    txm_status: str
+    txm_status: TXMStatus = TXMStatus.NOT_ONBOARDED
 
     _ = validator("txm_status", allow_reuse=True)(string_must_not_be_blank)
 

@@ -36,6 +36,22 @@ def create_identifier_response(identifier: db.IdentifierResult) -> IdentifierRes
     )
 
 
+@router.get("", response_model=list[IdentifierResponse])
+async def list_identifiers(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> list[IdentifierResponse]:
+    """List all identifiers for a merchant."""
+    try:
+        identifiers = await db.list_identifiers(
+            plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+
+    return [create_identifier_response(identifier) for identifier in identifiers]
+
+
 @router.post("")
 async def create_identifier(
     plan_ref: UUID,

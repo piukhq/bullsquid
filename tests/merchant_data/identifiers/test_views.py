@@ -1,4 +1,6 @@
 """Tests for identifier API endpoints."""
+import random
+from operator import itemgetter
 from uuid import uuid4
 
 from fastapi import status
@@ -23,6 +25,7 @@ from tests.merchant_data.factories import (
     merchant,
     payment_schemes,
     plan,
+    three_merchants,
 )
 
 
@@ -44,6 +47,118 @@ async def identifier_to_json(identifier: Identifier) -> dict:
         "identifier_status": identifier.status,
         "date_added": identifier.date_added.isoformat(),
     }
+
+
+@test("can list identifiers")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    identifier: Identifier = identifier,
+) -> None:
+    # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
+    identifier = await Identifier.objects().get(Identifier.pk == identifier.pk)
+
+    merchant_ref, plan_ref = itemgetter("merchant", "merchant.plan")(
+        await Identifier.select(
+            Identifier.merchant,
+            Identifier.merchant.plan,
+        )
+        .where(Identifier.pk == identifier.pk)
+        .first()
+    )
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/identifiers",
+        headers=auth_header,
+    )
+
+    assert resp.ok, resp.json()
+    assert resp.json() == [await identifier_to_json(identifier)]
+
+
+@test("deleted identifiers are not listed")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    identifier: Identifier = identifier,
+) -> None:
+    # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
+    identifier = await Identifier.objects().get(Identifier.pk == identifier.pk)
+
+    merchant_ref, plan_ref = itemgetter("merchant", "merchant.plan")(
+        await Identifier.select(
+            Identifier.merchant,
+            Identifier.merchant.plan,
+        )
+        .where(Identifier.pk == identifier.pk)
+        .first()
+    )
+
+    # create a deleted identifier that shouldn't be in the response
+    await identifier_factory(status=ResourceStatus.DELETED, merchant=merchant_ref)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/identifiers",
+        headers=auth_header,
+    )
+
+    assert resp.ok, resp.json()
+    assert resp.json() == [await identifier_to_json(identifier)]
+
+
+@test("can list identifiers from a specific plan")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchants: list[Merchant] = three_merchants,
+) -> None:
+    for merchant in merchants:
+        for _ in range(random.randint(1, 3)):
+            await identifier_factory(merchant=merchant)
+
+    plan_ref = (await Plan.select(Plan.pk).where(Plan.pk == merchants[0].plan).first())[
+        "pk"
+    ]
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan_ref}/merchants/{merchants[0].pk}/identifiers",
+        headers=auth_header,
+    )
+
+    expected = await Identifier.objects().where(Identifier.merchant == merchants[0])
+
+    assert resp.ok, resp.json()
+    assert resp.json() == [
+        await identifier_to_json(identifier) for identifier in expected
+    ]
+
+
+@test("can't list identifiers on a plan that doesn't exist")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    merchant: Merchant = merchant,
+) -> None:
+    resp = test_client.get(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/identifiers",
+        headers=auth_header,
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+@test("can't list identifiers on a merchant that doesn't exist")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    plan: Plan = plan,
+) -> None:
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/identifiers",
+        headers=auth_header,
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
 @test("can create an identifier on a merchant without onboarding")

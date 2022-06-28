@@ -24,6 +24,25 @@ IdentifierResult = TypedDict(
 )
 
 
+async def list_identifiers(
+    *, plan_ref: UUID, merchant_ref: UUID
+) -> list[IdentifierResult]:
+    """Return a list of all identifiers on the given merchant."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+
+    return await Identifier.select(
+        Identifier.pk,
+        Identifier.payment_scheme.code,
+        Identifier.value,
+        Identifier.payment_scheme_merchant_name,
+        Identifier.date_added,
+        Identifier.status,
+    ).where(
+        Identifier.merchant == merchant,
+        Identifier.status != ResourceStatus.DELETED,
+    )
+
+
 async def get_identifier(pk: UUID) -> Identifier:
     """Returns an identifier."""
     identifier = await Identifier.objects().get(Identifier.pk == pk)

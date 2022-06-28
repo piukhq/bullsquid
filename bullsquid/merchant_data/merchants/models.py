@@ -1,6 +1,7 @@
 """Request & response model definitions for merchant endpoints."""
 from pydantic import UUID4, validator
 
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.models import BaseModel
 from bullsquid.merchant_data.plans.models import PlanMetadataResponse
 from bullsquid.merchant_data.validators import FlexibleUrl, string_must_not_be_blank
@@ -47,7 +48,7 @@ class MerchantOverviewResponse(BaseModel):
     """Merchant response model."""
 
     merchant_ref: UUID4
-    merchant_status: str
+    merchant_status: ResourceStatus
     merchant_metadata: MerchantMetadataResponse
     merchant_counts: MerchantCountsResponse
 

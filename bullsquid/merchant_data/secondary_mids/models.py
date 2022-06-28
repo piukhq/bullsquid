@@ -19,7 +19,7 @@ class SecondaryMIDMetadata(BaseModel):
     payment_scheme_code: int
     secondary_mid: str
     payment_scheme_store_name: str | None
-    payment_enrolment_status: PaymentEnrolmentStatus
+    payment_enrolment_status: PaymentEnrolmentStatus = PaymentEnrolmentStatus.UNKNOWN
 
     _ = validator("secondary_mid", "payment_scheme_store_name", allow_reuse=True)(
         string_must_not_be_blank
@@ -40,7 +40,7 @@ class SecondaryMIDResponse(BaseModel):
     secondary_mid_metadata: SecondaryMIDMetadata
     secondary_mid_status: ResourceStatus
     date_added: datetime
-    txm_status: TXMStatus
+    txm_status: TXMStatus = TXMStatus.NOT_ONBOARDED
 
 
 class SecondaryMIDDeletionResponse(BaseModel):

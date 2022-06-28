@@ -43,9 +43,29 @@ async def list_identifiers(
     )
 
 
-async def get_identifier(pk: UUID) -> Identifier:
-    """Returns an identifier."""
-    identifier = await Identifier.objects().get(Identifier.pk == pk)
+async def get_identifier(
+    pk: UUID, *, plan_ref: UUID, merchant_ref: UUID
+) -> IdentifierResult:
+    """Returns a single identifier by its PK."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+
+    identifier = (
+        await Identifier.select(
+            Identifier.pk,
+            Identifier.payment_scheme.code,
+            Identifier.value,
+            Identifier.payment_scheme_merchant_name,
+            Identifier.date_added,
+            Identifier.status,
+        )
+        .where(
+            Identifier.pk == pk,
+            Identifier.merchant == merchant,
+            Identifier.status != ResourceStatus.DELETED,
+        )
+        .first()
+    )
+
     if not identifier:
         raise NoSuchRecord(Identifier)
 

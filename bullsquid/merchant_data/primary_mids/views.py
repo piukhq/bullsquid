@@ -64,7 +64,7 @@ async def list_primary_mids(
     return await create_primary_mid_list_response(mids)
 
 
-@router.post("", response_model=PrimaryMIDResponse)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=PrimaryMIDResponse)
 async def create_primary_mid(
     plan_ref: UUID, merchant_ref: UUID, mid_data: CreatePrimaryMIDRequest
 ) -> PrimaryMIDResponse:
@@ -87,7 +87,11 @@ async def create_primary_mid(
     return await create_primary_mid_response(mid)
 
 
-@router.post("/deletion", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/deletion",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=PrimaryMIDDeletionListResponse,
+)
 async def delete_primary_mids(
     plan_ref: UUID, merchant_ref: UUID, mid_refs: list[UUID]
 ) -> PrimaryMIDDeletionListResponse:

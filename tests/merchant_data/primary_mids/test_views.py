@@ -74,7 +74,7 @@ async def _(
         f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/mids", headers=auth_header
     )
 
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == {"mids": [await primary_mid_to_json(primary_mid)]}
 
 
@@ -103,7 +103,7 @@ async def _(
         f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/mids", headers=auth_header
     )
 
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == {"mids": [await primary_mid_to_json(primary_mid)]}
 
 
@@ -128,7 +128,7 @@ async def _(
 
     expected = await PrimaryMID.objects().where(PrimaryMID.merchant == merchants[0])
 
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == {
         "mids": [await primary_mid_to_json(primary_mid) for primary_mid in expected]
     }
@@ -182,7 +182,7 @@ async def _(
             },
         },
     )
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_201_CREATED
 
     mid_ref = resp.json()["mid_ref"]
 
@@ -216,7 +216,7 @@ async def _(
             },
         },
     )
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_201_CREATED
 
     mid_ref = resp.json()["mid_ref"]
 
@@ -249,7 +249,7 @@ async def _(
             },
         },
     )
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_201_CREATED
 
     expected = (
         await PrimaryMID.objects()

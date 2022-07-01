@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
@@ -100,7 +100,11 @@ async def get_merchant(plan_ref: UUID, merchant_ref: UUID) -> MerchantDetailResp
     return await create_merchant_detail_response(merchant, plan)
 
 
-@router.post("", response_model=MerchantOverviewResponse)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=MerchantOverviewResponse,
+)
 async def create_merchant(plan_ref: UUID, merchant_data: CreateMerchantRequest) -> dict:
     """Add a new merchant to a plan."""
     try:

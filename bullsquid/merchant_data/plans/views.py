@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 
 from bullsquid.api.errors import APIMultiError, ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
@@ -61,7 +61,7 @@ async def list_plans() -> list[PlanResponse]:
     ]
 
 
-@router.post("", response_model=PlanResponse)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=PlanResponse)
 async def create_plan(plan_data: CreatePlanRequest) -> PlanResponse:
     """Create a new plan."""
     plan_data = plan_data.dict()

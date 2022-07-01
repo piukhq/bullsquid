@@ -25,7 +25,7 @@ def make_user_lookup_response(result: db.UserLookupResult) -> UserLookupResponse
     )
 
 
-@router.get("")
+@router.get("", response_model=list[UserLookupResponse])
 async def list_user_lookups(
     user: str = Header(),
     n: int = Query(default=5),

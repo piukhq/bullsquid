@@ -33,6 +33,7 @@ async def _(merchant: Merchant = merchant) -> None:
             "mid": mid.mid,
             "visa_bin": mid.visa_bin,
             "payment_enrolment_status": mid.payment_enrolment_status,
+            "status": mid.status,
             "date_added": mid.date_added,
             "txm_status": mid.txm_status,
         }

@@ -47,6 +47,7 @@ async def primary_mid_to_json(primary_mid: PrimaryMID) -> dict:
             "visa_bin": primary_mid.visa_bin,
             "payment_enrolment_status": primary_mid.payment_enrolment_status,
         },
+        "mid_status": primary_mid.status,
         "date_added": primary_mid.date_added.isoformat(),
         "txm_status": primary_mid.txm_status,
     }
@@ -75,7 +76,7 @@ async def _(
     )
 
     assert resp.status_code == status.HTTP_200_OK
-    assert resp.json() == {"mids": [await primary_mid_to_json(primary_mid)]}
+    assert resp.json() == [await primary_mid_to_json(primary_mid)]
 
 
 @test("deleted mids are not listed")
@@ -104,7 +105,7 @@ async def _(
     )
 
     assert resp.status_code == status.HTTP_200_OK
-    assert resp.json() == {"mids": [await primary_mid_to_json(primary_mid)]}
+    assert resp.json() == [await primary_mid_to_json(primary_mid)]
 
 
 @test("can list primary mids from a specific plan")
@@ -129,9 +130,9 @@ async def _(
     expected = await PrimaryMID.objects().where(PrimaryMID.merchant == merchants[0])
 
     assert resp.status_code == status.HTTP_200_OK
-    assert resp.json() == {
-        "mids": [await primary_mid_to_json(primary_mid) for primary_mid in expected]
-    }
+    assert resp.json() == [
+        await primary_mid_to_json(primary_mid) for primary_mid in expected
+    ]
 
 
 @test("can't list primary MIDs on a plan that doesn't exist")

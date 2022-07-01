@@ -74,7 +74,7 @@ async def _(
         headers=auth_header,
     )
 
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [await identifier_to_json(identifier)]
 
 
@@ -104,7 +104,7 @@ async def _(
         headers=auth_header,
     )
 
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [await identifier_to_json(identifier)]
 
 
@@ -129,7 +129,7 @@ async def _(
 
     expected = await Identifier.objects().where(Identifier.merchant == merchants[0])
 
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
         await identifier_to_json(identifier) for identifier in expected
     ]
@@ -250,7 +250,7 @@ async def _(
             },
         },
     )
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_201_CREATED
 
     identifier_ref = resp.json()["identifier_ref"]
 
@@ -284,7 +284,7 @@ async def _(
             },
         },
     )
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_201_CREATED
 
     identifier_ref = resp.json()["identifier_ref"]
 

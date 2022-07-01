@@ -67,7 +67,7 @@ async def get_identifier_details(
     return create_identifier_response(mid)
 
 
-@router.post("")
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=IdentifierResponse)
 async def create_identifier(
     plan_ref: UUID,
     merchant_ref: UUID,
@@ -104,7 +104,11 @@ async def create_identifier(
     return create_identifier_response(identifier)
 
 
-@router.post("/deletion", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/deletion",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=IdentifierDeletionListResponse,
+)
 async def delete_identifiers(
     plan_ref: UUID, merchant_ref: UUID, identifier_refs: list[UUID]
 ) -> IdentifierDeletionListResponse:

@@ -71,7 +71,11 @@ async def get_secondary_mid_details(
     return create_secondary_mid_response(mid)
 
 
-@router.post("", response_model=SecondaryMIDResponse)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SecondaryMIDResponse,
+)
 async def create_secondary_mid(
     plan_ref: UUID,
     merchant_ref: UUID,
@@ -110,7 +114,11 @@ async def create_secondary_mid(
     return create_secondary_mid_response(secondary_mid)
 
 
-@router.post("/deletion", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/deletion",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=SecondaryMIDDeletionListResponse,
+)
 async def delete_secondary_mids(
     plan_ref: UUID, merchant_ref: UUID, secondary_mid_refs: list[UUID]
 ) -> SecondaryMIDDeletionListResponse:

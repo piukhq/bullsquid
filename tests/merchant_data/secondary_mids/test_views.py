@@ -78,7 +78,7 @@ async def _(
         headers=auth_header,
     )
 
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [await secondary_mid_to_json(secondary_mid)]
 
 
@@ -110,7 +110,7 @@ async def _(
         headers=auth_header,
     )
 
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [await secondary_mid_to_json(secondary_mid)]
 
 
@@ -135,7 +135,7 @@ async def _(
 
     expected = await SecondaryMID.objects().where(SecondaryMID.merchant == merchants[0])
 
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
         await secondary_mid_to_json(secondary_mid) for secondary_mid in expected
     ]
@@ -257,7 +257,7 @@ async def _(
             },
         },
     )
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_201_CREATED
 
     mid_ref = resp.json()["secondary_mid_ref"]
     expected = await SecondaryMID.objects().where(SecondaryMID.pk == mid_ref).first()
@@ -292,7 +292,7 @@ async def _(
             },
         },
     )
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_201_CREATED
 
     mid_ref = resp.json()["secondary_mid_ref"]
 
@@ -326,7 +326,7 @@ async def _(
             },
         },
     )
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_201_CREATED
 
     expected = (
         await SecondaryMID.objects()

@@ -2,6 +2,7 @@
 
 from uuid import uuid4
 
+from fastapi import status
 from fastapi.testclient import TestClient
 from ward import skip, test
 
@@ -84,7 +85,7 @@ async def _(
     ]
 
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants", headers=auth_header)
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
         merchant_list_to_json(merchant, payment_schemes) for merchant in merchants
     ]
@@ -111,7 +112,7 @@ async def _(
     resp = test_client.get(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}", headers=auth_header
     )
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == await merchant_detail_to_json(merchant)
 
 
@@ -156,7 +157,7 @@ async def _(
             "location_label": merchant.location_label,
         },
     )
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_201_CREATED
     merchant = await get_merchant(resp.json()["merchant_ref"], plan_ref=plan.pk)
     assert resp.json() == merchant_list_to_json(merchant, payment_schemes)
 
@@ -256,7 +257,7 @@ async def _(
             "icon_url": new_details.icon_url,
         },
     )
-    assert resp.ok, resp.json()
+    assert resp.status_code == status.HTTP_200_OK
     merchant = await get_merchant(merchant.pk, plan_ref=merchant.plan)
     assert resp.json() == merchant_list_to_json(merchant, payment_schemes)
     assert merchant.name == new_details.name

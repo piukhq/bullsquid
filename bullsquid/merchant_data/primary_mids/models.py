@@ -40,23 +40,18 @@ class PrimaryMIDResponse(BaseModel):
 
     mid_ref: UUID4
     mid_metadata: PrimaryMIDMetadata
+    mid_status: ResourceStatus
     date_added: datetime
     txm_status: TXMStatus = TXMStatus.NOT_ONBOARDED
 
     _ = validator("txm_status", allow_reuse=True)(string_must_not_be_blank)
 
 
-class PrimaryMIDListResponse(BaseModel):
-    """Response model for a list of primary MIDs."""
-
-    mids: list[PrimaryMIDResponse]
-
-
 class PrimaryMIDDeletionResponse(BaseModel):
     """Response model for a deletion of a primary MID."""
 
     mid_ref: UUID
-    status: ResourceStatus
+    mid_status: ResourceStatus
 
 
 class PrimaryMIDDeletionListResponse(BaseModel):

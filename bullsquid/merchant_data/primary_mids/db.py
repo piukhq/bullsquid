@@ -5,7 +5,11 @@ from typing import TypedDict
 from uuid import UUID
 
 from bullsquid.db import NoSuchRecord
-from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.enums import (
+    PaymentEnrolmentStatus,
+    ResourceStatus,
+    TXMStatus,
+)
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
 from bullsquid.merchant_data.primary_mids.models import PrimaryMIDMetadata
@@ -19,9 +23,10 @@ PrimaryMIDResult = TypedDict(
         "payment_scheme.code": int,
         "mid": str,
         "visa_bin": str,
-        "payment_enrolment_status": str,
+        "payment_enrolment_status": PaymentEnrolmentStatus,
+        "status": ResourceStatus,
         "date_added": datetime,
-        "txm_status": str,
+        "txm_status": TXMStatus,
     },
 )
 
@@ -38,6 +43,7 @@ async def list_primary_mids(
         PrimaryMID.mid,
         PrimaryMID.visa_bin,
         PrimaryMID.payment_enrolment_status,
+        PrimaryMID.status,
         PrimaryMID.date_added,
         PrimaryMID.txm_status,
     ).where(
@@ -102,6 +108,7 @@ async def create_primary_mid(
         "mid": mid.mid,
         "visa_bin": mid.visa_bin,
         "payment_enrolment_status": mid.payment_enrolment_status,
+        "status": mid.status,
         "date_added": mid.date_added,
         "txm_status": mid.txm_status,
     }

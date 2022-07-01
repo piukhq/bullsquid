@@ -16,7 +16,6 @@ from .models import (
     CreatePrimaryMIDRequest,
     PrimaryMIDDeletionListResponse,
     PrimaryMIDDeletionResponse,
-    PrimaryMIDListResponse,
     PrimaryMIDMetadata,
     PrimaryMIDResponse,
 )
@@ -37,31 +36,23 @@ async def create_primary_mid_response(
             visa_bin=primary_mid["visa_bin"],
             payment_enrolment_status=primary_mid["payment_enrolment_status"],
         ),
+        mid_status=primary_mid["status"],
         date_added=primary_mid["date_added"],
         txm_status=primary_mid["txm_status"],
     )
 
 
-async def create_primary_mid_list_response(
-    primary_mids: list[db.PrimaryMIDResult],
-) -> PrimaryMIDListResponse:
-    """Creates a PrimaryMIDListResponse instance from the given primary MIDs."""
-    return PrimaryMIDListResponse(
-        mids=[await create_primary_mid_response(mid) for mid in primary_mids]
-    )
-
-
-@router.get("", response_model=PrimaryMIDListResponse)
+@router.get("", response_model=list[PrimaryMIDResponse])
 async def list_primary_mids(
     plan_ref: UUID, merchant_ref: UUID
-) -> PrimaryMIDListResponse:
+) -> list[PrimaryMIDResponse]:
     """List all primary MIDs for a merchant."""
     try:
         mids = await db.list_primary_mids(plan_ref=plan_ref, merchant_ref=merchant_ref)
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
-    return await create_primary_mid_list_response(mids)
+    return [await create_primary_mid_response(mid) for mid in mids]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=PrimaryMIDResponse)
@@ -129,12 +120,14 @@ async def delete_primary_mids(
     return PrimaryMIDDeletionListResponse(
         mids=[
             PrimaryMIDDeletionResponse(
-                mid_ref=mid_ref, status=ResourceStatus.PENDING_DELETION
+                mid_ref=mid_ref, mid_status=ResourceStatus.PENDING_DELETION
             )
             for mid_ref in onboarded
         ]
         + [
-            PrimaryMIDDeletionResponse(mid_ref=mid_ref, status=ResourceStatus.DELETED)
+            PrimaryMIDDeletionResponse(
+                mid_ref=mid_ref, mid_status=ResourceStatus.DELETED
+            )
             for mid_ref in not_onboarded
         ]
     )

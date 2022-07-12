@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from bullsquid.db import NoSuchRecord
+from bullsquid.db import InvalidData, NoSuchRecord
 from bullsquid.naming import get_pretty_table_name, get_ref_name
 from settings import settings
 
@@ -104,3 +104,26 @@ class UniqueError(APIError):
         self.loc = loc
         self.message = f"Field must be unique: {'.'.join(loc)}."
         super().__init__()
+
+
+class DataError(APIError):
+    """Raised when a piece of data cannot be used."""
+
+    status_code = status.HTTP_409_CONFLICT
+    error = "data_error"
+
+    def __init__(self, *, loc: list[str], resource_name: str) -> None:
+        self.loc = loc
+        self.message = f"Field is not valid for {resource_name}"
+        super().__init__()
+
+    @staticmethod
+    def from_invalid_data(ex: InvalidData, *, loc: list[str]) -> "DataError":
+        """
+        Returns a DataError with the correct location and resource name from the
+        given InvalidData exception.
+        """
+        return DataError(
+            loc=loc,
+            resource_name=get_pretty_table_name(ex.table),
+        )

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TypedDict
 from uuid import UUID
 
-from bullsquid.db import NoSuchRecord
+from bullsquid.db import InvalidData, NoSuchRecord
 from bullsquid.merchant_data.enums import (
     PaymentEnrolmentStatus,
     ResourceStatus,
@@ -12,7 +12,11 @@ from bullsquid.merchant_data.enums import (
 )
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
-from bullsquid.merchant_data.primary_mids.models import PrimaryMIDMetadata
+from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.primary_mids.models import (
+    PrimaryMIDMetadata,
+    UpdatePrimaryMIDRequest,
+)
 
 from .tables import PrimaryMID
 
@@ -29,6 +33,24 @@ PrimaryMIDResult = TypedDict(
         "txm_status": TXMStatus,
     },
 )
+
+
+async def get_primary_mid_instance(
+    pk: UUID, *, plan_ref: UUID, merchant_ref: UUID
+) -> PrimaryMID:
+    """Get a primary MID instance by primary key."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+
+    mid = await PrimaryMID.objects(PrimaryMID.payment_scheme).get(
+        (PrimaryMID.pk == pk)
+        & (PrimaryMID.merchant == merchant)
+        & (PrimaryMID.status != ResourceStatus.DELETED)
+    )
+
+    if not mid:
+        raise NoSuchRecord(PrimaryMID)
+
+    return mid
 
 
 async def list_primary_mids(
@@ -105,6 +127,33 @@ async def create_primary_mid(
     return {
         "pk": mid.pk,
         "payment_scheme.code": payment_scheme.code,
+        "mid": mid.mid,
+        "visa_bin": mid.visa_bin,
+        "payment_enrolment_status": mid.payment_enrolment_status,
+        "status": mid.status,
+        "date_added": mid.date_added,
+        "txm_status": mid.txm_status,
+    }
+
+
+async def update_primary_mid(
+    pk: UUID, fields: UpdatePrimaryMIDRequest, *, plan_ref: UUID, merchant_ref: UUID
+) -> PrimaryMIDResult:
+    """Update a primary MID's editable fields."""
+    mid = await get_primary_mid_instance(
+        pk, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+
+    if fields.visa_bin and mid.payment_scheme.slug != "visa":
+        raise InvalidData(PaymentScheme)
+
+    for name, value in fields.dict(exclude_unset=True).items():
+        setattr(mid, name, value)
+    await mid.save()
+
+    return {
+        "pk": mid.pk,
+        "payment_scheme.code": mid.payment_scheme.code,
         "mid": mid.mid,
         "visa_bin": mid.visa_bin,
         "payment_enrolment_status": mid.payment_enrolment_status,

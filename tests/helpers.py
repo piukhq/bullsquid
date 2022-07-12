@@ -38,6 +38,23 @@ def assert_is_missing_field_error(resp: Response, *, loc: list[str]) -> None:
     )
 
 
+def assert_is_data_error(resp: Response, *, loc: list[str]) -> None:
+    """Asserts that the response is a data error."""
+    expect.assert_is_not(resp.ok, True, f"Expected an error status code: {resp}")
+    expect.assert_equal(
+        resp.status_code,
+        status.HTTP_409_CONFLICT,
+        f"Expected status code to be 409: {resp}",
+    )
+
+    detail = resp.json()["detail"]
+    expect.assert_equal(len(detail), 1, "Expected a single error")
+    expect.assert_equal(detail[0]["loc"], loc, "Expected the error location to match")
+    expect.assert_equal(
+        detail[0]["type"], "data_error", "Expected the error type to match"
+    )
+
+
 def assert_is_not_found_error(resp: Response, *, loc: list[str]) -> None:
     """Asserts that the response is a not found error."""
     expect.assert_is_not(resp.ok, True, f"Expected an error status code: {resp}")

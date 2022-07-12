@@ -14,6 +14,14 @@ class NoSuchRecord(Exception):
         self.table = table
 
 
+class InvalidData(Exception):
+    """Raised when the data given for an operation cannot be used."""
+
+    def __init__(self, table: Type[Table], *args: Any):
+        super().__init__(*args)
+        self.table = table
+
+
 async def field_is_unique(
     model: Type[Table], field: str, value: Any, *, pk: UUID | None = None
 ) -> bool:

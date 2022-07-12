@@ -8,23 +8,32 @@ from fastapi.testclient import TestClient
 from qbert.tables import Job
 from ward import test
 
-from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.enums import (
+    PaymentEnrolmentStatus,
+    ResourceStatus,
+    TXMStatus,
+)
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.tasks import OffboardAndDeletePrimaryMIDs, OnboardPrimaryMIDs
-from tests.fixtures import auth_header, test_client
+from tests.fixtures import auth_header, database, test_client
 from tests.helpers import (
+    assert_is_data_error,
     assert_is_missing_field_error,
     assert_is_not_found_error,
     assert_is_null_error,
     assert_is_uniqueness_error,
+    assert_is_value_error,
 )
 from tests.merchant_data.factories import (
+    default_payment_schemes,
     merchant,
+    merchant_factory,
     payment_schemes,
     plan,
+    plan_factory,
     primary_mid,
     primary_mid_factory,
     three_merchants,
@@ -432,6 +441,140 @@ async def _(
     )
 
     assert_is_null_error(resp, loc=["body", "mid_metadata", "mid"])
+
+
+@test("a primary MID can have its enrolment status updated")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    mid = await primary_mid_factory(
+        merchant=merchant, payment_enrolment_status=PaymentEnrolmentStatus.UNKNOWN
+    )
+    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}",
+        headers=auth_header,
+        json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLED},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+
+    expected = await primary_mid_to_json(mid)
+    expected["mid_metadata"][
+        "payment_enrolment_status"
+    ] = PaymentEnrolmentStatus.ENROLLED.value
+    assert resp.json() == expected
+
+
+@test("a visa primary MID can have its visa BIN updated")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    payment_schemes = await default_payment_schemes()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    mid = await primary_mid_factory(
+        merchant=merchant,
+        payment_scheme=payment_schemes[0],
+    )
+    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}",
+        headers=auth_header,
+        json={"visa_bin": "new-test-visa-bin"},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    expected = await primary_mid_to_json(mid)
+    expected["mid_metadata"]["visa_bin"] = "new-test-visa-bin"
+    assert resp.json() == expected
+
+
+@test("a non-visa primary MID cannot have its visa BIN updated")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    payment_schemes = await default_payment_schemes()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    mid = await primary_mid_factory(
+        merchant=merchant,
+        payment_scheme=payment_schemes[1],
+    )
+    original_visa_bin = mid.visa_bin
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}",
+        headers=auth_header,
+        json={"visa_bin": "new-test-visa-bin"},
+    )
+    assert_is_data_error(resp, loc=["body", "visa_bin"])
+
+    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+    assert mid.visa_bin == original_visa_bin
+
+
+@test("attempting to update a non-existent primary MID raises an error")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{uuid4()}",
+        headers=auth_header,
+        json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLING},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "mid_ref"])
+
+
+@test("attempting to update a primary MID on a non-existent merchant raises an error")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    mid = await primary_mid_factory(merchant=merchant)
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/mids/{mid.pk}",
+        headers=auth_header,
+        json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLING},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("attempting to update a primary MID on a non-existent plan raises an error")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    merchant = await merchant_factory()
+    mid = await primary_mid_factory(merchant=merchant)
+    resp = test_client.patch(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/mids/{mid.pk}",
+        headers=auth_header,
+        json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLING},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("a MID that is not onboarded is deleted and no qbert job is created")

@@ -78,6 +78,35 @@ async def identifier_factory(*, persist: bool = True, **defaults: Any) -> Identi
     )
 
 
+async def default_payment_schemes() -> list[PaymentScheme]:
+    return [
+        await ModelBuilder.build(
+            PaymentScheme,
+            defaults={
+                "slug": "visa",
+                "label": "VISA",
+                "code": 1,
+            },
+        ),
+        await ModelBuilder.build(
+            PaymentScheme,
+            defaults={
+                "slug": "mastercard",
+                "label": "MASTERCARD",
+                "code": 2,
+            },
+        ),
+        await ModelBuilder.build(
+            PaymentScheme,
+            defaults={
+                "slug": "amex",
+                "label": "AMEX",
+                "code": 3,
+            },
+        ),
+    ]
+
+
 @fixture
 async def plan(_: None = database) -> Plan:
     """Creates and returns a plan."""
@@ -140,30 +169,5 @@ async def three_identifiers(_: None = database) -> list[Identifier]:
 
 @fixture
 async def payment_schemes(_: None = database) -> list[PaymentScheme]:
-    """Creates and returns some default payment schemes."""
-    return [
-        await ModelBuilder.build(
-            PaymentScheme,
-            defaults={
-                "slug": "visa",
-                "label": "VISA",
-                "code": 1,
-            },
-        ),
-        await ModelBuilder.build(
-            PaymentScheme,
-            defaults={
-                "slug": "mastercard",
-                "label": "MASTERCARD",
-                "code": 2,
-            },
-        ),
-        await ModelBuilder.build(
-            PaymentScheme,
-            defaults={
-                "slug": "amex",
-                "label": "AMEX",
-                "code": 3,
-            },
-        ),
-    ]
+    """Creates and returns the default payment schemes."""
+    return await default_payment_schemes()

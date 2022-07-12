@@ -5,8 +5,8 @@ from uuid import UUID
 from fastapi import APIRouter, status
 
 from bullsquid import tasks
-from bullsquid.api.errors import ResourceNotFoundError, UniqueError
-from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.api.errors import DataError, ResourceNotFoundError, UniqueError
+from bullsquid.db import InvalidData, NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
@@ -18,6 +18,7 @@ from .models import (
     PrimaryMIDDeletionResponse,
     PrimaryMIDMetadata,
     PrimaryMIDResponse,
+    UpdatePrimaryMIDRequest,
 )
 from .tables import PrimaryMID
 
@@ -70,10 +71,30 @@ async def create_primary_mid(
         )
     except NoSuchRecord as ex:
         loc = ["path"] if ex.table in [Plan, Merchant] else ["body", "mid_metadata"]
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
 
     if mid_data.onboard:
         await tasks.queue.push(tasks.OnboardPrimaryMIDs(mid_refs=[mid["pk"]]))
+
+    return await create_primary_mid_response(mid)
+
+
+@router.patch("/{mid_ref}", response_model=PrimaryMIDResponse)
+async def update_primary_mid(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    mid_ref: UUID,
+    mid_data: UpdatePrimaryMIDRequest,
+) -> PrimaryMIDResponse:
+    """Update a primary MID's editable fields."""
+    try:
+        mid = await db.update_primary_mid(
+            mid_ref, mid_data, merchant_ref=merchant_ref, plan_ref=plan_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
+    except InvalidData as ex:
+        raise DataError.from_invalid_data(ex, loc=["body", "visa_bin"]) from ex
 
     return await create_primary_mid_response(mid)
 

@@ -35,6 +35,15 @@ class CreatePrimaryMIDRequest(BaseModel):
     mid_metadata: PrimaryMIDMetadata
 
 
+class UpdatePrimaryMIDRequest(BaseModel):
+    """Request model for updating a primary MID."""
+
+    payment_enrolment_status: PaymentEnrolmentStatus | None
+    visa_bin: str | None
+
+    _ = validator("visa_bin", allow_reuse=True)(string_must_not_be_blank)
+
+
 class PrimaryMIDResponse(BaseModel):
     """Primary MID response model"""
 

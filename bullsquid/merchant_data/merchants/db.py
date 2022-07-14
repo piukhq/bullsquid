@@ -5,6 +5,7 @@ from uuid import UUID
 
 from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.merchants.models import CreateMerchantRequest
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
 
@@ -46,11 +47,11 @@ async def create_merchant(fields: Mapping[str, Any], *, plan: Plan) -> Merchant:
 
 
 async def update_merchant(
-    pk: UUID, fields: Mapping[str, Any], *, plan_ref: UUID
+    pk: UUID, fields: CreateMerchantRequest, *, plan_ref: UUID
 ) -> Merchant:
     """Update an existing merchant with the given fields."""
     merchant = await get_merchant(pk, plan_ref=plan_ref)
-    for key, value in fields.items():
+    for key, value in fields:
         setattr(merchant, key, value)
     await merchant.save()
     return merchant

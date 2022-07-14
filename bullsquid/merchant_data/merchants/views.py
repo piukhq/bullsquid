@@ -88,18 +88,6 @@ async def list_merchants(plan_ref: UUID) -> list[MerchantOverviewResponse]:
     ]
 
 
-@router.get("/{merchant_ref}", response_model=MerchantDetailResponse)
-async def get_merchant(plan_ref: UUID, merchant_ref: UUID) -> MerchantDetailResponse:
-    """Get merchant details."""
-    try:
-        merchant = await db.get_merchant(merchant_ref, plan_ref=plan_ref)
-    except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
-
-    plan = await merchant.get_related(Merchant.plan)
-    return await create_merchant_detail_response(merchant, plan)
-
-
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
@@ -116,6 +104,39 @@ async def create_merchant(plan_ref: UUID, merchant_data: CreateMerchantRequest) 
         raise UniqueError(loc=["body", "name"])
 
     merchant = await db.create_merchant(merchant_data.dict(), plan=plan)
+
+    return await create_merchant_overview_response(
+        merchant, await list_payment_schemes()
+    )
+
+
+@router.get("/{merchant_ref}", response_model=MerchantDetailResponse)
+async def get_merchant(plan_ref: UUID, merchant_ref: UUID) -> MerchantDetailResponse:
+    """Get merchant details."""
+    try:
+        merchant = await db.get_merchant(merchant_ref, plan_ref=plan_ref)
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+
+    plan = await merchant.get_related(Merchant.plan)
+    return await create_merchant_detail_response(merchant, plan)
+
+
+@router.put("/{merchant_ref}", response_model=MerchantOverviewResponse)
+async def update_merchant(
+    plan_ref: UUID, merchant_ref: UUID, merchant_data: CreateMerchantRequest
+) -> MerchantOverviewResponse:
+    """Update a merchant with new details."""
+
+    if not await field_is_unique(Merchant, "name", merchant_data.name, pk=merchant_ref):
+        raise UniqueError(loc=["body", "name"])
+
+    try:
+        merchant = await db.update_merchant(
+            merchant_ref, merchant_data, plan_ref=plan_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
     return await create_merchant_overview_response(
         merchant, await list_payment_schemes()

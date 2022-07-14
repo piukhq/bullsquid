@@ -184,7 +184,7 @@ async def _(
     assert resp.json() == await identifier_to_json(expected)
 
 
-@test("can't get identifier details from a non-existant identifier")
+@test("can't get identifier details from a non-existent identifier")
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
@@ -199,7 +199,7 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "identifier_ref"])
 
 
-@test("can't get identifier details from a non-existant merchant")
+@test("can't get identifier details from a non-existent merchant")
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
@@ -215,7 +215,7 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
-@test("can't get identifier details from a non-existant plan")
+@test("can't get identifier details from a non-existent plan")
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,

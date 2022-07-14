@@ -181,7 +181,7 @@ async def _(
     assert_is_uniqueness_error(resp, loc=["body", "name"])
 
 
-@test("unable to create a merchant on a non-existant plan")
+@test("unable to create a merchant on a non-existent plan")
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,

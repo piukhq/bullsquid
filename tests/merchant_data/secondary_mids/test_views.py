@@ -190,7 +190,7 @@ async def _(
     assert resp.json() == await secondary_mid_to_json(expected)
 
 
-@test("can't get secondary MID details from a non-existant secondary MID")
+@test("can't get secondary MID details from a non-existent secondary MID")
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
@@ -205,7 +205,7 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "secondary_mid_ref"])
 
 
-@test("can't get secondary MID details from a non-existant merchant")
+@test("can't get secondary MID details from a non-existent merchant")
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
@@ -221,7 +221,7 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
-@test("can't get secondary MID details from a non-existant plan")
+@test("can't get secondary MID details from a non-existent plan")
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,

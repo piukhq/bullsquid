@@ -12,15 +12,11 @@ from bullsquid.merchant_data.merchants.db import (
     list_merchants,
     update_merchant,
 )
+from bullsquid.merchant_data.merchants.models import CreateMerchantRequest
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
 from tests.fixtures import database
-from tests.merchant_data.factories import (
-    merchant,
-    merchant_factory,
-    plan,
-    three_merchants,
-)
+from tests.merchant_data.factories import merchant, merchant_factory, plan
 
 
 @test("can get a merchant by primary key")
@@ -88,27 +84,36 @@ async def _(plan: Plan = plan) -> None:
 
 @test("can update a merchant")
 async def _(merchant: Merchant = merchant) -> None:
-    await update_merchant(merchant.pk, {"name": "updated"}, plan_ref=merchant.plan)
+    update = CreateMerchantRequest(name="updated", location_label="also updated")
+    await update_merchant(
+        merchant.pk,
+        update,
+        plan_ref=merchant.plan,
+    )
     merchant = await get_merchant(merchant.pk, plan_ref=merchant.plan)
     assert merchant.name == "updated"
+    assert merchant.location_label == "also updated"
 
 
 @test("updating a merchant that doesn't exist raises NoSuchRecord")
 async def _(plan: Plan = plan) -> None:
+    update = CreateMerchantRequest(name="updated", location_label="also updated")
     with raises(NoSuchRecord):
-        await update_merchant(uuid4(), {"name": "updated"}, plan_ref=plan.pk)
+        await update_merchant(uuid4(), update, plan_ref=plan.pk)
 
 
 @test("updating a merchant on a plan that doesn't exist raises NoSuchRecord")
 async def _(merchant: Merchant = merchant) -> None:
+    update = CreateMerchantRequest(name="updated", location_label="also updated")
     with raises(NoSuchRecord):
-        await update_merchant(merchant.pk, {"name": "updated"}, plan_ref=uuid4())
+        await update_merchant(merchant.pk, update, plan_ref=uuid4())
 
 
 @test("updating a merchant on a plan it doesn't belong to raises NoSuchRecord")
 async def _(plan: Plan = plan, merchant: Merchant = merchant) -> None:
+    update = CreateMerchantRequest(name="updated", location_label="also updated")
     with raises(NoSuchRecord):
-        await update_merchant(merchant.pk, {"name": "updated"}, plan_ref=plan.pk)
+        await update_merchant(merchant.pk, update, plan_ref=plan.pk)
 
 
 @test("can delete a merchant")

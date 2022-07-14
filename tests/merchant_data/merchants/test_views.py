@@ -12,6 +12,7 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from tests.fixtures import auth_header, database, test_client
 from tests.helpers import (
+    assert_is_missing_field_error,
     assert_is_not_found_error,
     assert_is_uniqueness_error,
     assert_is_value_error,
@@ -26,7 +27,7 @@ from tests.merchant_data.factories import (
 )
 
 
-def merchant_list_to_json(
+def merchant_overview_json(
     merchant: Merchant, payment_schemes: list[PaymentScheme]
 ) -> dict:
     """Convert a merchant to its expected list JSON representation."""
@@ -52,9 +53,8 @@ def merchant_list_to_json(
     }
 
 
-async def merchant_detail_to_json(merchant: Merchant) -> dict:
+def merchant_detail_json(merchant: Merchant, plan: Plan) -> dict:
     """Convert a merchant to its expected detail JSON representation."""
-    plan: Plan = await merchant.get_related(Merchant.plan)
     return {
         "merchant_ref": str(merchant.pk),
         "plan_metadata": {
@@ -87,7 +87,7 @@ async def _(
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants", headers=auth_header)
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
-        merchant_list_to_json(merchant, payment_schemes) for merchant in merchants
+        merchant_overview_json(merchant, payment_schemes) for merchant in merchants
     ]
 
 
@@ -113,7 +113,7 @@ async def _(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}", headers=auth_header
     )
     assert resp.status_code == status.HTTP_200_OK
-    assert resp.json() == await merchant_detail_to_json(merchant)
+    assert resp.json() == merchant_detail_json(merchant, plan)
 
 
 @test("getting merchant details from a non-existent plan returns a 404")
@@ -159,7 +159,7 @@ async def _(
     )
     assert resp.status_code == status.HTTP_201_CREATED
     merchant = await get_merchant(resp.json()["merchant_ref"], plan_ref=plan.pk)
-    assert resp.json() == merchant_list_to_json(merchant, payment_schemes)
+    assert resp.json() == merchant_overview_json(merchant, payment_schemes)
 
 
 @test("unable to create a merchant with a duplicate name")
@@ -239,62 +239,116 @@ async def _(
 
 
 @test("can update an existing merchant with new details")
-@skip("not yet implemented")
-async def _(
-    test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
-    merchant: Merchant = merchant,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
-) -> None:
-    new_details = await merchant_factory(persist=False)
-    resp = test_client.put(
-        f"/api/v1/merchants/{merchant.pk}",
-        headers=auth_header,
-        json={
-            "name": new_details.name,
-            "merchant_id": new_details.merchant_id,
-            "slug": new_details.slug,
-            "icon_url": new_details.icon_url,
-        },
-    )
-    assert resp.status_code == status.HTTP_200_OK
-    merchant = await get_merchant(merchant.pk, plan_ref=merchant.plan)
-    assert resp.json() == merchant_list_to_json(merchant, payment_schemes)
-    assert merchant.name == new_details.name
-    assert merchant.merchant_id == new_details.merchant_id
-    assert merchant.slug == new_details.slug
-    assert merchant.icon_url == new_details.icon_url
-
-
-@test("updating a non-existent merchant returns a ref error")
-@skip("not yet implemented")
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
 ) -> None:
+    merchant = await merchant_factory()
+    new_details = await merchant_factory(persist=False)
     resp = test_client.put(
-        f"/api/v1/merchants/{uuid4()}",
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}",
         headers=auth_header,
         json={
-            "name": "New name",
+            "name": new_details.name,
+            "icon_url": new_details.icon_url,
+            "location_label": new_details.location_label,
+        },
+    )
+    assert resp.status_code == status.HTTP_200_OK
+
+    merchant = await Merchant.objects().get(Merchant.pk == merchant.pk)
+    assert resp.json() == merchant_overview_json(
+        merchant, await PaymentScheme.objects()
+    )
+    assert merchant.name == new_details.name
+    assert merchant.icon_url == new_details.icon_url
+    assert merchant.location_label == new_details.location_label
+
+
+@test("updating a merchant requires a name")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    merchant = await merchant_factory()
+    resp = test_client.put(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}",
+        headers=auth_header,
+        json={"location_label": "new location"},
+    )
+    assert_is_missing_field_error(resp, loc=["body", "name"])
+
+
+@test("updating a merchant requires a location label")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    merchant = await merchant_factory()
+    resp = test_client.put(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}",
+        headers=auth_header,
+        json={"name": "new name"},
+    )
+    assert_is_missing_field_error(resp, loc=["body", "location_label"])
+
+
+@test("updating a non-existent merchant returns a ref error")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    resp = test_client.put(
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}",
+        headers=auth_header,
+        json={
+            "name": "new name",
+            "location_label": "new location",
         },
     )
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
-@test("updating a merchant with an existing name returns a uniqueness error")
-@skip("not yet implemented")
+@test("updating a merchant on a non-existent plan returns a ref error")
 async def _(
+    _db: None = database,
     test_client: TestClient = test_client,
     auth_header: dict = auth_header,
-    merchants: list[Merchant] = three_merchants,
 ) -> None:
+    merchant = await merchant_factory()
     resp = test_client.put(
-        f"/api/v1/merchants/{merchants[0].pk}",
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}",
+        headers=auth_header,
+        json={
+            "name": "new name",
+            "location_label": "new location",
+        },
+    )
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+@test("updating a merchant with an existing name returns a uniqueness error")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+) -> None:
+    plan = await plan_factory()
+    merchants = [
+        await merchant_factory(plan=plan),
+        await merchant_factory(),
+    ]
+    resp = test_client.put(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchants[0].pk}",
         headers=auth_header,
         json={
             "name": merchants[1].name,
+            "location_label": "new location",
         },
     )
     assert_is_uniqueness_error(resp, loc=["body", "name"])

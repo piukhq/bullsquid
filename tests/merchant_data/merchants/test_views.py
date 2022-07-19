@@ -10,7 +10,7 @@ from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
-from tests.fixtures import auth_header, database, test_client
+from tests.fixtures import database, test_client
 from tests.helpers import (
     assert_is_missing_field_error,
     assert_is_not_found_error,
@@ -74,7 +74,6 @@ def merchant_detail_json(merchant: Merchant, plan: Plan) -> dict:
 @test("can list merchants")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plan: Plan = plan,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
@@ -84,7 +83,7 @@ async def _(
         await merchant_factory(plan=plan),
     ]
 
-    resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants", headers=auth_header)
+    resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
         merchant_overview_json(merchant, payment_schemes) for merchant in merchants
@@ -95,9 +94,8 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
-    resp = test_client.get(f"/api/v1/plans/{uuid4()}/merchants", headers=auth_header)
+    resp = test_client.get(f"/api/v1/plans/{uuid4()}/merchants")
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
@@ -105,13 +103,10 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
-    resp = test_client.get(
-        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}", headers=auth_header
-    )
+    resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == merchant_detail_json(merchant, plan)
 
@@ -119,38 +114,30 @@ async def _(
 @test("getting merchant details from a non-existent plan returns a 404")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
 ) -> None:
-    resp = test_client.get(
-        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}", headers=auth_header
-    )
+    resp = test_client.get(f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}")
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("getting details from a non-existent merchant returns a 404")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plan: Plan = plan,
 ) -> None:
-    resp = test_client.get(
-        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}", headers=auth_header
-    )
+    resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}")
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
 @test("can create a merchant")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     payment_schemes: list[PaymentScheme] = payment_schemes,
     plan: Plan = plan,
 ) -> None:
     merchant = await merchant_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants",
-        headers=auth_header,
         json={
             "name": merchant.name,
             "icon_url": merchant.icon_url,
@@ -165,13 +152,11 @@ async def _(
 @test("unable to create a merchant with a duplicate name")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     existing_merchant: Merchant = merchant,
 ) -> None:
     new_merchant = await merchant_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{existing_merchant.plan}/merchants",
-        headers=auth_header,
         json={
             "name": existing_merchant.name,
             "icon_url": new_merchant.icon_url,
@@ -185,12 +170,10 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     new_merchant = await merchant_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{uuid4()}/merchants",
-        headers=auth_header,
         json={
             "name": new_merchant.name,
             "icon_url": new_merchant.icon_url,
@@ -203,13 +186,11 @@ async def _(
 @test("unable to create a merchant with a blank name instead of null")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plan: Plan = plan,
 ) -> None:
     merchant = await merchant_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants",
-        headers=auth_header,
         json={
             "name": "",
             "icon_url": merchant.icon_url,
@@ -222,13 +203,11 @@ async def _(
 @test("unable to create a merchant with a blank location label instead of null")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plan: Plan = plan,
 ) -> None:
     merchant = await merchant_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants",
-        headers=auth_header,
         json={
             "name": merchant.name,
             "icon_url": merchant.icon_url,
@@ -242,13 +221,11 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     merchant = await merchant_factory()
     new_details = await merchant_factory(persist=False)
     resp = test_client.put(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}",
-        headers=auth_header,
         json={
             "name": new_details.name,
             "icon_url": new_details.icon_url,
@@ -270,12 +247,10 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     merchant = await merchant_factory()
     resp = test_client.put(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}",
-        headers=auth_header,
         json={"location_label": "new location"},
     )
     assert_is_missing_field_error(resp, loc=["body", "name"])
@@ -285,12 +260,10 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     merchant = await merchant_factory()
     resp = test_client.put(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}",
-        headers=auth_header,
         json={"name": "new name"},
     )
     assert_is_missing_field_error(resp, loc=["body", "location_label"])
@@ -300,12 +273,10 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     plan = await plan_factory()
     resp = test_client.put(
         f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}",
-        headers=auth_header,
         json={
             "name": "new name",
             "location_label": "new location",
@@ -318,12 +289,10 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     merchant = await merchant_factory()
     resp = test_client.put(
         f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}",
-        headers=auth_header,
         json={
             "name": "new name",
             "location_label": "new location",
@@ -336,7 +305,6 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     plan = await plan_factory()
     merchants = [
@@ -345,7 +313,6 @@ async def _(
     ]
     resp = test_client.put(
         f"/api/v1/plans/{plan.pk}/merchants/{merchants[0].pk}",
-        headers=auth_header,
         json={
             "name": merchants[1].name,
             "location_label": "new location",

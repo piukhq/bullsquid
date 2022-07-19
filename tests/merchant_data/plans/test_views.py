@@ -11,7 +11,7 @@ from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
-from tests.fixtures import auth_header, database, test_client
+from tests.fixtures import database, test_client
 from tests.helpers import (
     assert_is_not_found_error,
     assert_is_uniqueness_error,
@@ -56,11 +56,10 @@ async def plan_to_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict
 @test("can list plans with no merchants")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plans: list[dict] = three_plans,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
-    resp = test_client.get("/api/v1/plans", headers=auth_header)
+    resp = test_client.get("/api/v1/plans")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [await plan_to_json(plan, payment_schemes) for plan in plans]
 
@@ -68,7 +67,6 @@ async def _(
 @test("can list plans with merchants")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plans: list[dict] = three_plans,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
@@ -76,7 +74,8 @@ async def _(
         for _ in range(random.randint(1, 3)):
             await merchant_factory(plan=plan)
 
-    resp = test_client.get("/api/v1/plans", headers=auth_header)
+    resp = test_client.get("/api/v1/plans")
+    print(resp.text)
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [await plan_to_json(plan, payment_schemes) for plan in plans]
 
@@ -84,13 +83,11 @@ async def _(
 @test("can create a plan")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     plan = await plan_factory(persist=False)
     resp = test_client.post(
         "/api/v1/plans",
-        headers=auth_header,
         json={
             "name": plan.name,
             "plan_id": plan.plan_id,
@@ -106,13 +103,11 @@ async def _(
 @test("can create a plan with a blank slug")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     plan = await plan_factory(persist=False, slug="")
     resp = test_client.post(
         "/api/v1/plans",
-        headers=auth_header,
         json={
             "name": plan.name,
             "plan_id": plan.plan_id,
@@ -129,13 +124,11 @@ async def _(
 @test("unable to create a plan with a duplicate name")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     existing_plan: Plan = plan,
 ) -> None:
     new_plan = await plan_factory(persist=False)
     resp = test_client.post(
         "/api/v1/plans",
-        headers=auth_header,
         json={
             "name": existing_plan.name,
             "plan_id": new_plan.plan_id,
@@ -149,13 +142,11 @@ async def _(
 @test("unable to create a plan with a duplicate slug")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     existing_plan: Plan = plan,
 ) -> None:
     new_plan = await plan_factory(persist=False)
     resp = test_client.post(
         "/api/v1/plans",
-        headers=auth_header,
         json={
             "name": new_plan.name,
             "plan_id": new_plan.plan_id,
@@ -169,13 +160,11 @@ async def _(
 @test("unable to create a plan with a duplicate plan ID")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     existing_plan: Plan = plan,
 ) -> None:
     new_plan = await plan_factory(persist=False)
     resp = test_client.post(
         "/api/v1/plans",
-        headers=auth_header,
         json={
             "name": new_plan.name,
             "plan_id": existing_plan.plan_id,
@@ -189,14 +178,12 @@ async def _(
 @test("can update an existing plan with new details")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plan: Plan = plan,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     new_details = await plan_factory(persist=False)
     resp = test_client.put(
         f"/api/v1/plans/{plan.pk}",
-        headers=auth_header,
         json={
             "name": new_details.name,
             "plan_id": new_details.plan_id,
@@ -217,11 +204,9 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     resp = test_client.put(
         f"/api/v1/plans/{uuid4()}",
-        headers=auth_header,
         json={
             "name": "New name",
         },
@@ -232,12 +217,10 @@ async def _(
 @test("updating a plan with an existing name returns a uniqueness error")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plans: list[Plan] = three_plans,
 ) -> None:
     resp = test_client.put(
         f"/api/v1/plans/{plans[0].pk}",
-        headers=auth_header,
         json={
             "name": plans[1].name,
         },
@@ -248,12 +231,10 @@ async def _(
 @test("updating a plan with an existing slug returns a uniqueness error")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plans: list[Plan] = three_plans,
 ) -> None:
     resp = test_client.put(
         f"/api/v1/plans/{plans[0].pk}",
-        headers=auth_header,
         json={
             "name": plans[0].name,
             "slug": plans[1].slug,
@@ -265,12 +246,10 @@ async def _(
 @test("updating a plan with an existing plan ID returns a uniqueness error")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plans: list[Plan] = three_plans,
 ) -> None:
     resp = test_client.put(
         f"/api/v1/plans/{plans[0].pk}",
-        headers=auth_header,
         json={
             "name": plans[0].name,
             "plan_id": plans[1].plan_id,

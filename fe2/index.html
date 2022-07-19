@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang=en>
+
+<head>
+    <meta charset=utf-8>
+    <title>Frontend 2.0</title>
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/1.20/auth0-spa-js.production.js"></script>
+    <style>
+        body {
+            background: #1e1e2e;
+            color: #cdd6f4;
+            font-family: Helvetica, Arial, sans-serif;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        div.title {
+            margin-bottom: 3rem;
+        }
+
+        img.logo {
+            display: block;
+            margin: 2rem auto;
+            border-radius: 50px;
+            width: 192px;
+        }
+
+        img.profile-pic {
+            width: 64px;
+            height: auto;
+            vertical-align: middle;
+            margin-right: 1rem;
+        }
+
+        div.container {
+            width: 640px;
+            margin: 0 auto;
+        }
+
+        div.panel {
+            background: #313244;
+            padding: 2rem;
+            border-radius: 50px;
+        }
+
+        a.btn {
+            padding: 1rem;
+            margin: 1rem;
+            font-size: 1rem;
+            color: #cdd6f4;
+            text-decoration: none;
+
+            border-radius: 50px;
+            background: #313244;
+            box-shadow: 20px 20px 60px #222330,
+                -20px -20px 60px #404158;
+        }
+
+        a.btn:active {
+            border-radius: 50px;
+            background: linear-gradient(145deg, #2c2d3d, #343649);
+            box-shadow: 20px 20px 60px #222330,
+                -20px -20px 60px #404158;
+        }
+
+        div#fetch-result {
+            display: none;
+            margin-top: 3rem;
+        }
+
+        div#fetch-result>pre {
+            overflow: scroll;
+            max-height: 20rem;
+            background: #11111b;
+            border-radius: 50px;
+            padding: 2rem;
+        }
+
+        div#profile {
+            margin-top: 3rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <img src="https://i.imgur.com/qb6RRAf.png" class="logo">
+        <div class="panel">
+            <div class="title">
+                <h1>Frontend 2.0</h1>
+                <i class="sub">Now with 100% less anything!</i>
+            </div>
+
+            <p class="buttons">
+                <a href="#" id="login" class="btn">Login</a>
+                <a href="#" onclick="listPlans()" id="list-plans" class="btn">List Plans</a>
+                <a href="#" id="logout" class="btn">Logout</a>
+            </p>
+
+            <div id="profile"></div>
+            <div id="fetch-result"></div>
+        </div>
+    </div>
+</body>
+
+<script>
+    function setpre(json) {
+        const text = JSON.stringify(json, null, 4);
+        const fetchResult = document.getElementById("fetch-result");
+        fetchResult.style.display = "block";
+        fetchResult.innerHTML = `<pre>${text}</pre>`;
+    }
+
+    var accessToken = "";
+
+    async function listPlans() {
+        const resp = await fetch(window.location.origin + "/api/v1/plans", {
+            headers: {Authorization: `Bearer ${accessToken}`}
+        });
+        const json = await resp.json();
+        setpre(json);
+    }
+
+    createAuth0Client({
+        domain: "bink.eu.auth0.com",
+        client_id: "4bBH1LadGhdzg7Frm5B8R2BWl5xDUsgE",
+        audience: "https://portal.bink.com",
+        redirect_uri: window.location.href,
+    }).then(async (auth0) => {
+        // Assumes a button with id "login" in the DOM
+        const loginButton = document.getElementById("login");
+
+        loginButton.addEventListener("click", (e) => {
+            e.preventDefault();
+            auth0.loginWithRedirect();
+        });
+
+        if (location.search.includes("state=") &&
+            (location.search.includes("code=") ||
+                location.search.includes("error="))) {
+            await auth0.handleRedirectCallback();
+            window.history.replaceState({}, document.title, "/");
+        }
+
+        // Assumes a button with id "logout" in the DOM
+        const logoutButton = document.getElementById("logout");
+
+        logoutButton.addEventListener("click", (e) => {
+            e.preventDefault();
+            auth0.logout();
+        });
+
+        const isAuthenticated = await auth0.isAuthenticated();
+        const userProfile = await auth0.getUser();
+
+        // Assumes an element with id "profile" in the DOM
+        const profileElement = document.getElementById("profile");
+
+        if (isAuthenticated) {
+            accessToken = await auth0.getTokenSilently();
+
+            profileElement.style.display = "block";
+            profileElement.innerHTML = `
+            <h2>Logged in!</h2>
+            <div class="user">
+                <img class="profile-pic" src="${userProfile.picture}" />
+                ${userProfile.name}
+            </div>
+            `;
+        } else {
+            profileElement.style.display = "none";
+        }
+    });
+</script>
+
+</html>

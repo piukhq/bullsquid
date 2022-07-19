@@ -4,11 +4,12 @@ Defines the create_app function used to initialize the application.
 from asyncpg.exceptions import PostgresError
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from piccolo.engine import engine_finder
 from starlette.responses import JSONResponse
 
-from bullsquid.api.auth import check_api_key
+from bullsquid.api.auth import jwt_bearer
 from bullsquid.api.errors import error_response
 from bullsquid.customer_wallet.router import router as customer_wallet_router
 from bullsquid.merchant_data.router import router as merchant_data_router
@@ -33,14 +34,16 @@ def create_app() -> FastAPI:
     app.include_router(status_api, tags=["Status"])
     app.include_router(
         merchant_data_router,
+        dependencies=[Depends(jwt_bearer)],
         prefix="/api/v1",
-        dependencies=[Depends(check_api_key)],
     )
     app.include_router(
         customer_wallet_router,
+        dependencies=[Depends(jwt_bearer)],
         prefix="/api/v1",
-        dependencies=[Depends(check_api_key)],
     )
+
+    app.mount("/fe2", StaticFiles(directory="fe2", html=True), name="Frontend 2")
 
     @app.exception_handler(Exception)
     async def generic_error_handler(_request: Request, ex: Exception) -> JSONResponse:

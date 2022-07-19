@@ -27,6 +27,7 @@ aiohttp = "^3.8.1"
 url-normalize = "^1.4.3"
 aiodns = "^3.0.0"
 inflection = "^0.5.1"
+PyJWT = {extras = ["crypto"], version = "^2.4.0"}
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.6.0"
@@ -95,5 +96,6 @@ omit = [
     "*/tables.py",             # table definitions are not directly tested
     "bullsquid/log_conf.py",   # log_conf sets up a complex log intercept that is hard to test
     "bullsquid/api/app.py",    # api app initialisation sets up db pools and so on that are hard to test
+    "bullsquid/api/auth.py",   # TEMPORARY: will probably need a lot of mocking
     "bullsquid/cmd/*.py",      # TEMPORARY: command line tools are not tested right now
 ]

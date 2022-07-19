@@ -18,7 +18,7 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.tasks import OffboardAndDeletePrimaryMIDs, OnboardPrimaryMIDs
-from tests.fixtures import auth_header, database, test_client
+from tests.fixtures import database, test_client
 from tests.helpers import (
     assert_is_data_error,
     assert_is_missing_field_error,
@@ -65,7 +65,6 @@ async def primary_mid_to_json(primary_mid: PrimaryMID) -> dict:
 @test("can list primary mids")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     primary_mid: PrimaryMID = primary_mid,
 ) -> None:
     # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
@@ -80,9 +79,7 @@ async def _(
         .first()
     )
 
-    resp = test_client.get(
-        f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/mids", headers=auth_header
-    )
+    resp = test_client.get(f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/mids")
 
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [await primary_mid_to_json(primary_mid)]
@@ -91,7 +88,6 @@ async def _(
 @test("deleted mids are not listed")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     primary_mid: PrimaryMID = primary_mid,
 ) -> None:
     # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
@@ -109,9 +105,7 @@ async def _(
     # create a deleted primary MID that shouldn't be in the response
     await primary_mid_factory(status=ResourceStatus.DELETED, merchant=merchant_ref)
 
-    resp = test_client.get(
-        f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/mids", headers=auth_header
-    )
+    resp = test_client.get(f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/mids")
 
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [await primary_mid_to_json(primary_mid)]
@@ -120,7 +114,6 @@ async def _(
 @test("can list primary mids from a specific plan")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchants: list[Merchant] = three_merchants,
 ) -> None:
     for merchant in merchants:
@@ -131,10 +124,7 @@ async def _(
         "pk"
     ]
 
-    resp = test_client.get(
-        f"/api/v1/plans/{plan_ref}/merchants/{merchants[0].pk}/mids",
-        headers=auth_header,
-    )
+    resp = test_client.get(f"/api/v1/plans/{plan_ref}/merchants/{merchants[0].pk}/mids")
 
     expected = await PrimaryMID.objects().where(PrimaryMID.merchant == merchants[0])
 
@@ -147,13 +137,9 @@ async def _(
 @test("can't list primary MIDs on a plan that doesn't exist")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
 ) -> None:
-    resp = test_client.get(
-        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/mids",
-        headers=auth_header,
-    )
+    resp = test_client.get(f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/mids")
 
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
@@ -161,12 +147,9 @@ async def _(
 @test("can't list primary MIDs on a merchant that doesn't exist")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plan: Plan = plan,
 ) -> None:
-    resp = test_client.get(
-        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/mids", headers=auth_header
-    )
+    resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/mids")
 
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
@@ -174,14 +157,12 @@ async def _(
 @test("can create a primary MID on a merchant without onboarding")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
-        headers=auth_header,
         json={
             "onboard": False,
             "mid_metadata": {
@@ -208,14 +189,12 @@ async def _(
 @test("can create and onboard a primary MID on a merchant")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
-        headers=auth_header,
         json={
             "onboard": True,
             "mid_metadata": {
@@ -242,14 +221,12 @@ async def _(
 @test("can create a primary MID without a Visa BIN")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
-        headers=auth_header,
         json={
             "onboard": False,
             "mid_metadata": {
@@ -272,14 +249,12 @@ async def _(
 @test("can't create a primary MID on a plan that does not exist")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/mids",
-        headers=auth_header,
         json={
             "onboard": False,
             "mid_metadata": {
@@ -297,14 +272,12 @@ async def _(
 @test("can't create a primary MID on a merchant that does not exist")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     plan: Plan = plan,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/mids",
-        headers=auth_header,
         json={
             "onboard": False,
             "mid_metadata": {
@@ -322,7 +295,6 @@ async def _(
 @test("can't create a primary MID with a MID that already exists")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
     payment_schemes: list[PaymentScheme] = payment_schemes,
     existing_mid: PrimaryMID = primary_mid,
@@ -330,7 +302,6 @@ async def _(
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
-        headers=auth_header,
         json={
             "onboard": False,
             "mid_metadata": {
@@ -348,13 +319,11 @@ async def _(
 @test("can't create a primary MID with a missing payment scheme code")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
 ) -> None:
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
-        headers=auth_header,
         json={
             "onboard": False,
             "mid_metadata": {
@@ -373,13 +342,11 @@ async def _(
 @test("can't create a primary MID with a null payment scheme code")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
 ) -> None:
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
-        headers=auth_header,
         json={
             "onboard": False,
             "mid_metadata": {
@@ -397,14 +364,12 @@ async def _(
 @test("can't create a primary MID with a missing MID value")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
-        headers=auth_header,
         json={
             "onboard": False,
             "mid_metadata": {
@@ -421,14 +386,12 @@ async def _(
 @test("can't create a primary MID with a null MID value")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
     payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
-        headers=auth_header,
         json={
             "onboard": False,
             "mid_metadata": {
@@ -447,7 +410,6 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -458,7 +420,6 @@ async def _(
 
     resp = test_client.patch(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}",
-        headers=auth_header,
         json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLED},
     )
 
@@ -475,7 +436,6 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     payment_schemes = await default_payment_schemes()
     plan = await plan_factory()
@@ -488,7 +448,6 @@ async def _(
 
     resp = test_client.patch(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}",
-        headers=auth_header,
         json={"visa_bin": "new-test-visa-bin"},
     )
 
@@ -503,7 +462,6 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     payment_schemes = await default_payment_schemes()
     plan = await plan_factory()
@@ -516,7 +474,6 @@ async def _(
 
     resp = test_client.patch(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}",
-        headers=auth_header,
         json={"visa_bin": "new-test-visa-bin"},
     )
     assert_is_data_error(resp, loc=["body", "visa_bin"])
@@ -529,13 +486,11 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     resp = test_client.patch(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{uuid4()}",
-        headers=auth_header,
         json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLING},
     )
 
@@ -546,14 +501,12 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     mid = await primary_mid_factory(merchant=merchant)
     resp = test_client.patch(
         f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/mids/{mid.pk}",
-        headers=auth_header,
         json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLING},
     )
 
@@ -564,13 +517,11 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     merchant = await merchant_factory()
     mid = await primary_mid_factory(merchant=merchant)
     resp = test_client.patch(
         f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/mids/{mid.pk}",
-        headers=auth_header,
         json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLING},
     )
 
@@ -580,7 +531,6 @@ async def _(
 @test("a MID that is not onboarded is deleted and no qbert job is created")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
 ) -> None:
     primary_mid = await primary_mid_factory(
@@ -588,7 +538,6 @@ async def _(
     )
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
-        headers=auth_header,
         json=[str(primary_mid.pk)],
     )
 
@@ -610,7 +559,6 @@ async def _(
 @test("a MID that is offboarded is deleted and no qbert job is created")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
 ) -> None:
     primary_mid = await primary_mid_factory(
@@ -618,7 +566,6 @@ async def _(
     )
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
-        headers=auth_header,
         json=[str(primary_mid.pk)],
     )
 
@@ -640,7 +587,6 @@ async def _(
 @test("a MID that is onboarded goes to pending deletion and a qbert job is created")
 async def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
 ) -> None:
     primary_mid = await primary_mid_factory(
@@ -648,7 +594,6 @@ async def _(
     )
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
-        headers=auth_header,
         json=[str(primary_mid.pk)],
     )
 
@@ -670,12 +615,10 @@ async def _(
 @test("deleting a MID that doesn't exist gives a useful error")
 def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
 ) -> None:
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
-        headers=auth_header,
         json=[str(uuid4())],
     )
 
@@ -685,12 +628,10 @@ def _(
 @test("sending a delete MIDs request with an empty body does nothing")
 def _(
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
     merchant: Merchant = merchant,
 ) -> None:
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
-        headers=auth_header,
         json=[],
     )
 

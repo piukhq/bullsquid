@@ -7,18 +7,9 @@ from fastapi.testclient import TestClient
 from piccolo.conf.apps import Finder
 from piccolo.table import create_tables, drop_tables
 from piccolo.utils.warnings import colored_warning
-from ward import Scope, fixture
+from ward import fixture
 
 from bullsquid.api.app import create_app
-from settings import settings
-
-
-@fixture(scope=Scope.Global)
-def auth_header() -> dict:
-    """Fills out the Authorization header with the configured API key."""
-    return {
-        "Authorization": f"token {settings.api_key}",
-    }
 
 
 @fixture()

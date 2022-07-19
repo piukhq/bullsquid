@@ -9,7 +9,7 @@ from ward import test
 
 from bullsquid.customer_wallet.user_lookups.tables import UserLookup
 from tests.customer_wallet.factories import user_lookup_factory
-from tests.fixtures import auth_header, database, test_client
+from tests.fixtures import database, test_client
 
 
 def user_lookup_req_json(user_lookup: UserLookup) -> dict[str, Any]:
@@ -38,7 +38,6 @@ def user_lookup_resp_json(user_lookup: UserLookup) -> dict[str, Any]:
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     auth_id = "test-authed-user-1"
     lookups = [await user_lookup_factory(auth_id=auth_id) for _ in range(5)]
@@ -50,7 +49,7 @@ async def _(
     ]
     resp = test_client.get(
         "/api/v1/customer_wallet/user_lookups",
-        headers={"user": auth_id, **auth_header},
+        headers={"user": auth_id},
     )
     assert resp.status_code == status.HTTP_200_OK
 
@@ -62,7 +61,6 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     auth_id = "test-authed-user-1"
     lookups = [await user_lookup_factory(auth_id=auth_id) for _ in range(5)]
@@ -75,7 +73,7 @@ async def _(
     resp = test_client.get(
         "/api/v1/customer_wallet/user_lookups",
         params={"n": 2, "p": 2},
-        headers={"user": auth_id, **auth_header},
+        headers={"user": auth_id},
     )
     assert resp.status_code == status.HTTP_200_OK
 
@@ -89,7 +87,6 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     auth_id = "test-authed-user-1"
     lookups = []
@@ -101,10 +98,7 @@ async def _(
         lookup = await user_lookup_factory(persist=False, user_id=user_id)
         resp = test_client.put(
             "/api/v1/customer_wallet/user_lookups",
-            headers={
-                "user": auth_id,
-                **auth_header,
-            },
+            headers={"user": auth_id},
             json=user_lookup_req_json(lookup),
         )
 
@@ -129,7 +123,6 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     auth_id = "test-authed-user-1"
     lookups = []
@@ -142,10 +135,7 @@ async def _(
         resp = test_client.put(
             "/api/v1/customer_wallet/user_lookups",
             params={"n": 3, "p": 2},
-            headers={
-                "user": auth_id,
-                **auth_header,
-            },
+            headers={"user": auth_id},
             json=user_lookup_req_json(lookup),
         )
 
@@ -170,14 +160,13 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     lookup_1 = await user_lookup_factory(persist=False, auth_id="test-authed-user-1")
     lookup_2 = await user_lookup_factory(persist=False, auth_id="test-authed-user-2")
 
     resp = test_client.put(
         "/api/v1/customer_wallet/user_lookups",
-        headers={"user": "test-authed-user-1", **auth_header},
+        headers={"user": "test-authed-user-1"},
         json=user_lookup_req_json(lookup_1),
     )
     assert resp.status_code == status.HTTP_201_CREATED
@@ -186,7 +175,7 @@ async def _(
 
     resp = test_client.put(
         "/api/v1/customer_wallet/user_lookups",
-        headers={"user": "test-authed-user-2", **auth_header},
+        headers={"user": "test-authed-user-2"},
         json=user_lookup_req_json(lookup_2),
     )
     assert resp.status_code == status.HTTP_201_CREATED
@@ -198,16 +187,12 @@ async def _(
 async def _(
     _db: None = database,
     test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
 ) -> None:
     lookup = await user_lookup_factory(persist=False)
 
     resp = test_client.put(
         "/api/v1/customer_wallet/user_lookups",
-        headers={
-            "user": lookup.auth_id,
-            **auth_header,
-        },
+        headers={"user": lookup.auth_id},
         json=user_lookup_req_json(lookup),
     )
 
@@ -215,10 +200,7 @@ async def _(
 
     resp = test_client.put(
         "/api/v1/customer_wallet/user_lookups",
-        headers={
-            "user": lookup.auth_id,
-            **auth_header,
-        },
+        headers={"user": lookup.auth_id},
         json=user_lookup_req_json(lookup),
     )
 

@@ -103,6 +103,29 @@ async def _(
     assert resp.json() == await plan_to_json(plan, payment_schemes)
 
 
+@test("can create a plan with a blank slug")
+async def _(
+    test_client: TestClient = test_client,
+    auth_header: dict = auth_header,
+    payment_schemes: list[PaymentScheme] = payment_schemes,
+) -> None:
+    plan = await plan_factory(persist=False, slug="")
+    resp = test_client.post(
+        "/api/v1/plans",
+        headers=auth_header,
+        json={
+            "name": plan.name,
+            "plan_id": plan.plan_id,
+            "slug": plan.slug,
+            "icon_url": plan.icon_url,
+        },
+    )
+    assert resp.status_code == status.HTTP_201_CREATED
+    plan = await get_plan(resp.json()["plan_ref"])
+    assert resp.json() == await plan_to_json(plan, payment_schemes)
+    assert resp.json()["plan_metadata"]["slug"] == None
+
+
 @test("unable to create a plan with a duplicate name")
 async def _(
     test_client: TestClient = test_client,
@@ -161,44 +184,6 @@ async def _(
         },
     )
     assert_is_uniqueness_error(resp, loc=["body", "plan_id"])
-
-
-@test("unable to create a plan with blank name instead of null")
-async def _(
-    test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
-) -> None:
-    plan = await plan_factory(persist=False)
-    resp = test_client.post(
-        "/api/v1/plans",
-        headers=auth_header,
-        json={
-            "name": "",
-            "plan_id": plan.plan_id,
-            "slug": plan.slug,
-            "icon_url": plan.icon_url,
-        },
-    )
-    assert_is_value_error(resp, loc=["body", "name"])
-
-
-@test("unable to create a plan with blank slug instead of null")
-async def _(
-    test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
-) -> None:
-    plan = await plan_factory(persist=False)
-    resp = test_client.post(
-        "/api/v1/plans",
-        headers=auth_header,
-        json={
-            "name": plan.name,
-            "plan_id": plan.plan_id,
-            "slug": "",
-            "icon_url": plan.icon_url,
-        },
-    )
-    assert_is_value_error(resp, loc=["body", "slug"])
 
 
 @test("can update an existing plan with new details")
@@ -292,43 +277,3 @@ async def _(
         },
     )
     assert_is_uniqueness_error(resp, loc=["body", "plan_id"])
-
-
-@test("unable to update a plan with a blank name instead of null")
-async def _(
-    test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
-    plan: Plan = plan,
-) -> None:
-    new_details = await plan_factory(persist=False)
-    resp = test_client.put(
-        f"/api/v1/plans/{plan.pk}",
-        headers=auth_header,
-        json={
-            "name": "",
-            "plan_id": new_details.plan_id,
-            "slug": new_details.slug,
-            "icon_url": new_details.icon_url,
-        },
-    )
-    assert_is_value_error(resp, loc=["body", "name"])
-
-
-@test("unable to update a plan with a blank slug instead of null")
-async def _(
-    test_client: TestClient = test_client,
-    auth_header: dict = auth_header,
-    plan: Plan = plan,
-) -> None:
-    new_details = await plan_factory(persist=False)
-    resp = test_client.put(
-        f"/api/v1/plans/{plan.pk}",
-        headers=auth_header,
-        json={
-            "name": new_details.name,
-            "plan_id": new_details.plan_id,
-            "slug": "",
-            "icon_url": new_details.icon_url,
-        },
-    )
-    assert_is_value_error(resp, loc=["body", "slug"])

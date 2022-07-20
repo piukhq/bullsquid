@@ -62,6 +62,7 @@ ensure_postgres() {
 
 install
 ensure_postgres
+export api_key=
 poetry run scripts/migrate
 hr
 load_fixtures

@@ -10,7 +10,7 @@ from bullsquid.merchant_data.enums import (
     ResourceStatus,
     TXMStatus,
 )
-from bullsquid.merchant_data.validators import string_must_not_be_blank
+from bullsquid.merchant_data.validators import nullify_blank_strings, string_must_not_be_blank
 
 
 class SecondaryMIDMetadata(BaseModel):
@@ -21,8 +21,11 @@ class SecondaryMIDMetadata(BaseModel):
     payment_scheme_store_name: str | None
     payment_enrolment_status: PaymentEnrolmentStatus = PaymentEnrolmentStatus.UNKNOWN
 
-    _ = validator("secondary_mid", "payment_scheme_store_name", allow_reuse=True)(
+    _ = validator("secondary_mid", allow_reuse=True)(
         string_must_not_be_blank
+    )
+    _ = validator("payment_scheme_store_name", allow_reuse=True)(
+        nullify_blank_strings
     )
 
 

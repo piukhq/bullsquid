@@ -12,7 +12,7 @@ from bullsquid.merchant_data.enums import (
     TXMStatus,
 )
 from bullsquid.merchant_data.models import BaseModel
-from bullsquid.merchant_data.validators import string_must_not_be_blank
+from bullsquid.merchant_data.validators import string_must_not_be_blank, nullify_blank_strings
 
 
 class PrimaryMIDMetadata(BaseModel):
@@ -23,8 +23,11 @@ class PrimaryMIDMetadata(BaseModel):
     visa_bin: str | None
     payment_enrolment_status: PaymentEnrolmentStatus = PaymentEnrolmentStatus.UNKNOWN
 
-    _ = validator("mid", "visa_bin", "payment_enrolment_status", allow_reuse=True)(
+    _ = validator("mid", "payment_enrolment_status", allow_reuse=True)(
         string_must_not_be_blank
+    )
+    _ = validator("visa_bin", allow_reuse=True)(
+        nullify_blank_strings
     )
 
 
@@ -41,7 +44,7 @@ class UpdatePrimaryMIDRequest(BaseModel):
     payment_enrolment_status: PaymentEnrolmentStatus | None
     visa_bin: str | None
 
-    _ = validator("visa_bin", allow_reuse=True)(string_must_not_be_blank)
+    _ = validator("visa_bin", allow_reuse=True)(nullify_blank_strings)
 
 
 class PrimaryMIDResponse(BaseModel):

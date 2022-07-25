@@ -25,7 +25,7 @@ def nullify_blank_strings(value: str | None) -> str | None:
     """
     if value is None:
         return value
-    null_value = value.strip()
+    null_value: str | None = value.strip()
     if null_value == "":
         null_value = None
     return null_value

@@ -102,6 +102,7 @@ async def _(
     plan = await get_plan(resp.json()["plan_ref"])
     assert resp.json() == await plan_to_json(plan, payment_schemes)
 
+
 @test("can create a plan with a blank slug")
 async def _(
     test_client: TestClient = test_client,
@@ -122,7 +123,8 @@ async def _(
     assert resp.status_code == status.HTTP_201_CREATED
     plan = await get_plan(resp.json()["plan_ref"])
     assert resp.json() == await plan_to_json(plan, payment_schemes)
-    assert resp.json()['plan_metadata']['slug'] == None
+    assert resp.json()["plan_metadata"]["slug"] == None
+
 
 @test("unable to create a plan with a duplicate name")
 async def _(
@@ -182,6 +184,7 @@ async def _(
         },
     )
     assert_is_uniqueness_error(resp, loc=["body", "plan_id"])
+
 
 @test("can update an existing plan with new details")
 async def _(

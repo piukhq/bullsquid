@@ -1,6 +1,5 @@
 """Reusable Pydantic validators."""
 
-from multiprocessing.sharedctypes import Value
 from typing import Generator
 
 from pydantic import HttpUrl
@@ -19,6 +18,7 @@ def string_must_not_be_blank(value: str | None) -> str | None:
 
     return value
 
+
 def nullify_blank_strings(value: str | None) -> str | None:
     """
     Allow blank strings to be returned as Null in certain cases
@@ -29,6 +29,7 @@ def nullify_blank_strings(value: str | None) -> str | None:
     if null_value == "":
         null_value = None
     return null_value
+
 
 class FlexibleUrl(HttpUrl):
     """URL validator for formatting incoming URLs"""

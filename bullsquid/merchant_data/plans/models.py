@@ -5,7 +5,11 @@ from pydantic import UUID4, validator
 
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.models import BaseModel
-from bullsquid.merchant_data.validators import FlexibleUrl, nullify_blank_strings, string_must_not_be_blank
+from bullsquid.merchant_data.validators import (
+    FlexibleUrl,
+    nullify_blank_strings,
+    string_must_not_be_blank,
+)
 
 
 class CreatePlanRequest(BaseModel):

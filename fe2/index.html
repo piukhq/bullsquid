@@ -106,6 +106,8 @@
 </body>
 
 <script>
+    const redirect_uri = window.location.origin + "/fe2/";
+
     function setpre(json) {
         const text = JSON.stringify(json, null, 4);
         const fetchResult = document.getElementById("fetch-result");
@@ -127,7 +129,7 @@
         domain: "bink.eu.auth0.com",
         client_id: "4bBH1LadGhdzg7Frm5B8R2BWl5xDUsgE",
         audience: "https://portal.bink.com",
-        redirect_uri: window.location.href,
+        redirect_uri: redirect_uri,
     }).then(async (auth0) => {
         // Assumes a button with id "login" in the DOM
         const loginButton = document.getElementById("login");
@@ -149,7 +151,9 @@
 
         logoutButton.addEventListener("click", (e) => {
             e.preventDefault();
-            auth0.logout();
+            auth0.logout({
+                returnTo: redirect_uri,
+            });
         });
 
         const isAuthenticated = await auth0.isAuthenticated();

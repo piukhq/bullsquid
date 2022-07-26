@@ -3,6 +3,7 @@ from typing import Callable
 from urllib.parse import urljoin
 
 import jwt
+import sentry_sdk
 from fastapi import HTTPException, Request, status
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 
@@ -43,9 +44,10 @@ def verify_jwt(token: str) -> dict:
             leeway=settings.oauth.leeway,
         )
     except Exception as ex:
+        sentry_sdk.capture_exception()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(ex),
+            detail=f"Authentication failed: {repr(ex)}",
         ) from ex
 
 

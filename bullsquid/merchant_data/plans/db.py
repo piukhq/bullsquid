@@ -2,7 +2,7 @@
 from typing import Any, Mapping
 from uuid import UUID
 
-from bullsquid.db import NoSuchRecord
+from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus
 
 from .tables import Plan
@@ -16,9 +16,11 @@ async def get_plan(pk: UUID) -> Plan:
     return plan
 
 
-async def list_plans() -> list[Plan]:
+async def list_plans(*, n: int, p: int) -> list[Plan]:
     """Return a list of all plans."""
-    return await Plan.objects().where(Plan.status != ResourceStatus.DELETED)
+    return await paginate(
+        Plan.objects().where(Plan.status != ResourceStatus.DELETED), n=n, p=p
+    )
 
 
 async def create_plan(fields: Mapping[str, Any]) -> Plan:

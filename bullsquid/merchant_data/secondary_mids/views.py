@@ -1,7 +1,7 @@
 """SecondaryMID API views."""
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
@@ -44,11 +44,13 @@ def create_secondary_mid_response(
 async def list_secondary_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
+    n: int = Query(default=10),
+    p: int = Query(default=1),
 ) -> list[SecondaryMIDResponse]:
     """Lists all secondary MIDs for a merchant."""
     try:
         secondary_mids = await db.list_secondary_mids(
-            plan_ref=plan_ref, merchant_ref=merchant_ref
+            plan_ref=plan_ref, merchant_ref=merchant_ref, n=n, p=p
         )
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])

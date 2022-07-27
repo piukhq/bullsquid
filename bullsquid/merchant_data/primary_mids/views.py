@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 from bullsquid import tasks
 from bullsquid.api.errors import DataError, ResourceNotFoundError, UniqueError
@@ -45,11 +45,16 @@ async def create_primary_mid_response(
 
 @router.get("", response_model=list[PrimaryMIDResponse])
 async def list_primary_mids(
-    plan_ref: UUID, merchant_ref: UUID
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    n: int = Query(default=10),
+    p: int = Query(default=1),
 ) -> list[PrimaryMIDResponse]:
     """List all primary MIDs for a merchant."""
     try:
-        mids = await db.list_primary_mids(plan_ref=plan_ref, merchant_ref=merchant_ref)
+        mids = await db.list_primary_mids(
+            plan_ref=plan_ref, merchant_ref=merchant_ref, n=n, p=p
+        )
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 

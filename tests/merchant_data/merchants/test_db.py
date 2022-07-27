@@ -45,7 +45,7 @@ async def _(plan: Plan = plan, merchant: Merchant = merchant) -> None:
 
 @test("can list all merchants in an empty database")
 async def _(plan: Plan = plan) -> None:
-    merchants = await list_merchants(plan.pk)
+    merchants = await list_merchants(plan.pk, n=10, p=1)
     assert len(merchants) == 0
 
 
@@ -55,7 +55,7 @@ async def _(plan: Plan = plan) -> None:
     await merchant_factory(plan=plan)
     await merchant_factory(plan=plan)
 
-    merchants = await list_merchants(plan.pk)
+    merchants = await list_merchants(plan.pk, n=10, p=1)
     assert len(merchants) == 3
 
 
@@ -65,14 +65,14 @@ async def _(plan: Plan = plan) -> None:
     await merchant_factory(plan=plan, status=ResourceStatus.DELETED)
     await merchant_factory(plan=plan)
 
-    merchants = await list_merchants(plan.pk)
+    merchants = await list_merchants(plan.pk, n=10, p=1)
     assert len(merchants) == 2
 
 
 @test("can't list merchants on a non-existent plan")
 async def _(_db: None = database) -> None:
     with raises(NoSuchRecord):
-        await list_merchants(uuid4())
+        await list_merchants(uuid4(), n=10, p=1)
 
 
 @test("can create a merchant")

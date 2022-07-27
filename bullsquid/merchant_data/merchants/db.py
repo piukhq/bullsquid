@@ -3,7 +3,7 @@
 from typing import Any, Mapping
 from uuid import UUID
 
-from bullsquid.db import NoSuchRecord
+from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.models import CreateMerchantRequest
 from bullsquid.merchant_data.plans.db import get_plan
@@ -23,11 +23,15 @@ async def get_merchant(pk: UUID, *, plan_ref: UUID) -> Merchant:
     return merchant
 
 
-async def list_merchants(plan_ref: UUID) -> list[Merchant]:
+async def list_merchants(plan_ref: UUID, *, n: int, p: int) -> list[Merchant]:
     """Return a list of all merchants."""
     plan = await get_plan(plan_ref)
-    return await Merchant.objects().where(
-        Merchant.plan == plan.pk, Merchant.status != ResourceStatus.DELETED
+    return await paginate(
+        Merchant.objects().where(
+            Merchant.plan == plan.pk, Merchant.status != ResourceStatus.DELETED
+        ),
+        n=n,
+        p=p,
     )
 
 

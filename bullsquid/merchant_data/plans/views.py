@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 from bullsquid.api.errors import APIMultiError, ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
@@ -52,12 +52,14 @@ async def create_plan_response(
 
 
 @router.get("", response_model=list[PlanResponse])
-async def list_plans() -> list[PlanResponse]:
+async def list_plans(
+    n: int = Query(default=10), p: int = Query(default=1)
+) -> list[PlanResponse]:
     """List all plans."""
     payment_schemes = await list_payment_schemes()
     return [
         await create_plan_response(plan, payment_schemes)
-        for plan in await db.list_plans()
+        for plan in await db.list_plans(n=n, p=p)
     ]
 
 

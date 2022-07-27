@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TypedDict
 from uuid import UUID
 
-from bullsquid.db import InvalidData, NoSuchRecord
+from bullsquid.db import InvalidData, NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import (
     PaymentEnrolmentStatus,
     ResourceStatus,
@@ -54,23 +54,27 @@ async def get_primary_mid_instance(
 
 
 async def list_primary_mids(
-    *, plan_ref: UUID, merchant_ref: UUID
+    *, plan_ref: UUID, merchant_ref: UUID, n: int, p: int
 ) -> list[PrimaryMIDResult]:
     """Return a list of all primary MIDs on the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    return await PrimaryMID.select(
-        PrimaryMID.pk,
-        PrimaryMID.payment_scheme.code,
-        PrimaryMID.mid,
-        PrimaryMID.visa_bin,
-        PrimaryMID.payment_enrolment_status,
-        PrimaryMID.status,
-        PrimaryMID.date_added,
-        PrimaryMID.txm_status,
-    ).where(
-        PrimaryMID.merchant == merchant,
-        PrimaryMID.status != ResourceStatus.DELETED,
+    return await paginate(
+        PrimaryMID.select(
+            PrimaryMID.pk,
+            PrimaryMID.payment_scheme.code,
+            PrimaryMID.mid,
+            PrimaryMID.visa_bin,
+            PrimaryMID.payment_enrolment_status,
+            PrimaryMID.status,
+            PrimaryMID.date_added,
+            PrimaryMID.txm_status,
+        ).where(
+            PrimaryMID.merchant == merchant,
+            PrimaryMID.status != ResourceStatus.DELETED,
+        ),
+        n=n,
+        p=p,
     )
 
 

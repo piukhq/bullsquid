@@ -1,7 +1,7 @@
 """Identifier API views."""
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
@@ -40,11 +40,13 @@ def create_identifier_response(identifier: db.IdentifierResult) -> IdentifierRes
 async def list_identifiers(
     plan_ref: UUID,
     merchant_ref: UUID,
+    n: int = Query(default=10),
+    p: int = Query(default=1),
 ) -> list[IdentifierResponse]:
     """List all identifiers for a merchant."""
     try:
         identifiers = await db.list_identifiers(
-            plan_ref=plan_ref, merchant_ref=merchant_ref
+            plan_ref=plan_ref, merchant_ref=merchant_ref, n=n, p=p
         )
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
@@ -59,7 +61,9 @@ async def get_identifier_details(
     """Returns details of a single identifier."""
     try:
         mid = await db.get_identifier(
-            identifier_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
+            identifier_ref,
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
         )
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])

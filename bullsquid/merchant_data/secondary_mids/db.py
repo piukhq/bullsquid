@@ -9,7 +9,7 @@ from bullsquid.merchant_data.enums import (
     ResourceStatus,
     TXMStatus,
 )
-from bullsquid.merchant_data.merchants.db import get_merchant
+from bullsquid.merchant_data.merchants.db import get_merchant, paginate
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
 from bullsquid.merchant_data.secondary_mids.models import SecondaryMIDMetadata
 
@@ -31,23 +31,27 @@ SecondaryMIDResult = TypedDict(
 
 
 async def list_secondary_mids(
-    *, plan_ref: UUID, merchant_ref: UUID
+    *, plan_ref: UUID, merchant_ref: UUID, n: int, p: int
 ) -> list[SecondaryMIDResult]:
     """Return a list of all secondary MIDs on the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    return await SecondaryMID.select(
-        SecondaryMID.pk,
-        SecondaryMID.payment_scheme.code,
-        SecondaryMID.secondary_mid,
-        SecondaryMID.payment_scheme_store_name,
-        SecondaryMID.payment_enrolment_status,
-        SecondaryMID.date_added,
-        SecondaryMID.txm_status,
-        SecondaryMID.status,
-    ).where(
-        SecondaryMID.merchant == merchant,
-        SecondaryMID.status != ResourceStatus.DELETED,
+    return await paginate(
+        SecondaryMID.select(
+            SecondaryMID.pk,
+            SecondaryMID.payment_scheme.code,
+            SecondaryMID.secondary_mid,
+            SecondaryMID.payment_scheme_store_name,
+            SecondaryMID.payment_enrolment_status,
+            SecondaryMID.date_added,
+            SecondaryMID.txm_status,
+            SecondaryMID.status,
+        ).where(
+            SecondaryMID.merchant == merchant,
+            SecondaryMID.status != ResourceStatus.DELETED,
+        ),
+        n=n,
+        p=p,
     )
 
 

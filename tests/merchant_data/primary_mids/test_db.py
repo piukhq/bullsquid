@@ -39,6 +39,8 @@ async def _(merchant: Merchant = merchant) -> None:
         }
         for mid in primary_mids
     ]
-    actual = await list_primary_mids(plan_ref=merchant.plan, merchant_ref=merchant.pk)
+    actual = await list_primary_mids(
+        plan_ref=merchant.plan, merchant_ref=merchant.pk, n=10, p=1
+    )
 
     assert expected == actual

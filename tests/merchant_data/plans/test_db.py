@@ -30,7 +30,7 @@ async def _(_db: None = database) -> None:
 
 @test("can list all plans in an empty database")
 async def _(_db: None = database) -> None:
-    plans = await list_plans()
+    plans = await list_plans(n=10, p=1)
     assert len(plans) == 0
 
 
@@ -39,7 +39,7 @@ async def _(
     _db: None = database,
     _plans: list[Plan] = three_plans,
 ) -> None:
-    plans = await list_plans()
+    plans = await list_plans(n=10, p=1)
     assert len(plans) == 3
 
 
@@ -49,7 +49,7 @@ async def _(_db: None = database) -> None:
     await plan_factory(status=ResourceStatus.DELETED)
     await plan_factory()
 
-    plans = await list_plans()
+    plans = await list_plans(n=10, p=1)
     assert len(plans) == 2
 
 

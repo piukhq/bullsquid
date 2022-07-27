@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import TypedDict
 from uuid import UUID
 
-from bullsquid.db import NoSuchRecord
+from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.models import IdentifierMetadata
 from bullsquid.merchant_data.merchants.db import get_merchant
@@ -25,21 +25,25 @@ IdentifierResult = TypedDict(
 
 
 async def list_identifiers(
-    *, plan_ref: UUID, merchant_ref: UUID
+    *, plan_ref: UUID, merchant_ref: UUID, n: int, p: int
 ) -> list[IdentifierResult]:
     """Return a list of all identifiers on the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    return await Identifier.select(
-        Identifier.pk,
-        Identifier.payment_scheme.code,
-        Identifier.value,
-        Identifier.payment_scheme_merchant_name,
-        Identifier.date_added,
-        Identifier.status,
-    ).where(
-        Identifier.merchant == merchant,
-        Identifier.status != ResourceStatus.DELETED,
+    return await paginate(
+        Identifier.select(
+            Identifier.pk,
+            Identifier.payment_scheme.code,
+            Identifier.value,
+            Identifier.payment_scheme_merchant_name,
+            Identifier.date_added,
+            Identifier.status,
+        ).where(
+            Identifier.merchant == merchant,
+            Identifier.status != ResourceStatus.DELETED,
+        ),
+        n=n,
+        p=p,
     )
 
 

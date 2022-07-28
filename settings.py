@@ -82,6 +82,10 @@ class Settings(BaseSettings):
     # OAuth settings.
     oauth: OAuthSettings = Field(default_factory=OAuthSettings)
 
+    # TEMPORARY: for compatibility until the frontend has transitioned over to
+    # using OAuth.
+    api_key: str | None = None
+
     # Number of jobs for workers to pull at once
     # The higher this is, the more work individual workers will do, but with
     # better per-worker performance.

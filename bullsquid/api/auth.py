@@ -6,6 +6,7 @@ import jwt
 import sentry_sdk
 from fastapi import HTTPException, Request, status
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
+from loguru import logger
 
 from settings import settings
 
@@ -31,6 +32,13 @@ def verify_jwt(token: str) -> dict:
     """
     if JWKS_CLIENT is None:
         raise RuntimeError("OAuth must be configured when not running in debug mode.")
+
+    if settings.api_key is not None and token == settings.api_key:
+        logger.warning(
+            "Falling back on legacy token authentication. "
+            "If the frontend can use Oauth now, this should be removed!"
+        )
+        return {"sub": "legacy-api-key-user"}
 
     try:
         key = JWKS_CLIENT.get_signing_key_from_jwt(token).key

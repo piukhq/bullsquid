@@ -78,6 +78,17 @@ async def create_plan(plan_data: CreatePlanRequest) -> PlanResponse:
     return await create_plan_response(plan, await list_payment_schemes())
 
 
+@router.get("/{plan_ref}", response_model=PlanResponse)
+async def get_plan_details(plan_ref: UUID) -> PlanResponse:
+    """Get plan details by ref."""
+    try:
+        plan = await db.get_plan(plan_ref)
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
+    payment_schemes = await list_payment_schemes()
+    return await create_plan_response(plan, payment_schemes)
+
+
 @router.put("/{plan_ref}", response_model=PlanResponse)
 async def update_plan(plan_ref: UUID, plan_data: CreatePlanRequest) -> PlanResponse:
     """Update a plan's details."""

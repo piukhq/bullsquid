@@ -12,11 +12,7 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
 from tests.fixtures import database, test_client
-from tests.helpers import (
-    assert_is_not_found_error,
-    assert_is_uniqueness_error,
-    assert_is_value_error,
-)
+from tests.helpers import assert_is_not_found_error, assert_is_uniqueness_error
 from tests.merchant_data.factories import (
     merchant_factory,
     payment_schemes,
@@ -75,9 +71,23 @@ async def _(
             await merchant_factory(plan=plan)
 
     resp = test_client.get("/api/v1/plans")
-    print(resp.text)
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [await plan_to_json(plan, payment_schemes) for plan in plans]
+
+
+@test("can get a plan's details")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    ps = await payment_schemes()
+    resp = test_client.get(f"/api/v1/plans/{plan.pk}")
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+    assert resp.json() == await plan_to_json(plan, ps)
+
+
+@test("can't get details of a non-existent plan")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    resp = test_client.get(f"/api/v1/plans/{uuid4()}")
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("can create a plan")

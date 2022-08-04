@@ -6,6 +6,7 @@ from ward import fixture
 
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
+from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
@@ -34,6 +35,18 @@ async def merchant_factory(*, persist: bool = True, **defaults: Any) -> Merchant
         defaults={
             "status": ResourceStatus.ACTIVE,
             "icon_url": "https://example.com/icon.png",
+            **defaults,  # type: ignore
+        },
+        persist=persist,
+    )
+
+
+async def location_factory(*, persist: bool = True, **defaults: Any) -> Location:
+    """Creates and returns a location."""
+    return await ModelBuilder.build(
+        Location,
+        defaults={
+            "status": ResourceStatus.ACTIVE,
             **defaults,  # type: ignore
         },
         persist=persist,

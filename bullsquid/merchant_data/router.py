@@ -2,6 +2,7 @@
 from fastapi import APIRouter
 
 from .identifiers.views import router as identifiers_router
+from .locations.views import router as locations_router
 from .merchants.views import router as merchants_router
 from .plans.views import router as plans_router
 from .primary_mids.views import router as primary_mids_router
@@ -13,3 +14,4 @@ router.include_router(merchants_router)
 router.include_router(primary_mids_router)
 router.include_router(secondary_mids_router)
 router.include_router(identifiers_router)
+router.include_router(locations_router)

@@ -52,8 +52,6 @@ class MerchantOverviewResponse(BaseModel):
     merchant_metadata: MerchantMetadataResponse
     merchant_counts: MerchantCountsResponse
 
-    _ = validator("merchant_status", allow_reuse=True)(string_must_not_be_blank)
-
 
 class MerchantDetailResponse(BaseModel):
     """Merchant detail response model."""

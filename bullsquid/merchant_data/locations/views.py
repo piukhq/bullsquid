@@ -11,6 +11,8 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 
 from . import db
 from .models import (
+    LocationDetailMetadataResponse,
+    LocationDetailResponse,
     LocationMetadataResponse,
     LocationOverviewResponse,
     LocationPaymentSchemeCountResponse,
@@ -34,6 +36,24 @@ def create_location_metadata_response(
     )
 
 
+def create_location_detail_metadata_response(
+    location: db.LocationDetailResult,
+) -> LocationDetailMetadataResponse:
+    """Creates a LocationMetadataResponse instance from the given location object."""
+    return LocationDetailMetadataResponse(
+        name=location["name"],
+        location_id=location["location_id"],
+        merchant_internal_id=location["merchant_internal_id"],
+        is_physical_location=location["is_physical_location"],
+        address_line_1=location["address_line_1"],
+        town_city=location["town_city"],
+        postcode=location["postcode"],
+        address_line_2=location["address_line_2"],
+        county=location["county"],
+        country=location["country"],
+    )
+
+
 async def create_location_overview_response(
     location: db.LocationResult, payment_schemes: list[PaymentScheme]
 ) -> LocationOverviewResponse:
@@ -43,6 +63,28 @@ async def create_location_overview_response(
         location_ref=location["pk"],
         location_status=location["status"],
         location_metadata=create_location_metadata_response(location),
+        payment_schemes=[
+            LocationPaymentSchemeCountResponse(
+                label=payment_scheme.label,
+                scheme_code=payment_scheme.code,
+                count=0,
+            )
+            for payment_scheme in payment_schemes
+        ],
+    )
+
+
+async def create_location_detail_response(
+    location: db.LocationDetailResult, payment_schemes: list[PaymentScheme]
+) -> LocationDetailResponse:
+    """Creates a MerchantOverviewResponse instance from the given merchant object."""
+    return LocationDetailResponse(
+        date_added=location["date_added"],
+        location_ref=location["pk"],
+        location_status=location["status"],
+        linked_mids_count=0,
+        linked_secondary_mids_count=0,
+        location_metadata=create_location_detail_metadata_response(location),
         payment_schemes=[
             LocationPaymentSchemeCountResponse(
                 label=payment_scheme.label,
@@ -74,3 +116,20 @@ async def list_locations(
         await create_location_overview_response(location, payment_schemes)
         for location in locations
     ]
+
+
+@router.get("/{location_ref}", response_model=LocationDetailResponse)
+async def get_location(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+) -> LocationDetailResponse:
+    """Get location details."""
+    try:
+        location = await db.get_location(
+            location_ref, merchant_ref=merchant_ref, plan_ref=plan_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+    payment_schemes = await list_payment_schemes()
+    return await create_location_detail_response(location, payment_schemes)

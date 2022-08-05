@@ -51,3 +51,26 @@ class LocationOverviewResponse(BaseModel):
     location_metadata: LocationMetadataResponse
     payment_schemes: list[LocationPaymentSchemeCountResponse]
     date_added: datetime
+
+
+class LocationDetailMetadataResponse(LocationMetadataResponse):
+    """Metadata detailed response"""
+
+    address_line_2: str
+    county: str
+    country: str
+
+    _ = validator(
+        "address_line_2",
+        "county",
+        "country",
+    )(nullify_blank_strings)
+
+
+class LocationDetailResponse(LocationOverviewResponse):
+    """Location detailed response model"""
+
+    linked_mids_count: int
+    linked_secondary_mids_count: int
+
+    location_metadata: LocationDetailMetadataResponse

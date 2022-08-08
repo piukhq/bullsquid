@@ -20,9 +20,9 @@ python = "^3.10"
 piccolo = {extras = ["orjson", "postgres"], version = "==0.74.4"}
 fastapi = "^0.79.0"
 loguru = "^0.6.0"
-sentry-sdk = "^1.7.2"
+sentry-sdk = "^1.9.2"
 uvicorn = "^0.18.2"
-qbert = "^0.1.4"
+qbert = "^0.1.7"
 aiohttp = "^3.8.1"
 url-normalize = "^1.4.3"
 aiodns = "^3.0.0"
@@ -32,22 +32,21 @@ PyJWT = {extras = ["crypto"], version = "^2.4.0"}
 [tool.poetry.group.dev.dependencies]
 black = "^22.6.0"
 pylint = "^2.14.5"
-mypy = "^0.961"
+mypy = "^0.971"
 isort = "^5.10.1"
-types-ujson = "^5.4.0"
 ipython = "^8.4.0"
-coverage = "^6.4.2"
-types-PyYAML = "^6.0.10"
+coverage = "^6.4.3"
 watchgod = "^0.8.2"
 ward = "^0.66.1b0"
 aioresponses = "^0.7.3"
 requests = "^2.28.1"
-types-requests = "^2.28.2"
+types-PyYAML = "^6.0.11"
+types-requests = "^2.28.8"
 
 [tool.poetry.group.cmd.dependencies]
 PyYAML = "^6.0"
-docopt-ng = "^0.7.2"
-colorama = "^0.4.4"
+docopt-ng = "^0.8.1"
+colorama = "^0.4.5"
 
 [tool.poetry-dynamic-versioning]
 enable = true

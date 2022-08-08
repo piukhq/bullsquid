@@ -17,7 +17,7 @@ LocationResult = TypedDict(
         "date_added": datetime,
         "name": str | None,
         "location_id": str,
-        "merchant_internal_id": int | None,
+        "merchant_internal_id": str | None,
         "is_physical_location": bool,
         "address_line_1": str | None,
         "town_city": str | None,

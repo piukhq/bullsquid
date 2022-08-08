@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+import subprocess
+
+import tomli
+
+
+def is_pinned(version: str | dict) -> bool:
+    if isinstance(version, str):
+        return "==" in version
+    return "==" in version["version"]
+
+
+def upgrade(dependencies: dict, *, group: str | None = None) -> None:
+    to_upgrade = [
+        name
+        for name, version in dependencies.items()
+        if name != "python" and not is_pinned(version)
+    ]
+
+    if group:
+        print(f"⬆️ Upgrade({group}): {', '.join(to_upgrade)}")
+    else:
+        print(f"⬆️ Upgrade: {', '.join(to_upgrade)}")
+
+    cmd = ["poetry", "add"]
+    if group:
+        cmd.extend(["--group", group])
+    cmd.extend(f"{name}@latest" for name in to_upgrade)
+
+    subprocess.run(cmd, check=True)
+
+
+with open("pyproject.toml", "rb") as f:
+    pyproject = tomli.load(f)
+
+main_deps = pyproject["tool"]["poetry"]["dependencies"]
+upgrade(main_deps)
+
+for name, group in pyproject["tool"]["poetry"]["group"].items():
+    upgrade(group["dependencies"], group=name)

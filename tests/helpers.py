@@ -6,11 +6,10 @@ from ward import expect
 
 def assert_is_uniqueness_error(resp: Response, *, loc: list[str]) -> None:
     """Asserts that the response is a uniqueness error."""
-    expect.assert_is_not(resp.ok, True, f"Expected an error status code: {resp}")
     expect.assert_equal(
         resp.status_code,
         status.HTTP_409_CONFLICT,
-        f"Expected status code to be 409: {resp}",
+        f"Expected status code to be 409: {resp}\n{resp.text}",
     )
 
     detail = resp.json()["detail"]
@@ -23,11 +22,10 @@ def assert_is_uniqueness_error(resp: Response, *, loc: list[str]) -> None:
 
 def assert_is_missing_field_error(resp: Response, *, loc: list[str]) -> None:
     """Asserts that the response is a missing field error."""
-    expect.assert_is_not(resp.ok, True, f"Expected an error status code: {resp}")
     expect.assert_equal(
         resp.status_code,
         status.HTTP_422_UNPROCESSABLE_ENTITY,
-        f"Expected status code to be 422: {resp}",
+        f"Expected status code to be 422: {resp}\n{resp.text}",
     )
 
     detail = resp.json()["detail"]
@@ -40,11 +38,10 @@ def assert_is_missing_field_error(resp: Response, *, loc: list[str]) -> None:
 
 def assert_is_data_error(resp: Response, *, loc: list[str]) -> None:
     """Asserts that the response is a data error."""
-    expect.assert_is_not(resp.ok, True, f"Expected an error status code: {resp}")
     expect.assert_equal(
         resp.status_code,
         status.HTTP_409_CONFLICT,
-        f"Expected status code to be 409: {resp}",
+        f"Expected status code to be 409: {resp}\n{resp.text}",
     )
 
     detail = resp.json()["detail"]
@@ -57,11 +54,10 @@ def assert_is_data_error(resp: Response, *, loc: list[str]) -> None:
 
 def assert_is_not_found_error(resp: Response, *, loc: list[str]) -> None:
     """Asserts that the response is a not found error."""
-    expect.assert_is_not(resp.ok, True, f"Expected an error status code: {resp}")
     expect.assert_equal(
         resp.status_code,
         status.HTTP_404_NOT_FOUND,
-        f"Expected status code to be 404: {resp}",
+        f"Expected status code to be 404: {resp}\n{resp.text}",
     )
 
     detail = resp.json()["detail"]
@@ -74,11 +70,10 @@ def assert_is_not_found_error(resp: Response, *, loc: list[str]) -> None:
 
 def assert_is_value_error(resp: Response, *, loc: list[str]) -> None:
     """Asserts that the response is a value error."""
-    expect.assert_is_not(resp.ok, True, f"Expected an error status code: {resp}")
     expect.assert_equal(
         resp.status_code,
         status.HTTP_422_UNPROCESSABLE_ENTITY,
-        f"Expected status code to be 422: {resp}",
+        f"Expected status code to be 422: {resp}\n{resp.text}",
     )
 
     detail = resp.json()["detail"]
@@ -91,11 +86,10 @@ def assert_is_value_error(resp: Response, *, loc: list[str]) -> None:
 
 def assert_is_null_error(resp: Response, *, loc: list[str]) -> None:
     """Asserts that the response is a "null not allowed" error."""
-    expect.assert_is_not(resp.ok, True, f"Expected an error status code: {resp}")
     expect.assert_equal(
         resp.status_code,
         status.HTTP_422_UNPROCESSABLE_ENTITY,
-        f"Expected status code to be 422: {resp}",
+        f"Expected status code to be 422: {resp}\n{resp.text}",
     )
 
     detail = resp.json()["detail"]

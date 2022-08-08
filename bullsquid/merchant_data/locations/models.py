@@ -1,7 +1,7 @@
 """Request & response model definitions for location endpoints."""
 from datetime import datetime
 
-from pydantic import UUID4, validator
+from pydantic import UUID4, root_validator, validator
 
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.models import BaseModel
@@ -11,10 +11,10 @@ from bullsquid.merchant_data.validators import (
 )
 
 
-class LocationMetadataResponse(BaseModel):
+class LocationOverviewMetadata(BaseModel):
     """Location details."""
 
-    name: str | None
+    name: str
     location_id: str
     merchant_internal_id: str | None
     is_physical_location: bool
@@ -32,6 +32,39 @@ class LocationMetadataResponse(BaseModel):
         allow_reuse=True,
     )(nullify_blank_strings)
 
+    @root_validator
+    @classmethod
+    def physical_locations_must_have_addresses(cls, values: dict) -> dict:
+        """
+        Validate that if is_physical_location has been set to true, the location
+        has a minimum of an address_line_1 and postcode present.
+        """
+        if values.get("is_physical_location"):
+            address = [values.get("address_line_1"), values.get("postcode")]
+            if not all(address):
+                raise ValueError(
+                    "address_line_1 and postcode must be provided when is_physical_location is true"
+                )
+        return values
+
+
+class LocationDetailMetadata(LocationOverviewMetadata):
+    """
+    Detailed location metadata request & response model.
+    This is a superset of the location overview metadata model.
+    """
+
+    address_line_2: str | None
+    county: str
+    country: str
+
+    _ = validator(
+        "address_line_2",
+        "county",
+        "country",
+        allow_reuse=True,
+    )(nullify_blank_strings)
+
 
 class LocationPaymentSchemeCountResponse(BaseModel):
     """Counts of MIDs by payment scheme on a location."""
@@ -44,33 +77,18 @@ class LocationPaymentSchemeCountResponse(BaseModel):
 
 
 class LocationOverviewResponse(BaseModel):
-    """Location response model."""
+    """Location overview response model."""
 
     location_ref: UUID4
     location_status: ResourceStatus
-    location_metadata: LocationMetadataResponse
+    location_metadata: LocationOverviewMetadata
     payment_schemes: list[LocationPaymentSchemeCountResponse]
     date_added: datetime
 
 
-class LocationDetailMetadataResponse(LocationMetadataResponse):
-    """Metadata detailed response"""
-
-    address_line_2: str
-    county: str
-    country: str
-
-    _ = validator(
-        "address_line_2",
-        "county",
-        "country",
-    )(nullify_blank_strings)
-
-
 class LocationDetailResponse(LocationOverviewResponse):
-    """Location detailed response model"""
+    """Location detail response model"""
 
+    location_metadata: LocationDetailMetadata
     linked_mids_count: int
     linked_secondary_mids_count: int
-
-    location_metadata: LocationDetailMetadataResponse

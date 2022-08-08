@@ -10,7 +10,7 @@ class Location(Table):
     """Represents a location that can have multiple MIDs."""
 
     pk = UUID(primary_key=True)
-    location_id = Text(required=True)
+    location_id = Text(required=True, unique=True)
     name = Text(required=True)
     is_physical_location = Boolean(default=True)
     address_line_1 = Text(null=True, default=None)

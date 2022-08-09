@@ -55,8 +55,8 @@ class LocationDetailMetadata(LocationOverviewMetadata):
     """
 
     address_line_2: str | None
-    county: str
-    country: str
+    county: str | None
+    country: str | None
 
     _ = validator(
         "address_line_2",

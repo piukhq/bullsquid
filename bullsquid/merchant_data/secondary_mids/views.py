@@ -13,7 +13,7 @@ from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from . import db
 from .models import (
     CreateSecondaryMIDRequest,
-    SecondaryMIDDeletionListResponse,
+    SecondaryMIDDeletionRequest,
     SecondaryMIDDeletionResponse,
     SecondaryMIDMetadata,
     SecondaryMIDResponse,
@@ -119,18 +119,18 @@ async def create_secondary_mid(
 @router.post(
     "/deletion",
     status_code=status.HTTP_202_ACCEPTED,
-    response_model=SecondaryMIDDeletionListResponse,
+    response_model=list[SecondaryMIDDeletionResponse],
 )
 async def delete_secondary_mids(
-    plan_ref: UUID, merchant_ref: UUID, secondary_mid_refs: list[UUID]
-) -> SecondaryMIDDeletionListResponse:
+    plan_ref: UUID, merchant_ref: UUID, deletion: SecondaryMIDDeletionRequest
+) -> list[SecondaryMIDDeletionResponse]:
     """Remove a number of secondary MIDs from a merchant."""
-    if not secondary_mid_refs:
-        return SecondaryMIDDeletionListResponse(secondary_mids=[])
+    if not deletion.secondary_mid_refs:
+        return []
 
     try:
         onboarded, not_onboarded = await db.filter_onboarded_secondary_mids(
-            secondary_mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+            deletion.secondary_mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == SecondaryMID else ["path"]
@@ -155,18 +155,15 @@ async def delete_secondary_mids(
             merchant_ref=merchant_ref,
         )
 
-    return SecondaryMIDDeletionListResponse(
-        secondary_mids=[
-            SecondaryMIDDeletionResponse(
-                secondary_mid_ref=secondary_mid_ref,
-                status=ResourceStatus.PENDING_DELETION,
-            )
-            for secondary_mid_ref in onboarded
-        ]
-        + [
-            SecondaryMIDDeletionResponse(
-                secondary_mid_ref=secondary_mid_ref, status=ResourceStatus.DELETED
-            )
-            for secondary_mid_ref in not_onboarded
-        ]
-    )
+    return [
+        SecondaryMIDDeletionResponse(
+            secondary_mid_ref=secondary_mid_ref,
+            status=ResourceStatus.PENDING_DELETION,
+        )
+        for secondary_mid_ref in onboarded
+    ] + [
+        SecondaryMIDDeletionResponse(
+            secondary_mid_ref=secondary_mid_ref, status=ResourceStatus.DELETED
+        )
+        for secondary_mid_ref in not_onboarded
+    ]

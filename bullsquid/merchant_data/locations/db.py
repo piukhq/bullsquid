@@ -108,3 +108,36 @@ async def get_location(
         raise NoSuchRecord(Location)
 
     return location
+
+
+async def confirm_locations_exist(
+    location_refs: list[UUID], *, plan_ref: UUID, merchant_ref: UUID
+) -> None:
+    """
+    Validate that all the given location refs actually exist under the given
+    plan and merchant.
+    """
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+
+    # remove duplicates to ensure count mismatches are not caused by duplicate locations
+    location_refs = list(set(location_refs))
+
+    count = await Location.count().where(
+        Location.pk.is_in(location_refs), Location.merchant == merchant
+    )
+    if count != len(location_refs):
+        raise NoSuchRecord(Location)
+
+
+async def update_locations_status(
+    location_refs: list[UUID],
+    *,
+    status: ResourceStatus,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> None:
+    """Updates the status of a list of locations on a merchant."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    await Location.update({Location.status: status}).where(
+        Location.pk.is_in(location_refs), Location.merchant == merchant
+    )

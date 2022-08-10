@@ -92,3 +92,16 @@ class LocationDetailResponse(LocationOverviewResponse):
     location_metadata: LocationDetailMetadata
     linked_mids_count: int
     linked_secondary_mids_count: int
+
+
+class LocationDeletionRequest(BaseModel):
+    """Request model for deleting locations."""
+
+    location_refs: list[UUID4]
+
+
+class LocationDeletionResponse(BaseModel):
+    """Response model for deleting locations."""
+
+    location_ref: UUID4
+    location_status: ResourceStatus

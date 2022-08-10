@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query, status
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.merchants.models import MerchantOverviewResponse
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
@@ -12,6 +13,8 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 
 from . import db
 from .models import (
+    LocationDeletionRequest,
+    LocationDeletionResponse,
     LocationDetailMetadata,
     LocationDetailResponse,
     LocationOverviewMetadata,
@@ -181,3 +184,40 @@ async def create_location(
         ),
         payment_schemes,
     )
+
+
+@router.post(
+    "/deletion",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=list[LocationDeletionResponse],
+)
+async def delete_locations(
+    plan_ref: UUID, merchant_ref: UUID, deletion: LocationDeletionRequest
+) -> list[LocationDeletionResponse]:
+    """Remove a number of locations from a merchant."""
+
+    if not deletion.location_refs:
+        return []
+
+    try:
+        await db.confirm_locations_exist(
+            deletion.location_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    except NoSuchRecord as ex:
+        loc = ["body"] if ex.table == Location else ["path"]
+        plural = ex.table == Location
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc, plural=plural)
+
+    await db.update_locations_status(
+        deletion.location_refs,
+        status=ResourceStatus.DELETED,
+        plan_ref=plan_ref,
+        merchant_ref=merchant_ref,
+    )
+
+    return [
+        LocationDeletionResponse(
+            location_ref=location_ref, location_status=ResourceStatus.DELETED
+        )
+        for location_ref in deletion.location_refs
+    ]

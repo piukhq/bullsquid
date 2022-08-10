@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+from fastapi import status
 from fastapi.testclient import TestClient
 from ward import test
 
@@ -90,7 +91,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations")
 
-    assert resp.status_code == 200
+    assert resp.status_code == status.HTTP_200_OK
     location = await Location.objects().get(Location.pk == location.pk)
     assert resp.json() == [await location_to_json(location, payment_schemes)]
 
@@ -124,7 +125,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}"
     )
 
-    assert resp.status_code == 200
+    assert resp.status_code == status.HTTP_200_OK
     location = await Location.objects().get(Location.pk == location.pk)
     assert resp.json() == await location_to_json_detail(location, payment_schemes)
 
@@ -192,7 +193,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         },
     )
 
-    assert resp.status_code == 200, resp.text
+    assert resp.status_code == status.HTTP_201_CREATED, resp.text
 
     location = await Location.objects().get(Location.pk == resp.json()["location_ref"])
     assert resp.json() == await location_to_json(location, payment_schemes)

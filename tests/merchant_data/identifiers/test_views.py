@@ -165,7 +165,7 @@ async def _(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers/{identifier.pk}",
     )
 
-    assert resp.status_code == 200, resp.json()
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
 
     identifier_ref = resp.json()["identifier_ref"]
     expected = await Identifier.objects().where(Identifier.pk == identifier_ref).first()

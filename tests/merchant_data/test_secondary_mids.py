@@ -520,22 +520,20 @@ async def _(
     merchant = await mid.get_related(SecondaryMID.merchant)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/deletion",
-        json=[str(mid.pk)],
+        json={"secondary_mid_refs": [str(mid.pk)]},
     )
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
-    assert resp.json() == {
-        "secondary_mids": [
-            {
-                "secondary_mid_ref": str(mid.pk),
-                "status": (
-                    "pending_deletion"
-                    if mid.txm_status == TXMStatus.ONBOARDED
-                    else "deleted"
-                ),
-            }
-        ]
-    }
+    assert resp.json() == [
+        {
+            "secondary_mid_ref": str(mid.pk),
+            "status": (
+                "pending_deletion"
+                if mid.txm_status == TXMStatus.ONBOARDED
+                else "deleted"
+            ),
+        }
+    ]
 
 
 @test("a secondary MID that is not onboarded is deleted and no qbert job is created")
@@ -550,7 +548,7 @@ async def _(
 
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/deletion",
-        json=[str(mid.pk)],
+        json={"secondary_mid_refs": [str(mid.pk)]},
     )
 
     mid_status = (
@@ -581,7 +579,7 @@ async def _(
 
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/deletion",
-        json=[str(mid.pk)],
+        json={"secondary_mid_refs": [str(mid.pk)]},
     )
 
     mid_status = (
@@ -612,7 +610,7 @@ async def _(
 
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/deletion",
-        json=[str(mid.pk)],
+        json={"secondary_mid_refs": [str(mid.pk)]},
     )
 
     mid_status = (
@@ -639,7 +637,7 @@ async def _(
     merchant = await merchant_factory()
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/deletion",
-        json=[str(uuid4())],
+        json={"secondary_mid_refs": [str(uuid4())]},
     )
 
     assert_is_not_found_error(resp, loc=["body", "secondary_mid_refs"])
@@ -653,8 +651,8 @@ async def _(
     merchant = await merchant_factory()
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/deletion",
-        json=[],
+        json={"secondary_mid_refs": []},
     )
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
-    assert resp.json() == {"secondary_mids": []}
+    assert resp.json() == []

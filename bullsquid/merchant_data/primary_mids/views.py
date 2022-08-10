@@ -14,7 +14,7 @@ from bullsquid.merchant_data.plans.tables import Plan
 from . import db
 from .models import (
     CreatePrimaryMIDRequest,
-    PrimaryMIDDeletionListResponse,
+    PrimaryMIDDeletionRequest,
     PrimaryMIDDeletionResponse,
     PrimaryMIDMetadata,
     PrimaryMIDResponse,
@@ -107,19 +107,19 @@ async def update_primary_mid(
 @router.post(
     "/deletion",
     status_code=status.HTTP_202_ACCEPTED,
-    response_model=PrimaryMIDDeletionListResponse,
+    response_model=list[PrimaryMIDDeletionResponse],
 )
 async def delete_primary_mids(
-    plan_ref: UUID, merchant_ref: UUID, mid_refs: list[UUID]
-) -> PrimaryMIDDeletionListResponse:
+    plan_ref: UUID, merchant_ref: UUID, deletion: PrimaryMIDDeletionRequest
+) -> list[PrimaryMIDDeletionResponse]:
     """Remove a number of primary MIDs from a merchant."""
 
-    if not mid_refs:
-        return PrimaryMIDDeletionListResponse(mids=[])
+    if not deletion.mid_refs:
+        return []
 
     try:
         onboarded, not_onboarded = await db.filter_onboarded_mid_refs(
-            mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+            deletion.mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == PrimaryMID else ["path"]
@@ -143,17 +143,12 @@ async def delete_primary_mids(
             merchant_ref=merchant_ref,
         )
 
-    return PrimaryMIDDeletionListResponse(
-        mids=[
-            PrimaryMIDDeletionResponse(
-                mid_ref=mid_ref, mid_status=ResourceStatus.PENDING_DELETION
-            )
-            for mid_ref in onboarded
-        ]
-        + [
-            PrimaryMIDDeletionResponse(
-                mid_ref=mid_ref, mid_status=ResourceStatus.DELETED
-            )
-            for mid_ref in not_onboarded
-        ]
-    )
+    return [
+        PrimaryMIDDeletionResponse(
+            mid_ref=mid_ref, mid_status=ResourceStatus.PENDING_DELETION
+        )
+        for mid_ref in onboarded
+    ] + [
+        PrimaryMIDDeletionResponse(mid_ref=mid_ref, mid_status=ResourceStatus.DELETED)
+        for mid_ref in not_onboarded
+    ]

@@ -36,14 +36,14 @@ class IdentifierResponse(BaseModel):
     date_added: datetime
 
 
+class IdentifierDeletionRequest(BaseModel):
+    """Request model for deletion of identifiers."""
+
+    identifier_refs: list[UUID4]
+
+
 class IdentifierDeletionResponse(BaseModel):
     """Response model for a deleted identifier."""
 
     identifier_ref: UUID
     status: ResourceStatus
-
-
-class IdentifierDeletionListResponse(BaseModel):
-    """Response model for a list of deleted identifiers."""
-
-    identifiers: list[IdentifierDeletionResponse]

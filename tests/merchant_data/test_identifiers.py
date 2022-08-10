@@ -451,22 +451,20 @@ async def _(
     merchant = await identifier.get_related(Identifier.merchant)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
-        json=[str(identifier.pk)],
+        json={"identifier_refs": [str(identifier.pk)]},
     )
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
-    assert resp.json() == {
-        "identifiers": [
-            {
-                "identifier_ref": str(identifier.pk),
-                "status": (
-                    "pending_deletion"
-                    if identifier.txm_status == TXMStatus.ONBOARDED
-                    else "deleted"
-                ),
-            }
-        ]
-    }
+    assert resp.json() == [
+        {
+            "identifier_ref": str(identifier.pk),
+            "status": (
+                "pending_deletion"
+                if identifier.txm_status == TXMStatus.ONBOARDED
+                else "deleted"
+            ),
+        }
+    ]
 
 
 @test("an identifier that is not onboarded is deleted and no qbert job is created")
@@ -481,7 +479,7 @@ async def _(
 
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
-        json=[str(identifier.pk)],
+        json={"identifier_refs": [str(identifier.pk)]},
     )
 
     identifier_status = (
@@ -512,7 +510,7 @@ async def _(
 
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
-        json=[str(identifier.pk)],
+        json={"identifier_refs": [str(identifier.pk)]},
     )
 
     identifier_status = (
@@ -545,7 +543,7 @@ async def _(
 
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
-        json=[str(identifier.pk)],
+        json={"identifier_refs": [str(identifier.pk)]},
     )
 
     identifier_status = (
@@ -572,7 +570,7 @@ async def _(
     merchant = await merchant_factory()
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
-        json=[str(uuid4())],
+        json={"identifier_refs": [str(uuid4())]},
     )
 
     assert_is_not_found_error(resp, loc=["body", "identifier_refs"])
@@ -586,8 +584,8 @@ async def _(
     merchant = await merchant_factory()
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
-        json=[],
+        json={"identifier_refs": []},
     )
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
-    assert resp.json() == {"identifiers": []}
+    assert resp.json() == []

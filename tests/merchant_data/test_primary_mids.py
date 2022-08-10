@@ -549,7 +549,7 @@ async def _(
     )
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
-        json=[str(primary_mid.pk)],
+        json={"mid_refs": [str(primary_mid.pk)]},
     )
 
     mid_status = (
@@ -578,7 +578,7 @@ async def _(
     )
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
-        json=[str(primary_mid.pk)],
+        json={"mid_refs": [str(primary_mid.pk)]},
     )
 
     mid_status = (
@@ -607,7 +607,7 @@ async def _(
     )
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
-        json=[str(primary_mid.pk)],
+        json={"mid_refs": [str(primary_mid.pk)]},
     )
 
     mid_status = (
@@ -633,7 +633,7 @@ async def _(
     merchant = await merchant_factory()
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
-        json=[str(uuid4())],
+        json={"mid_refs": [str(uuid4())]},
     )
 
     assert_is_not_found_error(resp, loc=["body", "mid_refs"])
@@ -647,8 +647,8 @@ async def _(
     merchant = await merchant_factory()
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
-        json=[],
+        json={"mid_refs": []},
     )
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
-    assert resp.json() == {"mids": []}
+    assert resp.json() == []

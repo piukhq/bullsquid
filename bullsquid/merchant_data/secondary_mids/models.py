@@ -45,14 +45,14 @@ class SecondaryMIDResponse(BaseModel):
     txm_status: TXMStatus = TXMStatus.NOT_ONBOARDED
 
 
+class SecondaryMIDDeletionRequest(BaseModel):
+    """Request model for deleting secondary MIDs."""
+
+    secondary_mid_refs: list[UUID]
+
+
 class SecondaryMIDDeletionResponse(BaseModel):
     """Response model for a deleted secondary MID."""
 
     secondary_mid_ref: UUID
     status: ResourceStatus
-
-
-class SecondaryMIDDeletionListResponse(BaseModel):
-    """Response model for a list of deleted secondary MIDs."""
-
-    secondary_mids: list[SecondaryMIDDeletionResponse]

@@ -60,14 +60,14 @@ class PrimaryMIDResponse(BaseModel):
     _ = validator("txm_status", allow_reuse=True)(string_must_not_be_blank)
 
 
+class PrimaryMIDDeletionRequest(BaseModel):
+    """Request model for a deletion of primary MIDs."""
+
+    mid_refs: list[UUID]
+
+
 class PrimaryMIDDeletionResponse(BaseModel):
     """Response model for a deletion of a primary MID."""
 
     mid_ref: UUID
     mid_status: ResourceStatus
-
-
-class PrimaryMIDDeletionListResponse(BaseModel):
-    """Response model for the deletion of primary MIDs."""
-
-    mids: list[PrimaryMIDDeletionResponse]

@@ -13,7 +13,7 @@ from bullsquid.merchant_data.plans.tables import Plan
 from . import db
 from .models import (
     CreateIdentifierRequest,
-    IdentifierDeletionListResponse,
+    IdentifierDeletionRequest,
     IdentifierDeletionResponse,
     IdentifierMetadata,
     IdentifierResponse,
@@ -111,18 +111,18 @@ async def create_identifier(
 @router.post(
     "/deletion",
     status_code=status.HTTP_202_ACCEPTED,
-    response_model=IdentifierDeletionListResponse,
+    response_model=list[IdentifierDeletionResponse],
 )
 async def delete_identifiers(
-    plan_ref: UUID, merchant_ref: UUID, identifier_refs: list[UUID]
-) -> IdentifierDeletionListResponse:
+    plan_ref: UUID, merchant_ref: UUID, deletion: IdentifierDeletionRequest
+) -> list[IdentifierDeletionResponse]:
     """Remove a number of identifiers from a merchant."""
-    if not identifier_refs:
-        return IdentifierDeletionListResponse(identifiers=[])
+    if not deletion.identifier_refs:
+        return []
 
     try:
         onboarded, not_onboarded = await db.filter_onboarded_identifiers(
-            identifier_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+            deletion.identifier_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
         plural = ex.table == Identifier
@@ -147,17 +147,14 @@ async def delete_identifiers(
             merchant_ref=merchant_ref,
         )
 
-    return IdentifierDeletionListResponse(
-        identifiers=[
-            IdentifierDeletionResponse(
-                identifier_ref=identifier_ref, status=ResourceStatus.PENDING_DELETION
-            )
-            for identifier_ref in onboarded
-        ]
-        + [
-            IdentifierDeletionResponse(
-                identifier_ref=identifier_ref, status=ResourceStatus.DELETED
-            )
-            for identifier_ref in not_onboarded
-        ]
-    )
+    return [
+        IdentifierDeletionResponse(
+            identifier_ref=identifier_ref, status=ResourceStatus.PENDING_DELETION
+        )
+        for identifier_ref in onboarded
+    ] + [
+        IdentifierDeletionResponse(
+            identifier_ref=identifier_ref, status=ResourceStatus.DELETED
+        )
+        for identifier_ref in not_onboarded
+    ]

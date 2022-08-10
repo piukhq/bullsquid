@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from ward import test
+from ward import skip, test
 
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
@@ -422,3 +422,88 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
     assert_is_value_error(resp, loc=["body", "__root__"])
+
+
+@test("can delete locations")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    locations = [
+        await location_factory(merchant=merchant),
+        await location_factory(merchant=merchant),
+        await location_factory(merchant=merchant),
+    ]
+
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/deletion",
+        json={"location_refs": [str(location.pk) for location in locations]},
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+    assert resp.json() == [
+        {"location_ref": str(location.pk), "location_status": "deleted"}
+        for location in locations
+    ]
+
+
+@test("deleting locations with an empty list does nothing")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/deletion",
+        json={"location_refs": []},
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+    assert resp.json() == []
+
+
+@test("can't delete locations on a non-existent plan")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    locations = [
+        await location_factory(merchant=merchant),
+        await location_factory(merchant=merchant),
+        await location_factory(merchant=merchant),
+    ]
+
+    resp = test_client.post(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/locations/deletion",
+        json={"location_refs": [str(location.pk) for location in locations]},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+@test("can't delete locations on a non-existent merchant")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    locations = [
+        await location_factory(merchant=merchant),
+        await location_factory(merchant=merchant),
+        await location_factory(merchant=merchant),
+    ]
+
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/locations/deletion",
+        json={"location_refs": [str(location.pk) for location in locations]},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can't delete non-existent locations")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/deletion",
+        json={"location_refs": [str(uuid4()) for _ in range(3)]},
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "location_refs"])

@@ -1,7 +1,7 @@
 """Endpoints that operate on locations"""
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, status
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
@@ -137,7 +137,7 @@ async def get_location(
     return await create_location_detail_response(location, payment_schemes)
 
 
-@router.post("")
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_location(
     location_data: LocationDetailMetadata, plan_ref: UUID, merchant_ref: UUID
 ) -> MerchantOverviewResponse:

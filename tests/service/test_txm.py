@@ -3,6 +3,7 @@ from importlib import reload
 from unittest.mock import MagicMock, patch
 
 from aioresponses import aioresponses
+from fastapi import status
 from ward import test
 
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
@@ -17,7 +18,9 @@ async def _(
     primary_mid: PrimaryMID = primary_mid,
 ) -> None:
     mock_responses.post(
-        "https://testbink.com/txm/mids/", status=200, payload={"test": "success"}
+        "https://testbink.com/txm/mids/",
+        status=status.HTTP_200_OK,
+        payload={"test": "success"},
     )
     txm = TXMServiceInterface("https://testbink.com")
     resp = await txm.onboard_mids([primary_mid.pk])
@@ -31,7 +34,7 @@ async def _(
 ) -> None:
     mock_responses.post(
         "https://testbink.com/txm/mids/deletion",
-        status=200,
+        status=status.HTTP_200_OK,
         payload={"test": "success"},
     )
     txm = TXMServiceInterface("https://testbink.com")

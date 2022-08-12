@@ -16,7 +16,7 @@ class DatabaseSettings(BaseSettings):
 
         env_prefix = "database_"
 
-    dsn = "postgresql://postgres:postgres@localhost:5432/{}"
+    dsn = "postgresql://postgres:postgres@localhost:5432/{}?application_name=bullsquid"
     dbname = "bullsquid"
 
 

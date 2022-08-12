@@ -16,11 +16,12 @@ from bullsquid.tasks import (
     run_worker,
 )
 from tests.fixtures import database
-from tests.merchant_data.factories import primary_mid, primary_mid_factory
+from tests.merchant_data.factories import primary_mid_factory
 
 
 @test("run_worker executes jobs")
-async def _(primary_mid: PrimaryMID = primary_mid) -> None:
+async def _(_: None = database) -> None:
+    primary_mid = await primary_mid_factory()
     await queue.push(OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
     assert await Job.count().where(Job.message_type == OnboardPrimaryMIDs.__name__) == 1
 
@@ -31,7 +32,8 @@ async def _(primary_mid: PrimaryMID = primary_mid) -> None:
 
 
 @test("run_worker handles exceptions without crashing")
-async def _(primary_mid: PrimaryMID = primary_mid) -> None:
+async def _(_: None = database) -> None:
+    primary_mid = await primary_mid_factory()
     await queue.push(OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
     assert (
         await Job.count().where(
@@ -59,7 +61,8 @@ async def _(primary_mid: PrimaryMID = primary_mid) -> None:
 
 
 @test("run_worker sleeps when the queue is empty")
-async def _(primary_mid: PrimaryMID = primary_mid) -> None:
+async def _(_: None = database) -> None:
+    primary_mid = await primary_mid_factory()
     await queue.push(OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
 
     class MockedSleep(Exception):
@@ -77,7 +80,7 @@ async def _(primary_mid: PrimaryMID = primary_mid) -> None:
 
 
 @test("the task worker can onboard primary MIDs")
-async def _(_db: None = database) -> None:
+async def _(_: None = database) -> None:
     primary_mid = await primary_mid_factory(txm_status=TXMStatus.NOT_ONBOARDED)
 
     await queue.push(OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
@@ -90,7 +93,7 @@ async def _(_db: None = database) -> None:
 
 
 @test("the task worker can offboard primary MIDs")
-async def _(_db: None = database) -> None:
+async def _(_: None = database) -> None:
     primary_mid = await primary_mid_factory(txm_status=TXMStatus.ONBOARDED)
 
     await queue.push(OffboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
@@ -103,7 +106,7 @@ async def _(_db: None = database) -> None:
 
 
 @test("the task worker can offboard and delete primary MIDs")
-async def _(_db: None = database) -> None:
+async def _(_: None = database) -> None:
     primary_mid = await primary_mid_factory(txm_status=TXMStatus.ONBOARDED)
 
     await queue.push(OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]))

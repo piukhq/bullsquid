@@ -8,15 +8,16 @@ from ward import test
 
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.service.txm import TXMServiceInterface, create_txm_service_interface
-from tests.fixtures import mock_responses
-from tests.merchant_data.factories import primary_mid
+from tests.fixtures import database, mock_responses
+from tests.merchant_data.factories import primary_mid_factory
 
 
 @test("the onboard_mids method sends a request to the correct url")
 async def _(
+    _: None = database,
     mock_responses: aioresponses = mock_responses,
-    primary_mid: PrimaryMID = primary_mid,
 ) -> None:
+    primary_mid = await primary_mid_factory()
     mock_responses.post(
         "https://testbink.com/txm/mids/",
         status=status.HTTP_200_OK,
@@ -29,9 +30,10 @@ async def _(
 
 @test("the offboard_mids method sends a request to the correct url")
 async def _(
+    _: None = database,
     mock_responses: aioresponses = mock_responses,
-    primary_mid: PrimaryMID = primary_mid,
 ) -> None:
+    primary_mid = await primary_mid_factory()
     mock_responses.post(
         "https://testbink.com/txm/mids/deletion",
         status=status.HTTP_200_OK,

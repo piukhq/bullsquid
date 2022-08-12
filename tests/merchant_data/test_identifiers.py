@@ -9,6 +9,7 @@ from ward import test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
+from bullsquid.merchant_data.merchants.models import MerchantPaymentSchemeCountResponse
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
@@ -20,14 +21,10 @@ from tests.helpers import (
     assert_is_uniqueness_error,
 )
 from tests.merchant_data.factories import (
-    identifier,
+    default_payment_schemes,
     identifier_factory,
-    merchant,
     merchant_factory,
-    payment_schemes,
-    plan,
     plan_factory,
-    three_merchants,
 )
 
 
@@ -53,9 +50,10 @@ async def identifier_to_json(identifier: Identifier) -> dict:
 
 @test("can list identifiers")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    identifier: Identifier = identifier,
 ) -> None:
+    identifier = await identifier_factory()
     # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
     identifier = await Identifier.objects().get(Identifier.pk == identifier.pk)
 
@@ -78,9 +76,10 @@ async def _(
 
 @test("deleted identifiers are not listed")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    identifier: Identifier = identifier,
 ) -> None:
+    identifier = await identifier_factory()
     # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
     identifier = await Identifier.objects().get(Identifier.pk == identifier.pk)
 
@@ -106,9 +105,10 @@ async def _(
 
 @test("can list identifiers from a specific plan")
 async def _(
+    _db: None = database,
     test_client: TestClient = test_client,
-    merchants: list[Merchant] = three_merchants,
 ) -> None:
+    merchants = [await merchant_factory() for _ in range(3)]
     for merchant in merchants:
         for _ in range(random.randint(1, 3)):
             await identifier_factory(merchant=merchant)
@@ -131,9 +131,10 @@ async def _(
 
 @test("can't list identifiers on a plan that doesn't exist")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
 ) -> None:
+    merchant = await merchant_factory()
     resp = test_client.get(
         f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/identifiers",
     )
@@ -143,9 +144,10 @@ async def _(
 
 @test("can't list identifiers on a merchant that doesn't exist")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    plan: Plan = plan,
 ) -> None:
+    plan = await plan_factory()
     resp = test_client.get(
         f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/identifiers",
     )
@@ -155,7 +157,7 @@ async def _(
 
 @test("can get identifier details")
 async def _(
-    _db: None = database,
+    _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
     plan = await plan_factory()
@@ -214,10 +216,11 @@ async def _(
 
 @test("can create an identifier on a merchant without onboarding")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    payment_schemes = await default_payment_schemes()
+    merchant = await merchant_factory()
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
@@ -246,10 +249,11 @@ async def _(
 
 @test("can create and onboard an identifier on a merchant")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    payment_schemes = await default_payment_schemes()
+    merchant = await merchant_factory()
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
@@ -278,10 +282,11 @@ async def _(
 
 @test("can't create an identifier on a plan that does not exist")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    payment_schemes = await default_payment_schemes()
+    merchant = await merchant_factory()
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/identifiers",
@@ -300,10 +305,11 @@ async def _(
 
 @test("can't create an identifier on a merchant that does not exist")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    plan: Plan = plan,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    payment_schemes = await default_payment_schemes()
+    plan = await plan_factory()
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/identifiers",
@@ -322,11 +328,12 @@ async def _(
 
 @test("can't create an identifier with a value that already exists")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
-    existing_identifier: Identifier = identifier,
 ) -> None:
+    existing_identifier = await identifier_factory()
+    payment_schemes = await default_payment_schemes()
+    merchant = await merchant_factory()
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
@@ -345,9 +352,10 @@ async def _(
 
 @test("can't create an identifier with a missing payment scheme code")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
 ) -> None:
+    merchant = await merchant_factory()
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
@@ -367,9 +375,10 @@ async def _(
 
 @test("can't create an identifier with a null payment scheme code")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
 ) -> None:
+    merchant = await merchant_factory()
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
@@ -390,10 +399,11 @@ async def _(
 
 @test("can't create an identifier with a missing value")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    payment_schemes = await default_payment_schemes()
+    merchant = await merchant_factory()
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
@@ -411,10 +421,11 @@ async def _(
 
 @test("can't create an identifier with a null value")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    payment_schemes = await default_payment_schemes()
+    merchant = await merchant_factory()
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
@@ -433,9 +444,10 @@ async def _(
 
 @test("can delete an identifier")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    identifier: Identifier = identifier,
 ) -> None:
+    identifier = await identifier_factory()
     merchant = await identifier.get_related(Identifier.merchant)
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
@@ -459,9 +471,10 @@ async def _(
 
 @test("an identifier that is not onboarded is deleted and no qbert job is created")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
 ) -> None:
+    merchant = await merchant_factory()
     identifier = await identifier_factory(
         merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
     )
@@ -489,9 +502,10 @@ async def _(
 
 @test("an identifier that is offboarded is deleted and no qbert job is created")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
 ) -> None:
+    merchant = await merchant_factory()
     identifier = await identifier_factory(
         merchant=merchant, txm_status=TXMStatus.OFFBOARDED
     )
@@ -521,9 +535,10 @@ async def _(
     "an identifier that is onboarded goes to pending deletion and a qbert job is created"
 )
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
 ) -> None:
+    merchant = await merchant_factory()
     identifier = await identifier_factory(
         merchant=merchant, txm_status=TXMStatus.ONBOARDED
     )
@@ -551,9 +566,10 @@ async def _(
 
 @test("deleting an identifier that doesn't exist returns a useful error")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
 ) -> None:
+    merchant = await merchant_factory()
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
         json=[str(uuid4())],
@@ -563,10 +579,11 @@ async def _(
 
 
 @test("sending a delete identifiers request with an empty body does nothing")
-def _(
+async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
 ) -> None:
+    merchant = await merchant_factory()
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
         json=[],

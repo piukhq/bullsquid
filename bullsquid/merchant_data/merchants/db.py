@@ -59,9 +59,3 @@ async def update_merchant(
         setattr(merchant, key, value)
     await merchant.save()
     return merchant
-
-
-async def delete_merchant(pk: UUID, *, plan_ref: UUID) -> None:
-    """Delete a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
-    merchant = await get_merchant(pk, plan_ref=plan_ref)
-    await merchant.remove()

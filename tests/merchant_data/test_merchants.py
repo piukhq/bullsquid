@@ -18,12 +18,9 @@ from tests.helpers import (
     assert_is_value_error,
 )
 from tests.merchant_data.factories import (
-    merchant,
+    default_payment_schemes,
     merchant_factory,
-    payment_schemes,
-    plan,
     plan_factory,
-    three_merchants,
 )
 
 
@@ -73,10 +70,11 @@ def merchant_detail_json(merchant: Merchant, plan: Plan) -> dict:
 
 @test("can list merchants")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    plan: Plan = plan,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    payment_schemes = await default_payment_schemes()
+    plan = await plan_factory()
     merchants = [
         await merchant_factory(plan=plan),
         await merchant_factory(plan=plan),
@@ -113,28 +111,31 @@ async def _(
 
 @test("getting merchant details from a non-existent plan returns a 404")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    merchant: Merchant = merchant,
 ) -> None:
+    merchant = await merchant_factory()
     resp = test_client.get(f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}")
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("getting details from a non-existent merchant returns a 404")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    plan: Plan = plan,
 ) -> None:
+    plan = await plan_factory()
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}")
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
 @test("can create a merchant")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
-    plan: Plan = plan,
 ) -> None:
+    plan = await plan_factory()
+    payment_schemes = await default_payment_schemes()
     merchant = await merchant_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants",
@@ -151,9 +152,10 @@ async def _(
 
 @test("unable to create a merchant with a duplicate name")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    existing_merchant: Merchant = merchant,
 ) -> None:
+    existing_merchant = await merchant_factory()
     new_merchant = await merchant_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{existing_merchant.plan}/merchants",
@@ -185,9 +187,10 @@ async def _(
 
 @test("unable to create a merchant with a blank name instead of null")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    plan: Plan = plan,
 ) -> None:
+    plan = await plan_factory()
     merchant = await merchant_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants",
@@ -202,9 +205,10 @@ async def _(
 
 @test("unable to create a merchant with a blank location label instead of null")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    plan: Plan = plan,
 ) -> None:
+    plan = await plan_factory()
     merchant = await merchant_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants",

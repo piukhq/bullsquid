@@ -2,7 +2,6 @@
 from typing import Any
 
 from piccolo.testing.model_builder import ModelBuilder
-from ward import fixture
 
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
@@ -12,7 +11,6 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from tests.fixtures import database
 
 
 async def plan_factory(*, persist: bool = True, **defaults: Any) -> Plan:
@@ -118,69 +116,3 @@ async def default_payment_schemes() -> list[PaymentScheme]:
             },
         ),
     ]
-
-
-@fixture
-async def plan(_: None = database) -> Plan:
-    """Creates and returns a plan."""
-    return await plan_factory()
-
-
-@fixture
-async def three_plans(_: None = database) -> list[Plan]:
-    """Creates and returns three plans with the given defaults."""
-    return [await plan_factory() for _ in range(3)]
-
-
-@fixture
-async def merchant(_: None = database) -> Merchant:
-    """Creates and returns a merchant."""
-    return await merchant_factory()
-
-
-@fixture
-async def three_merchants(_: None = database) -> list[Merchant]:
-    """Creates and returns three merchants."""
-    return [await merchant_factory() for _ in range(3)]
-
-
-@fixture
-async def primary_mid(_: None = database) -> PrimaryMID:
-    """Creates and returns a primary MID."""
-    return await primary_mid_factory()
-
-
-@fixture
-async def three_primary_mids(_: None = database) -> list[PrimaryMID]:
-    """Creates and returns three primary MIDs."""
-    return [await primary_mid_factory() for _ in range(3)]
-
-
-@fixture
-async def secondary_mid(_: None = database) -> SecondaryMID:
-    """Creates and returns a secondary MID."""
-    return await secondary_mid_factory()
-
-
-@fixture
-async def three_secondary_mids(_: None = database) -> list[SecondaryMID]:
-    """Creates and returns three secondary MIDs."""
-    return [await secondary_mid_factory() for _ in range(3)]
-
-
-@fixture
-async def identifier(_: None = database) -> Identifier:
-    """Creates and returns an identifier."""
-    return await identifier_factory()
-
-
-@fixture
-async def three_identifiers(_: None = database) -> list[Identifier]:
-    """Creates and returns three identifiers."""
-    return [await identifier_factory() for _ in range(3)]
-
-
-@fixture
-async def payment_schemes(_: None = database) -> list[PaymentScheme]:
-    """Creates and returns the default payment schemes."""
-    return await default_payment_schemes()

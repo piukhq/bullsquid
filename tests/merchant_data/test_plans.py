@@ -14,11 +14,9 @@ from bullsquid.merchant_data.plans.tables import Plan
 from tests.fixtures import database, test_client
 from tests.helpers import assert_is_not_found_error, assert_is_uniqueness_error
 from tests.merchant_data.factories import (
+    default_payment_schemes,
     merchant_factory,
-    payment_schemes,
-    plan,
     plan_factory,
-    three_plans,
 )
 
 
@@ -51,10 +49,11 @@ async def plan_to_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict
 
 @test("can list plans with no merchants")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    plans: list[dict] = three_plans,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    payment_schemes = await default_payment_schemes()
+    plans = [await plan_factory() for _ in range(3)]
     resp = test_client.get("/api/v1/plans")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [await plan_to_json(plan, payment_schemes) for plan in plans]
@@ -62,10 +61,11 @@ async def _(
 
 @test("can list plans with merchants")
 async def _(
+    _db: None = database,
     test_client: TestClient = test_client,
-    plans: list[dict] = three_plans,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    plans = [await plan_factory() for _ in range(3)]
+    payment_schemes = await default_payment_schemes()
     for plan in plans:
         for _ in range(random.randint(1, 3)):
             await merchant_factory(plan=plan)
@@ -78,7 +78,7 @@ async def _(
 @test("can get a plan's details")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
     plan = await plan_factory()
-    ps = await payment_schemes()
+    ps = await default_payment_schemes()
     resp = test_client.get(f"/api/v1/plans/{plan.pk}")
     assert resp.status_code == status.HTTP_200_OK, resp.text
     assert resp.json() == await plan_to_json(plan, ps)
@@ -92,9 +92,10 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can create a plan")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    payment_schemes = await default_payment_schemes()
     plan = await plan_factory(persist=False)
     resp = test_client.post(
         "/api/v1/plans",
@@ -112,9 +113,10 @@ async def _(
 
 @test("can create a plan with a blank slug")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    payment_schemes = await default_payment_schemes()
     plan = await plan_factory(persist=False, slug="")
     resp = test_client.post(
         "/api/v1/plans",
@@ -133,9 +135,10 @@ async def _(
 
 @test("unable to create a plan with a duplicate name")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    existing_plan: Plan = plan,
 ) -> None:
+    existing_plan = await plan_factory()
     new_plan = await plan_factory(persist=False)
     resp = test_client.post(
         "/api/v1/plans",
@@ -151,9 +154,10 @@ async def _(
 
 @test("unable to create a plan with a duplicate slug")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    existing_plan: Plan = plan,
 ) -> None:
+    existing_plan = await plan_factory()
     new_plan = await plan_factory(persist=False)
     resp = test_client.post(
         "/api/v1/plans",
@@ -169,9 +173,10 @@ async def _(
 
 @test("unable to create a plan with a duplicate plan ID")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    existing_plan: Plan = plan,
 ) -> None:
+    existing_plan = await plan_factory()
     new_plan = await plan_factory(persist=False)
     resp = test_client.post(
         "/api/v1/plans",
@@ -187,10 +192,11 @@ async def _(
 
 @test("can update an existing plan with new details")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    plan: Plan = plan,
-    payment_schemes: list[PaymentScheme] = payment_schemes,
 ) -> None:
+    payment_schemes = await default_payment_schemes()
+    plan = await plan_factory()
     new_details = await plan_factory(persist=False)
     resp = test_client.put(
         f"/api/v1/plans/{plan.pk}",
@@ -212,7 +218,7 @@ async def _(
 
 @test("updating a non-existent plan returns a ref error")
 async def _(
-    _db: None = database,
+    _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
     resp = test_client.put(
@@ -226,9 +232,10 @@ async def _(
 
 @test("updating a plan with an existing name returns a uniqueness error")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    plans: list[Plan] = three_plans,
 ) -> None:
+    plans = [await plan_factory() for _ in range(3)]
     resp = test_client.put(
         f"/api/v1/plans/{plans[0].pk}",
         json={
@@ -240,9 +247,10 @@ async def _(
 
 @test("updating a plan with an existing slug returns a uniqueness error")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    plans: list[Plan] = three_plans,
 ) -> None:
+    plans = [await plan_factory() for _ in range(3)]
     resp = test_client.put(
         f"/api/v1/plans/{plans[0].pk}",
         json={
@@ -255,9 +263,10 @@ async def _(
 
 @test("updating a plan with an existing plan ID returns a uniqueness error")
 async def _(
+    _: None = database,
     test_client: TestClient = test_client,
-    plans: list[Plan] = three_plans,
 ) -> None:
+    plans = [await plan_factory() for _ in range(3)]
     resp = test_client.put(
         f"/api/v1/plans/{plans[0].pk}",
         json={

@@ -4,10 +4,13 @@ from typing import Any, Mapping
 from uuid import UUID
 
 from bullsquid.db import NoSuchRecord, paginate
-from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.merchants.models import CreateMerchantRequest
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 from .tables import Merchant
 
@@ -59,3 +62,42 @@ async def update_merchant(
         setattr(merchant, key, value)
     await merchant.save()
     return merchant
+
+
+async def merchant_has_onboarded_resources(pk: UUID) -> bool:
+    """
+    Returns true if the given merchant has any onboarded primary MIDs,
+    secondary MIDs, or identifiers.
+    """
+    primary_mids = PrimaryMID.exists().where(
+        PrimaryMID.merchant == pk, PrimaryMID.txm_status == TXMStatus.ONBOARDED
+    )
+    secondary_mids = SecondaryMID.exists().where(
+        SecondaryMID.merchant == pk, SecondaryMID.txm_status == TXMStatus.ONBOARDED
+    )
+    identifiers = Identifier.exists().where(
+        Identifier.merchant == pk, Identifier.txm_status == TXMStatus.ONBOARDED
+    )
+
+    return (await primary_mids) or (await secondary_mids) or (await identifiers)
+
+
+async def update_merchant_status(
+    pk: UUID, status: ResourceStatus, *, cascade: bool = False
+) -> None:
+    """
+    Set the given merchant's status.
+    If cascade = true, also update all associated resources.
+    """
+    async with Merchant._meta.db.transaction():  # pylint: disable=protected-access
+        await Merchant.update({Merchant.status: status}).where(Merchant.pk == pk)
+        if cascade:
+            await PrimaryMID.update({PrimaryMID.status: ResourceStatus.DELETED}).where(
+                PrimaryMID.merchant == pk
+            )
+            await SecondaryMID.update(
+                {SecondaryMID.status: ResourceStatus.DELETED}
+            ).where(SecondaryMID.merchant == pk)
+            await Identifier.update({Identifier.status: ResourceStatus.DELETED}).where(
+                Identifier.merchant == pk
+            )

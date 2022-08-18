@@ -8,6 +8,8 @@ from pydantic import BaseModel
 from qbert import Queue
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.merchants.db import merchant_has_onboarded_resources
+from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.service.txm import txm
 from settings import settings
@@ -31,7 +33,30 @@ class OffboardAndDeletePrimaryMIDs(BaseModel):
     mid_refs: list[UUID]
 
 
-queue = Queue([OnboardPrimaryMIDs, OffboardPrimaryMIDs, OffboardAndDeletePrimaryMIDs])
+class OffboardAndDeleteMerchant(BaseModel):
+    """Offboard merchant from Harmonia, then mark them as deleted"""
+
+    merchant_ref: UUID
+
+
+queue = Queue(
+    [
+        OnboardPrimaryMIDs,
+        OffboardPrimaryMIDs,
+        OffboardAndDeletePrimaryMIDs,
+        OffboardAndDeleteMerchant,
+    ]
+)
+
+
+async def delete_fully_offboarded_merchants(merchant_refs: list[UUID]) -> None:
+    """Delete fully offboarded merchants"""
+    for merchant_ref in merchant_refs:
+        if not await merchant_has_onboarded_resources(merchant_ref):
+            await Merchant.update({Merchant.status: ResourceStatus.DELETED}).where(
+                Merchant.pk == merchant_ref,
+                Merchant.status == ResourceStatus.PENDING_DELETION,
+            )
 
 
 async def _run_job(message: BaseModel) -> None:
@@ -41,11 +66,13 @@ async def _run_job(message: BaseModel) -> None:
             await PrimaryMID.update({PrimaryMID.txm_status: TXMStatus.ONBOARDED}).where(
                 PrimaryMID.pk.is_in(message.mid_refs)
             )
+
         case OffboardPrimaryMIDs():
             await txm.offboard_mids(message.mid_refs)
             await PrimaryMID.update(
                 {PrimaryMID.txm_status: TXMStatus.OFFBOARDED}
             ).where(PrimaryMID.pk.is_in(message.mid_refs))
+
         case OffboardAndDeletePrimaryMIDs():
             await txm.offboard_mids(message.mid_refs)
             await PrimaryMID.update(
@@ -54,6 +81,26 @@ async def _run_job(message: BaseModel) -> None:
                     PrimaryMID.status: ResourceStatus.DELETED,
                 }
             ).where(PrimaryMID.pk.is_in(message.mid_refs))
+
+            await delete_fully_offboarded_merchants(
+                await PrimaryMID.select(PrimaryMID.merchant)
+                .where(PrimaryMID.pk.is_in(message.mid_refs))
+                .output(as_list=True)
+            )
+
+        case OffboardAndDeleteMerchant():
+            onboarded_primary_mids = (
+                await PrimaryMID.select(PrimaryMID.pk)
+                .where(
+                    PrimaryMID.merchant == message.merchant_ref,
+                    PrimaryMID.txm_status == TXMStatus.ONBOARDED,
+                )
+                .output(as_list=True)
+            )
+            await queue.push(
+                OffboardAndDeletePrimaryMIDs(mid_refs=onboarded_primary_mids)
+            )
+            # TODO: also offboard & delete secondary MIDs and identifiers
 
 
 async def run_worker(*, burst: bool = False) -> None:

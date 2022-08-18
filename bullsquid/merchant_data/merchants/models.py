@@ -59,3 +59,9 @@ class MerchantDetailResponse(BaseModel):
     merchant_ref: UUID4
     plan_metadata: PlanMetadataResponse
     merchant_metadata: MerchantMetadataResponse
+
+
+class MerchantDeletionResponse(BaseModel):
+    """Response model for a deletion of a merchant."""
+
+    merchant_status: ResourceStatus

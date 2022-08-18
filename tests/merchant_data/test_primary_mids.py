@@ -25,7 +25,6 @@ from tests.helpers import (
     assert_is_not_found_error,
     assert_is_null_error,
     assert_is_uniqueness_error,
-    assert_is_value_error,
 )
 from tests.merchant_data.factories import (
     default_payment_schemes,

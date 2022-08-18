@@ -7,8 +7,10 @@ from qbert.tables import Job
 from ward import raises, test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.tasks import (
+    OffboardAndDeleteMerchant,
     OffboardAndDeletePrimaryMIDs,
     OffboardPrimaryMIDs,
     OnboardPrimaryMIDs,
@@ -16,7 +18,7 @@ from bullsquid.tasks import (
     run_worker,
 )
 from tests.fixtures import database
-from tests.merchant_data.factories import primary_mid_factory
+from tests.merchant_data.factories import merchant_factory, primary_mid_factory
 
 
 @test("run_worker executes jobs")
@@ -116,3 +118,25 @@ async def _(_: None = database) -> None:
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.txm_status == TXMStatus.OFFBOARDED
     assert primary_mid.status == ResourceStatus.DELETED
+
+
+@test("the task worker can offboard and delete a merchant")
+async def _(_: None = database) -> None:
+    merchant = await merchant_factory(status=ResourceStatus.PENDING_DELETION)
+    primary_mid = await primary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.ONBOARDED
+    )
+
+    await queue.push(OffboardAndDeleteMerchant(merchant_ref=merchant.pk))
+    with patch("bullsquid.tasks.logger"):
+        # run this twice; once for OffboardAndDeleteMerchant and once more for
+        # OffboardAndDeletePrimaryMIDs.
+        # TODO: fix burst mode
+        await run_worker(burst=True)
+        await run_worker(burst=True)
+
+    merchant = await Merchant.objects().get(Merchant.pk == merchant.pk)
+    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert primary_mid.txm_status == TXMStatus.OFFBOARDED
+    assert primary_mid.status == ResourceStatus.DELETED
+    assert merchant.status == ResourceStatus.DELETED

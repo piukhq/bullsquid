@@ -4,8 +4,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, status
 
+from bullsquid import tasks
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
@@ -16,6 +18,7 @@ from . import db
 from .models import (
     CreateMerchantRequest,
     MerchantCountsResponse,
+    MerchantDeletionResponse,
     MerchantDetailResponse,
     MerchantMetadataResponse,
     MerchantOverviewResponse,
@@ -143,3 +146,31 @@ async def update_merchant(
     return await create_merchant_overview_response(
         merchant, await list_payment_schemes()
     )
+
+
+@router.delete(
+    "/{merchant_ref}",
+    response_model=MerchantDeletionResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def delete_merchant(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> MerchantDeletionResponse:
+    """
+    Mark a merchant as deleted, also deleting its associated resources.
+    """
+
+    try:
+        merchant = await db.get_merchant(merchant_ref, plan_ref=plan_ref)
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+
+    if await db.merchant_has_onboarded_resources(merchant.pk):
+        await db.update_merchant_status(merchant.pk, ResourceStatus.PENDING_DELETION)
+        await tasks.queue.push(
+            tasks.OffboardAndDeleteMerchant(merchant_ref=merchant.pk)
+        )
+        return MerchantDeletionResponse(merchant_status=ResourceStatus.PENDING_DELETION)
+    await db.update_merchant_status(merchant.pk, ResourceStatus.DELETED, cascade=True)
+    return MerchantDeletionResponse(merchant_status=ResourceStatus.DELETED)

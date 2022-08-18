@@ -4,12 +4,18 @@ from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from ward import skip, test
+from qbert.tables import Job
+from ward import test
 
+from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from bullsquid.tasks import OffboardAndDeleteMerchant
 from tests.fixtures import database, test_client
 from tests.helpers import (
     assert_is_missing_field_error,
@@ -19,8 +25,11 @@ from tests.helpers import (
 )
 from tests.merchant_data.factories import (
     default_payment_schemes,
+    identifier_factory,
     merchant_factory,
     plan_factory,
+    primary_mid_factory,
+    secondary_mid_factory,
 )
 
 
@@ -323,3 +332,112 @@ async def _(
         },
     )
     assert_is_uniqueness_error(resp, loc=["body", "name"])
+
+
+@test("deleted merchants are not listed")
+async def _(
+    _: None = database,
+    test_client: TestClient = test_client,
+) -> None:
+    merchant = await merchant_factory()
+    payment_schemes = await default_payment_schemes()
+
+    # create a deleted merchant that shouldn't be in the response
+    await merchant_factory(status=ResourceStatus.DELETED)
+
+    resp = test_client.get(f"/api/v1/plans/{merchant.plan}/merchants")
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json() == [merchant_overview_json(merchant, payment_schemes)]
+
+
+@test("a merchant with no onboarded resources is immediately deleted")
+async def _(
+    _: None = database,
+    test_client: TestClient = test_client,
+) -> None:
+    merchant = await merchant_factory()
+    primary_mid = await primary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
+    )
+    secondary_mid = await secondary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
+    )
+    identifier = await identifier_factory(
+        merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
+    )
+
+    resp = test_client.delete(f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}")
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    assert resp.json() == {"merchant_status": "deleted"}
+
+    merchant = (
+        await Merchant.select(Merchant.status).where(Merchant.pk == merchant.pk).first()
+    )
+    primary_mid = (
+        await PrimaryMID.select(PrimaryMID.status)
+        .where(PrimaryMID.pk == primary_mid.pk)
+        .first()
+    )
+    secondary_mid = (
+        await SecondaryMID.select(SecondaryMID.status)
+        .where(SecondaryMID.pk == secondary_mid.pk)
+        .first()
+    )
+    identifier = (
+        await Identifier.select(Identifier.status)
+        .where(Identifier.pk == identifier.pk)
+        .first()
+    )
+
+    assert merchant["status"] == ResourceStatus.DELETED
+    assert primary_mid["status"] == ResourceStatus.DELETED
+    assert secondary_mid["status"] == ResourceStatus.DELETED
+    assert identifier["status"] == ResourceStatus.DELETED
+
+
+@test("a merchant with onboarded resources is set to pending deletion")
+async def _(
+    _: None = database,
+    test_client: TestClient = test_client,
+) -> None:
+    merchant = await merchant_factory()
+    await primary_mid_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
+    await secondary_mid_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
+    await identifier_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
+
+    resp = test_client.delete(f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}")
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    assert resp.json() == {"merchant_status": "pending_deletion"}
+
+    assert await Job.exists().where(
+        Job.message_type == OffboardAndDeleteMerchant.__name__,
+        Job.message == OffboardAndDeleteMerchant(merchant_ref=merchant.pk).dict(),
+    )
+
+    merchant = (
+        await Merchant.select(Merchant.status).where(Merchant.pk == merchant.pk).first()
+    )
+    assert merchant["status"] == ResourceStatus.PENDING_DELETION
+
+
+@test("deleting a non-existent merchant returns a ref error")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+) -> None:
+    plan = await plan_factory()
+    resp = test_client.delete(f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}")
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("deleting a merchant on a non-existent plan returns a ref error")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+) -> None:
+    merchant = await merchant_factory()
+    resp = test_client.delete(f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}")
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])

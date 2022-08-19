@@ -6,10 +6,42 @@ from uuid import UUID
 
 from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.locations.db import get_location_instance
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.merchant_data.tables import LocationSecondaryMIDAssociation
+
+
+async def create_location_primary_mid_links(
+    *,
+    location_ref: UUID,
+    primary_mid_refs: list[UUID],
+    plan_ref: UUID,
+    merchant_ref: UUID
+) -> list[PrimaryMID]:
+    """
+    Create and return a set of links between locations and primary MIDs.
+    """
+    location = await get_location_instance(
+        location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+
+    primary_mid_ref_set = set(primary_mid_refs)
+    where = (
+        PrimaryMID.pk.is_in(primary_mid_ref_set),
+        PrimaryMID.merchant == merchant_ref,
+        PrimaryMID.status != ResourceStatus.DELETED,
+    )
+    primary_mids = await PrimaryMID.objects().where(*where)
+
+    if len(primary_mids) != len(primary_mid_ref_set):
+        raise NoSuchRecord(PrimaryMID)
+
+    await PrimaryMID.update({PrimaryMID.location: location}).where(*where)
+
+    return primary_mids
 
 
 async def create_location_secondary_mid_links(

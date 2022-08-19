@@ -5,12 +5,15 @@ from fastapi import APIRouter, Query, status
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
-from bullsquid.merchant_data.db import create_location_secondary_mid_links
+from bullsquid.merchant_data.db import (
+    create_location_primary_mid_links,
+    create_location_secondary_mid_links,
+)
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
-from bullsquid.merchant_data.merchants.models import MerchantOverviewResponse
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 from . import db
@@ -22,6 +25,8 @@ from .models import (
     LocationOverviewMetadata,
     LocationOverviewResponse,
     LocationPaymentSchemeCountResponse,
+    PrimaryMIDLinkRequest,
+    PrimaryMIDLinkResponse,
     SecondaryMIDLinkRequest,
     SecondaryMIDLinkResponse,
 )
@@ -66,7 +71,7 @@ def create_location_detail_metadata(
 async def create_location_overview_response(
     location: db.LocationResult, payment_schemes: list[PaymentScheme]
 ) -> LocationOverviewResponse:
-    """Creates a MerchantOverviewResponse instance from the given merchant object."""
+    """Creates a LocationOverviewResponse instance from the given merchant object."""
     return LocationOverviewResponse(
         date_added=location["date_added"],
         location_ref=location["pk"],
@@ -86,7 +91,7 @@ async def create_location_overview_response(
 async def create_location_detail_response(
     location: db.LocationDetailResult, payment_schemes: list[PaymentScheme]
 ) -> LocationDetailResponse:
-    """Creates a MerchantOverviewResponse instance from the given merchant object."""
+    """Creates a LocationDetailResponse instance from the given merchant object."""
     return LocationDetailResponse(
         date_added=location["date_added"],
         location_ref=location["pk"],
@@ -111,7 +116,7 @@ async def list_locations(
     merchant_ref: UUID,
     n: int = Query(default=10),
     p: int = Query(default=1),
-) -> list[MerchantOverviewResponse]:
+) -> list[LocationOverviewResponse]:
     """List locations on a merchant."""
     try:
         locations = await db.list_locations(
@@ -147,7 +152,7 @@ async def get_location(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_location(
     location_data: LocationDetailMetadata, plan_ref: UUID, merchant_ref: UUID
-) -> MerchantOverviewResponse:
+) -> LocationOverviewResponse:
     """Create a location for the given merchant."""
     if not await field_is_unique(Location, "location_id", location_data.location_id):
         raise UniqueError(loc=["body", "location_id"])
@@ -224,6 +229,40 @@ async def delete_locations(
             location_ref=location_ref, location_status=ResourceStatus.DELETED
         )
         for location_ref in deletion.location_refs
+    ]
+
+
+@router.post(
+    "/{location_ref}/mids",
+    response_model=list[PrimaryMIDLinkResponse],
+)
+async def link_location_to_primary_mid(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    link_request: PrimaryMIDLinkRequest,
+) -> list[PrimaryMIDLinkResponse]:
+    """
+    Link a primary MID to a location.
+    """
+    try:
+        mids = await create_location_primary_mid_links(
+            location_ref=location_ref,
+            primary_mid_refs=link_request.mid_refs,
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+    except NoSuchRecord as ex:
+        loc = ["body"] if ex.table == PrimaryMID else ["path"]
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
+
+    return [
+        PrimaryMIDLinkResponse(
+            mid_ref=mid.pk,
+            payment_scheme_slug=mid.payment_scheme,
+            mid_value=mid.mid,
+        )
+        for mid in mids
     ]
 
 

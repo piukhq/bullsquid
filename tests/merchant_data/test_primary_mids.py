@@ -28,6 +28,7 @@ from tests.helpers import (
 )
 from tests.merchant_data.factories import (
     default_payment_schemes,
+    location_factory,
     merchant_factory,
     plan_factory,
     primary_mid_factory,
@@ -637,3 +638,76 @@ async def _(
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert resp.json() == []
+
+
+@test("can associate a location with a primary mid")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    primary_mid = await primary_mid_factory(merchant=merchant)
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.put(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{primary_mid.pk}/location_link",
+        json={"location_ref": str(location.pk)},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json() == {
+        "location_ref": str(location.pk),
+        "location_title": location.title,
+    }
+
+
+@test("can't associate a location with a primary mid on a different merchant")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    primary_mid = await primary_mid_factory(merchant=merchant)
+    location = await location_factory()
+
+    resp = test_client.put(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{primary_mid.pk}/location_link",
+        json={"location_ref": str(location.pk)},
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "location_ref"])
+
+
+@test("can't associate a location with a primary mid that doesn't exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.put(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{uuid4()}/location_link",
+        json={"location_ref": str(location.pk)},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "mid_ref"])
+
+
+@test("can't associate a location with a primary mid on a non-existent merchant")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    primary_mid = await primary_mid_factory(merchant=merchant)
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.put(
+        f"/api/v1/plans/{merchant.plan}/merchants/{uuid4()}/mids/{primary_mid.pk}/location_link",
+        json={"location_ref": str(location.pk)},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can't associate a location with a primary mid on a non-existent plan")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    primary_mid = await primary_mid_factory(merchant=merchant)
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.put(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/mids/{primary_mid.pk}/location_link",
+        json={"location_ref": str(location.pk)},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])

@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from ward import skip, test
+from ward import test
 
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
@@ -19,6 +19,7 @@ from tests.merchant_data.factories import (
     location_factory,
     merchant_factory,
     plan_factory,
+    primary_mid_factory,
     secondary_mid_factory,
 )
 
@@ -509,6 +510,83 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
     assert_is_not_found_error(resp, loc=["body", "location_refs"])
+
+
+@test("can associate a primary mid with a location")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory(merchant=merchant)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{location.pk}/mids",
+        json={"mid_refs": [str(primary_mid.pk)]},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+
+    assert resp.json() == [
+        {
+            "mid_ref": str(primary_mid.pk),
+            "payment_scheme_slug": primary_mid.payment_scheme,
+            "mid_value": primary_mid.mid,
+        }
+    ]
+
+
+@test("can't associate a primary mid with a location on a different merchant")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory()
+
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{location.pk}/mids",
+        json={"mid_refs": [str(primary_mid.pk)]},
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "mid_ref"])
+
+
+@test("can't associate a primary mid with a location that doesn't exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    primary_mid = await primary_mid_factory(merchant=merchant)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{uuid4()}/mids",
+        json={"mid_refs": [str(primary_mid.pk)]},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+@test("can't associate a primary mid with a location on a non-existent merchant")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory(merchant=merchant)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{uuid4()}/locations/{location.pk}/mids",
+        json={"mid_refs": [str(primary_mid.pk)]},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can't associate a primary mid with a location on a non-existent plan")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory(merchant=merchant)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/locations/{location.pk}/mids",
+        json={"mid_refs": [str(primary_mid.pk)]},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
 @test("can associate a secondary mid with a location")

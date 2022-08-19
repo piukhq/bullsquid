@@ -2,7 +2,6 @@
 
 
 from datetime import datetime
-from uuid import UUID
 
 from pydantic import UUID4, validator
 
@@ -63,11 +62,24 @@ class PrimaryMIDResponse(BaseModel):
 class PrimaryMIDDeletionRequest(BaseModel):
     """Request model for a deletion of primary MIDs."""
 
-    mid_refs: list[UUID]
+    mid_refs: list[UUID4]
 
 
 class PrimaryMIDDeletionResponse(BaseModel):
     """Response model for a deletion of a primary MID."""
 
-    mid_ref: UUID
+    mid_ref: UUID4
     mid_status: ResourceStatus
+
+
+class LocationLinkRequest(BaseModel):
+    """Request model for linking a location to a primary mid."""
+
+    location_ref: UUID4
+
+
+class LocationLinkResponse(BaseModel):
+    """Response model for linking a location to a primary mid."""
+
+    location_ref: UUID4
+    location_title: str

@@ -78,7 +78,7 @@ async def get_location(
     plan_ref: UUID,
     merchant_ref: UUID,
 ) -> LocationDetailResult:
-    """Return a list of all locations on the given merchant."""
+    """Return the details of a location with the given primary key."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
     location = await (
@@ -97,6 +97,30 @@ async def get_location(
             Location.county,
             Location.country,
         )
+        .where(
+            Location.pk == location_ref,
+            Location.merchant == merchant,
+            Location.status != ResourceStatus.DELETED,
+        )
+        .first()
+    )
+    if not location:
+        raise NoSuchRecord(Location)
+
+    return location
+
+
+async def get_location_instance(
+    location_ref: UUID,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> Location:
+    """Return a single location object with the given primary key."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+
+    location = (
+        await Location.objects()
         .where(
             Location.pk == location_ref,
             Location.merchant == merchant,

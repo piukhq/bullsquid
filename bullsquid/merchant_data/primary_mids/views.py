@@ -8,12 +8,16 @@ from bullsquid import tasks
 from bullsquid.api.errors import DataError, ResourceNotFoundError, UniqueError
 from bullsquid.db import InvalidData, NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.locations.db import get_location_instance
+from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
 
 from . import db
 from .models import (
     CreatePrimaryMIDRequest,
+    LocationLinkRequest,
+    LocationLinkResponse,
     PrimaryMIDDeletionRequest,
     PrimaryMIDDeletionResponse,
     PrimaryMIDMetadata,
@@ -152,3 +156,36 @@ async def delete_primary_mids(
         PrimaryMIDDeletionResponse(mid_ref=mid_ref, mid_status=ResourceStatus.DELETED)
         for mid_ref in not_onboarded
     ]
+
+
+@router.put(
+    "/{mid_ref}/location_link",
+    response_model=LocationLinkResponse,
+)
+async def link_primary_mid_to_location(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    mid_ref: UUID,
+    link_request: LocationLinkRequest,
+) -> LocationLinkResponse:
+    """Create link between location and primary mid"""
+    try:
+        primary_mid = await db.get_primary_mid_instance(
+            mid_ref,
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+        location = await get_location_instance(
+            link_request.location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    except NoSuchRecord as ex:
+        loc = ["body"] if ex.table == Location else ["path"]
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
+
+    primary_mid.location = location
+    await primary_mid.save()
+
+    return LocationLinkResponse(
+        location_ref=location.pk,
+        location_title=location.title,
+    )

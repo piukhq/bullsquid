@@ -107,6 +107,20 @@ class LocationDeletionResponse(BaseModel):
     location_status: ResourceStatus
 
 
+class PrimaryMIDLinkRequest(BaseModel):
+    """Request model for linking a primary MID with a location."""
+
+    mid_refs: list[UUID4]
+
+
+class PrimaryMIDLinkResponse(BaseModel):
+    """Request model for linking a primary MID with a location."""
+
+    mid_ref: UUID4
+    payment_scheme_slug: str
+    mid_value: str
+
+
 class SecondaryMIDLinkRequest(BaseModel):
     """Request model for linking a location with a secondary MID."""
 

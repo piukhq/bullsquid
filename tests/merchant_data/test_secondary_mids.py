@@ -1,6 +1,5 @@
 """Tests for secondary MID API endpoints."""
 import random
-from operator import itemgetter
 from uuid import uuid4
 
 from fastapi import status
@@ -8,7 +7,6 @@ from fastapi.testclient import TestClient
 from ward import test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
-from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
@@ -54,54 +52,40 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    secondary_mid = await secondary_mid_factory()
-    # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
-    secondary_mid = await SecondaryMID.objects().get(
-        SecondaryMID.pk == secondary_mid.pk
-    )
-
-    merchant_ref, plan_ref = itemgetter("merchant", "merchant.plan")(
-        await SecondaryMID.select(
-            SecondaryMID.merchant,
-            SecondaryMID.merchant.plan,
-        )
-        .where(SecondaryMID.pk == secondary_mid.pk)
-        .first()
-    )
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
 
     resp = test_client.get(
-        f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/secondary_mids"
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids"
     )
 
     assert resp.status_code == status.HTTP_200_OK
+
+    secondary_mid = await SecondaryMID.objects().get(
+        SecondaryMID.pk == secondary_mid.pk
+    )
     assert resp.json() == [await secondary_mid_to_json(secondary_mid)]
 
 
 @test("deleted mids are not listed")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    secondary_mid = await secondary_mid_factory()
-    # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
-    secondary_mid = await SecondaryMID.objects().get(
-        SecondaryMID.pk == secondary_mid.pk
-    )
-
-    merchant_ref, plan_ref = itemgetter("merchant", "merchant.plan")(
-        await SecondaryMID.select(
-            SecondaryMID.merchant,
-            SecondaryMID.merchant.plan,
-        )
-        .where(SecondaryMID.pk == secondary_mid.pk)
-        .first()
-    )
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
 
     # create a deleted secondary MID that shouldn't be in the response
-    await secondary_mid_factory(status=ResourceStatus.DELETED, merchant=merchant_ref)
+    await secondary_mid_factory(status=ResourceStatus.DELETED, merchant=merchant)
 
     resp = test_client.get(
-        f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/secondary_mids"
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids"
     )
 
     assert resp.status_code == status.HTTP_200_OK
+
+    secondary_mid = await SecondaryMID.objects().get(
+        SecondaryMID.pk == secondary_mid.pk
+    )
     assert resp.json() == [await secondary_mid_to_json(secondary_mid)]
 
 
@@ -516,10 +500,11 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    mid = await secondary_mid_factory()
-    merchant = await mid.get_related(SecondaryMID.merchant)
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    mid = await secondary_mid_factory(merchant=merchant)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/deletion",
         json={"secondary_mid_refs": [str(mid.pk)]},
     )
 

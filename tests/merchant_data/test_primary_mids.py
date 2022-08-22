@@ -61,22 +61,15 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    primary_mid = await primary_mid_factory()
-    # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    primary_mid = await primary_mid_factory(merchant=merchant)
 
-    merchant_ref, plan_ref = itemgetter("merchant", "merchant.plan")(
-        await PrimaryMID.select(
-            PrimaryMID.merchant,
-            PrimaryMID.merchant.plan,
-        )
-        .where(PrimaryMID.pk == primary_mid.pk)
-        .first()
-    )
-
-    resp = test_client.get(f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/mids")
+    resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids")
 
     assert resp.status_code == status.HTTP_200_OK
+
+    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
     assert resp.json() == [await primary_mid_to_json(primary_mid)]
 
 
@@ -85,25 +78,18 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    primary_mid = await primary_mid_factory()
-    # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
-
-    merchant_ref, plan_ref = itemgetter("merchant", "merchant.plan")(
-        await PrimaryMID.select(
-            PrimaryMID.merchant,
-            PrimaryMID.merchant.plan,
-        )
-        .where(PrimaryMID.pk == primary_mid.pk)
-        .first()
-    )
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    primary_mid = await primary_mid_factory(merchant=merchant)
 
     # create a deleted primary MID that shouldn't be in the response
-    await primary_mid_factory(status=ResourceStatus.DELETED, merchant=merchant_ref)
+    await primary_mid_factory(status=ResourceStatus.DELETED, merchant=merchant.pk)
 
-    resp = test_client.get(f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/mids")
+    resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids")
 
     assert resp.status_code == status.HTTP_200_OK
+
+    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
     assert resp.json() == [await primary_mid_to_json(primary_mid)]
 
 

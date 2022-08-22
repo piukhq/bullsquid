@@ -53,24 +53,17 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    identifier = await identifier_factory()
-    # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
-    identifier = await Identifier.objects().get(Identifier.pk == identifier.pk)
-
-    merchant_ref, plan_ref = itemgetter("merchant", "merchant.plan")(
-        await Identifier.select(
-            Identifier.merchant,
-            Identifier.merchant.plan,
-        )
-        .where(Identifier.pk == identifier.pk)
-        .first()
-    )
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    identifier = await identifier_factory(merchant=merchant)
 
     resp = test_client.get(
-        f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/identifiers"
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers"
     )
 
     assert resp.status_code == status.HTTP_200_OK
+
+    identifier = await Identifier.objects().get(Identifier.pk == identifier.pk)
     assert resp.json() == [await identifier_to_json(identifier)]
 
 
@@ -79,27 +72,20 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    identifier = await identifier_factory()
-    # work around a bug in piccolo's ModelBuilder that returns datetimes without timezones
-    identifier = await Identifier.objects().get(Identifier.pk == identifier.pk)
-
-    merchant_ref, plan_ref = itemgetter("merchant", "merchant.plan")(
-        await Identifier.select(
-            Identifier.merchant,
-            Identifier.merchant.plan,
-        )
-        .where(Identifier.pk == identifier.pk)
-        .first()
-    )
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    identifier = await identifier_factory(merchant=merchant)
 
     # create a deleted identifier that shouldn't be in the response
-    await identifier_factory(status=ResourceStatus.DELETED, merchant=merchant_ref)
+    await identifier_factory(status=ResourceStatus.DELETED, merchant=merchant.pk)
 
     resp = test_client.get(
-        f"/api/v1/plans/{plan_ref}/merchants/{merchant_ref}/identifiers",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers",
     )
 
     assert resp.status_code == status.HTTP_200_OK
+
+    identifier = await Identifier.objects().get(Identifier.pk == identifier.pk)
     assert resp.json() == [await identifier_to_json(identifier)]
 
 
@@ -447,10 +433,11 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    identifier = await identifier_factory()
-    merchant = await identifier.get_related(Identifier.merchant)
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    identifier = await identifier_factory(merchant=merchant)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers/deletion",
         json={"identifier_refs": [str(identifier.pk)]},
     )
 

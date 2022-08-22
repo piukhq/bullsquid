@@ -6,6 +6,7 @@ from uuid import UUID
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
+from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.models import CreateMerchantRequest
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
@@ -17,9 +18,16 @@ from .tables import Merchant
 
 async def get_merchant(pk: UUID, *, plan_ref: UUID) -> Merchant:
     """Return a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
+
     plan = await get_plan(plan_ref)
     merchant = (
-        await Merchant.objects().where(Merchant.pk == pk, Merchant.plan == plan).first()
+        await Merchant.objects()
+        .where(
+            Merchant.pk == pk,
+            Merchant.plan == plan,
+            Merchant.status != ResourceStatus.DELETED,
+        )
+        .first()
     )
     if not merchant:
         raise NoSuchRecord(Merchant)
@@ -92,12 +100,15 @@ async def update_merchant_status(
     async with Merchant._meta.db.transaction():  # pylint: disable=protected-access
         await Merchant.update({Merchant.status: status}).where(Merchant.pk == pk)
         if cascade:
-            await PrimaryMID.update({PrimaryMID.status: ResourceStatus.DELETED}).where(
+            await PrimaryMID.update({PrimaryMID.status: status}).where(
                 PrimaryMID.merchant == pk
             )
-            await SecondaryMID.update(
-                {SecondaryMID.status: ResourceStatus.DELETED}
-            ).where(SecondaryMID.merchant == pk)
-            await Identifier.update({Identifier.status: ResourceStatus.DELETED}).where(
+            await SecondaryMID.update({SecondaryMID.status: status}).where(
+                SecondaryMID.merchant == pk
+            )
+            await Identifier.update({Identifier.status: status}).where(
                 Identifier.merchant == pk
+            )
+            await Location.update({Location.status: status}).where(
+                Location.merchant == pk
             )

@@ -1,5 +1,13 @@
 """Location table definitions."""
-from piccolo.columns import UUID, Boolean, ForeignKey, Text, Timestamptz
+from piccolo.columns import (
+    M2M,
+    UUID,
+    Boolean,
+    ForeignKey,
+    LazyTableReference,
+    Text,
+    Timestamptz,
+)
 from piccolo.table import Table
 
 from bullsquid.merchant_data.enums import ResourceStatus
@@ -23,3 +31,19 @@ class Location(Table):
     date_added = Timestamptz()
     status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE)
     merchant = ForeignKey(Merchant, required=True)
+
+    secondary_mids = M2M(LazyTableReference("secondary_mid", "merchant_data"))
+
+    @staticmethod
+    def make_title(
+        name: str, address_line_1: str, town_city: str, postcode: str
+    ) -> str:
+        """Makes a location "title" from the given fields."""
+        return f"{name}, {address_line_1}, {town_city}, {postcode}"
+
+    @property
+    def title(self) -> str:
+        """Calls Location.make_title with this location's fields."""
+        return Location.make_title(
+            self.name, self.address_line_1, self.town_city, self.postcode
+        )

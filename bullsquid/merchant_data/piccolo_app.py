@@ -15,6 +15,7 @@ APP_CONFIG = AppConfig(
     migrations_folder_path=os.path.join(CURRENT_DIRECTORY, "piccolo_migrations"),
     table_classes=table_finder(
         [
+            "bullsquid.merchant_data.tables",
             "bullsquid.merchant_data.locations.tables",
             "bullsquid.merchant_data.identifiers.tables",
             "bullsquid.merchant_data.merchants.tables",

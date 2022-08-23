@@ -10,6 +10,7 @@ from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from bullsquid.merchant_data.tables import LocationSecondaryMIDAssociation
 from tests.fixtures import database, test_client
 from tests.helpers import (
     assert_is_missing_field_error,
@@ -19,6 +20,7 @@ from tests.helpers import (
 )
 from tests.merchant_data.factories import (
     default_payment_schemes,
+    location_factory,
     merchant_factory,
     plan_factory,
     secondary_mid_factory,
@@ -641,3 +643,86 @@ async def _(
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert resp.json() == []
+
+
+@test("can associate a location with a secondary mid")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links",
+        json={"location_ref": str(location.pk)},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+
+    link = (
+        await LocationSecondaryMIDAssociation.select(LocationSecondaryMIDAssociation.pk)
+        .where(
+            LocationSecondaryMIDAssociation.location == location,
+            LocationSecondaryMIDAssociation.secondary_mid == secondary_mid,
+        )
+        .first()
+    )
+    assert resp.json() == {
+        "link_ref": str(link["pk"]),
+        "location_ref": str(location.pk),
+        "location_title": location.title,
+    }
+
+
+@test("can't associate a location with a secondary mid on a different merchant")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    location = await location_factory()
+
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links",
+        json={"location_ref": str(location.pk)},
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "location_ref"])
+
+
+@test("can't associate a location with a secondary mid that doesn't exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/{uuid4()}/secondary_mid_location_links",
+        json={"location_ref": str(location.pk)},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "secondary_mid_ref"])
+
+
+@test("can't associate a location with a secondary mid on a non-existent merchant")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{uuid4()}/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links",
+        json={"location_ref": str(location.pk)},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can't associate a location with a secondary mid on a non-existent plan")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links",
+        json={"location_ref": str(location.pk)},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])

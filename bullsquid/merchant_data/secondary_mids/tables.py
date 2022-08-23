@@ -1,5 +1,5 @@
 """Secondary MID table definitions."""
-from piccolo.columns import UUID, ForeignKey, Text, Timestamptz
+from piccolo.columns import M2M, UUID, ForeignKey, LazyTableReference, Text, Timestamptz
 from piccolo.table import Table
 
 from bullsquid.merchant_data.enums import (
@@ -25,3 +25,5 @@ class SecondaryMID(Table):
     txm_status = Text(choices=TXMStatus, default=TXMStatus.NOT_ONBOARDED)
     status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE, index=True)
     merchant = ForeignKey(Merchant, required=True)
+
+    locations = M2M(LazyTableReference("location", "merchant_data"))

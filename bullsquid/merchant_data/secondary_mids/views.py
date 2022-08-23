@@ -5,7 +5,9 @@ from fastapi import APIRouter, Query, status
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.merchant_data.db import create_location_secondary_mid_links
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
@@ -13,6 +15,8 @@ from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from . import db
 from .models import (
     CreateSecondaryMIDRequest,
+    LocationLinkRequest,
+    LocationLinkResponse,
     SecondaryMIDDeletionRequest,
     SecondaryMIDDeletionResponse,
     SecondaryMIDMetadata,
@@ -167,3 +171,35 @@ async def delete_secondary_mids(
         )
         for secondary_mid_ref in not_onboarded
     ]
+
+
+@router.post(
+    "/{secondary_mid_ref}/secondary_mid_location_links",
+    response_model=LocationLinkResponse,
+)
+async def link_secondary_mid_to_location(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    secondary_mid_ref: UUID,
+    link_request: LocationLinkRequest,
+) -> LocationLinkResponse:
+    """
+    Link a location to a secondary MID.
+    """
+    try:
+        links = await create_location_secondary_mid_links(
+            refs=[(link_request.location_ref, secondary_mid_ref)],
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+    except NoSuchRecord as ex:
+        loc = ["body"] if ex.table == Location else ["path"]
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
+
+    link = links.pop()
+
+    return LocationLinkResponse(
+        link_ref=link.pk,
+        location_ref=link.location.pk,
+        location_title=link.location.title,
+    )

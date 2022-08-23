@@ -5,11 +5,13 @@ from fastapi import APIRouter, Query, status
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.merchant_data.db import create_location_secondary_mid_links
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.merchants.models import MerchantOverviewResponse
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 from . import db
 from .models import (
@@ -20,6 +22,8 @@ from .models import (
     LocationOverviewMetadata,
     LocationOverviewResponse,
     LocationPaymentSchemeCountResponse,
+    SecondaryMIDLinkRequest,
+    SecondaryMIDLinkResponse,
 )
 from .tables import Location
 
@@ -220,4 +224,41 @@ async def delete_locations(
             location_ref=location_ref, location_status=ResourceStatus.DELETED
         )
         for location_ref in deletion.location_refs
+    ]
+
+
+@router.post(
+    "/{location_ref}/secondary_mid_location_links",
+    response_model=list[SecondaryMIDLinkResponse],
+)
+async def link_location_to_secondary_mid(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    link_request: SecondaryMIDLinkRequest,
+) -> list[SecondaryMIDLinkResponse]:
+    """
+    Link a secondary MID to a location.
+    """
+    try:
+        links = await create_location_secondary_mid_links(
+            refs=[
+                (location_ref, secondary_mid_ref)
+                for secondary_mid_ref in link_request.secondary_mid_refs
+            ],
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+    except NoSuchRecord as ex:
+        loc = ["body"] if ex.table == SecondaryMID else ["path"]
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
+
+    return [
+        SecondaryMIDLinkResponse(
+            link_ref=link.pk,
+            secondary_mid_ref=link.secondary_mid.pk,
+            payment_scheme_slug=link.secondary_mid.payment_scheme,
+            secondary_mid_value=link.secondary_mid.secondary_mid,
+        )
+        for link in links
     ]

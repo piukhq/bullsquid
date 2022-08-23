@@ -1,6 +1,5 @@
 """SecondaryMID request & response models."""
 from datetime import datetime
-from uuid import UUID
 
 from pydantic import BaseModel, validator
 from pydantic.types import UUID4
@@ -48,11 +47,25 @@ class SecondaryMIDResponse(BaseModel):
 class SecondaryMIDDeletionRequest(BaseModel):
     """Request model for deleting secondary MIDs."""
 
-    secondary_mid_refs: list[UUID]
+    secondary_mid_refs: list[UUID4]
 
 
 class SecondaryMIDDeletionResponse(BaseModel):
     """Response model for a deleted secondary MID."""
 
-    secondary_mid_ref: UUID
+    secondary_mid_ref: UUID4
     status: ResourceStatus
+
+
+class LocationLinkRequest(BaseModel):
+    """Request model for linking a secondary MID with a location."""
+
+    location_ref: UUID4
+
+
+class LocationLinkResponse(BaseModel):
+    """Response model for linking a secondary MID with a location."""
+
+    link_ref: UUID4
+    location_ref: UUID4
+    location_title: str

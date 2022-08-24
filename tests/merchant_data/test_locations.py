@@ -85,6 +85,29 @@ async def location_to_json_detail(
     }
 
 
+@test("location with only a name has the correct title")
+def _() -> None:
+    location = Location(name="test location")
+    assert location.title == "test location"
+
+
+@test("location with mixed fields has the correct title")
+def _() -> None:
+    location = Location(name="test location", town_city="test town")
+    assert location.title == "test location, test town"
+
+
+@test("location with all fields has the correct title")
+def _() -> None:
+    location = Location(
+        name="test location",
+        address_line_1="1 test street",
+        town_city="test town",
+        postcode="T35T L0C",
+    )
+    assert location.title == "test location, 1 test street, test town, T35T L0C"
+
+
 @test("can list locations")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
     plan = await plan_factory()

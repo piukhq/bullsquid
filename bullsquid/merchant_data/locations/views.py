@@ -2,6 +2,8 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Query, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
@@ -268,19 +270,22 @@ async def link_location_to_primary_mid(
 
 @router.post(
     "/{location_ref}/secondary_mid_location_links",
-    response_model=list[SecondaryMIDLinkResponse],
+    responses={
+        status.HTTP_200_OK: {"model": list[SecondaryMIDLinkResponse]},
+        status.HTTP_201_CREATED: {"model": list[SecondaryMIDLinkResponse]},
+    },
 )
 async def link_location_to_secondary_mid(
     plan_ref: UUID,
     merchant_ref: UUID,
     location_ref: UUID,
     link_request: SecondaryMIDLinkRequest,
-) -> list[SecondaryMIDLinkResponse]:
+) -> JSONResponse:
     """
     Link a secondary MID to a location.
     """
     try:
-        links = await create_location_secondary_mid_links(
+        links, created = await create_location_secondary_mid_links(
             refs=[
                 (location_ref, secondary_mid_ref)
                 for secondary_mid_ref in link_request.secondary_mid_refs
@@ -292,12 +297,18 @@ async def link_location_to_secondary_mid(
         loc = ["body"] if ex.table == SecondaryMID else ["path"]
         raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
 
-    return [
-        SecondaryMIDLinkResponse(
-            link_ref=link.pk,
-            secondary_mid_ref=link.secondary_mid.pk,
-            payment_scheme_slug=link.secondary_mid.payment_scheme,
-            secondary_mid_value=link.secondary_mid.secondary_mid,
-        )
-        for link in links
-    ]
+    content = jsonable_encoder(
+        [
+            SecondaryMIDLinkResponse(
+                link_ref=link.pk,
+                secondary_mid_ref=link.secondary_mid.pk,
+                payment_scheme_slug=link.secondary_mid.payment_scheme,
+                secondary_mid_value=link.secondary_mid.secondary_mid,
+            )
+            for link in links
+        ]
+    )
+    return JSONResponse(
+        content=content,
+        status_code=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+    )

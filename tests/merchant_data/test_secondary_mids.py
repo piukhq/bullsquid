@@ -10,7 +10,7 @@ from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from bullsquid.merchant_data.tables import LocationSecondaryMIDAssociation
+from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 from tests.fixtures import database, test_client
 from tests.helpers import (
     assert_is_missing_field_error,
@@ -656,13 +656,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         json={"location_ref": str(location.pk)},
     )
 
-    assert resp.status_code == status.HTTP_200_OK
+    assert resp.status_code == status.HTTP_201_CREATED
 
     link = (
-        await LocationSecondaryMIDAssociation.select(LocationSecondaryMIDAssociation.pk)
+        await LocationSecondaryMIDLink.select(LocationSecondaryMIDLink.pk)
         .where(
-            LocationSecondaryMIDAssociation.location == location,
-            LocationSecondaryMIDAssociation.secondary_mid == secondary_mid,
+            LocationSecondaryMIDLink.location == location,
+            LocationSecondaryMIDLink.secondary_mid == secondary_mid,
         )
         .first()
     )
@@ -726,3 +726,27 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+@test(
+    "creating the same location association twice only creates a single database record"
+)
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    """
+    We don't actually need to check the database in this test - the unique
+    constraint will prevent the insertion of a second association.
+    """
+    merchant = await merchant_factory()
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    location = await location_factory(merchant=merchant)
+
+    url = f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links"
+    json = {"location_ref": str(location.pk)}
+
+    resp1 = test_client.post(url, json=json)
+    assert resp1.status_code == status.HTTP_201_CREATED
+
+    resp2 = test_client.post(url, json=json)
+    assert resp2.status_code == status.HTTP_200_OK
+
+    assert resp1.json()["link_ref"] == resp2.json()["link_ref"]

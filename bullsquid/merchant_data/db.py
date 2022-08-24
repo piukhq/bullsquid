@@ -11,7 +11,7 @@ from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from bullsquid.merchant_data.tables import LocationSecondaryMIDAssociation
+from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 
 
 async def create_location_primary_mid_links(
@@ -46,10 +46,11 @@ async def create_location_primary_mid_links(
 
 async def create_location_secondary_mid_links(
     *, refs: list[tuple[UUID, UUID]], plan_ref: UUID, merchant_ref: UUID
-) -> list[LocationSecondaryMIDAssociation]:
+) -> tuple[list[LocationSecondaryMIDLink], bool]:
     """
-    Create and return a set of links between locations and secondary MIDs.
+    Create a set of links between locations and secondary MIDs.
     Each element of ``refs`` should be a tuple of (location_ref, secondary_mid_ref).
+    Returns the created links and a boolean indicating if any links are new.
     """
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
@@ -79,12 +80,29 @@ async def create_location_secondary_mid_links(
     }
 
     links = [
-        LocationSecondaryMIDAssociation(
-            location=locations_by_pk[location_ref],
-            secondary_mid=secondary_mids_by_pk[secondary_mid_ref],
+        await LocationSecondaryMIDLink.objects(
+            LocationSecondaryMIDLink.location,
+            LocationSecondaryMIDLink.secondary_mid,
+        ).get_or_create(
+            (LocationSecondaryMIDLink.location == locations_by_pk[location_ref])
+            & (
+                LocationSecondaryMIDLink.secondary_mid
+                == secondary_mids_by_pk[secondary_mid_ref]
+            )
         )
         for location_ref, secondary_mid_ref in refs
     ]
-    await LocationSecondaryMIDAssociation.insert(*links)
 
-    return links
+    # TEMP: patch to work around https://github.com/piccolo-orm/piccolo/issues/597
+    for link in links:
+        if link._was_created:  # pylint: disable=protected-access
+            link.location = await link.get_related(LocationSecondaryMIDLink.location)
+            link.secondary_mid = await link.get_related(
+                LocationSecondaryMIDLink.secondary_mid
+            )
+
+    created = any(
+        link._was_created for link in links  # pylint: disable=protected-access
+    )
+
+    return links, created

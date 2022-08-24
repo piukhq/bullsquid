@@ -36,10 +36,14 @@ class Location(Table):
 
     @staticmethod
     def make_title(
-        name: str, address_line_1: str, town_city: str, postcode: str
+        name: str,
+        address_line_1: str | None,
+        town_city: str | None,
+        postcode: str | None,
     ) -> str:
         """Makes a location "title" from the given fields."""
-        return f"{name}, {address_line_1}, {town_city}, {postcode}"
+        parts = [part for part in [name, address_line_1, town_city, postcode] if part]
+        return ", ".join(parts)
 
     @property
     def title(self) -> str:

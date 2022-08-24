@@ -2,6 +2,8 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Query, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
@@ -175,19 +177,22 @@ async def delete_secondary_mids(
 
 @router.post(
     "/{secondary_mid_ref}/secondary_mid_location_links",
-    response_model=LocationLinkResponse,
+    responses={
+        status.HTTP_200_OK: {"model": list[LocationLinkResponse]},
+        status.HTTP_201_CREATED: {"model": list[LocationLinkResponse]},
+    },
 )
 async def link_secondary_mid_to_location(
     plan_ref: UUID,
     merchant_ref: UUID,
     secondary_mid_ref: UUID,
     link_request: LocationLinkRequest,
-) -> LocationLinkResponse:
+) -> JSONResponse:
     """
     Link a location to a secondary MID.
     """
     try:
-        links = await create_location_secondary_mid_links(
+        links, created = await create_location_secondary_mid_links(
             refs=[(link_request.location_ref, secondary_mid_ref)],
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
@@ -198,8 +203,15 @@ async def link_secondary_mid_to_location(
 
     link = links.pop()
 
-    return LocationLinkResponse(
-        link_ref=link.pk,
-        location_ref=link.location.pk,
-        location_title=link.location.title,
+    content = jsonable_encoder(
+        LocationLinkResponse(
+            link_ref=link.pk,
+            location_ref=link.location.pk,
+            location_title=link.location.title,
+        )
+    )
+
+    return JSONResponse(
+        content=content,
+        status_code=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
     )

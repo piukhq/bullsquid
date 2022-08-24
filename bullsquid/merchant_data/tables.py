@@ -9,7 +9,7 @@ from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 
-class LocationSecondaryMIDAssociation(Table):
+class LocationSecondaryMIDLink(Table):
     """Represents an association between a secondary MID and a location."""
 
     pk = UUID(primary_key=True)

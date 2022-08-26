@@ -81,6 +81,10 @@ async def create_primary_mid(
     except NoSuchRecord as ex:
         loc = ["path"] if ex.table in [Plan, Merchant] else ["body", "mid_metadata"]
         raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
+    except InvalidData as ex:
+        raise DataError.from_invalid_data(
+            ex, loc=["body", "mid_metadata", "visa_bin"]
+        ) from ex
 
     if mid_data.onboard:
         await tasks.queue.push(tasks.OnboardPrimaryMIDs(mid_refs=[mid["pk"]]))

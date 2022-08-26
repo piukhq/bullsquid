@@ -173,6 +173,31 @@ async def _(
     )
 
 
+@test("can't create a primary mid with non visa mid and visa bin")
+async def _(
+    _: None = database,
+    test_client: TestClient = test_client,
+) -> None:
+    merchant = await merchant_factory()
+    payment_schemes = await default_payment_schemes()
+    primary_mid = await primary_mid_factory(
+        persist=False, payment_scheme=payment_schemes[2], visa_bin="test"
+    )
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
+        json={
+            "onboard": False,
+            "mid_metadata": {
+                "payment_scheme_code": payment_schemes[2].code,
+                "mid": primary_mid.mid,
+                "visa_bin": primary_mid.visa_bin,
+                "payment_enrolment_status": primary_mid.payment_enrolment_status,
+            },
+        },
+    )
+    assert_is_data_error(resp, loc=["body", "mid_metadata", "visa_bin"])
+
+
 @test("can create and onboard a primary MID on a merchant")
 async def _(
     _: None = database,

@@ -117,6 +117,7 @@ async def create_primary_mid(
     merchant_ref: UUID,
 ) -> PrimaryMIDResult:
     """Create a primary MID for the given merchant."""
+
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
     payment_scheme = await get_payment_scheme_by_code(mid_data.payment_scheme_code)
     mid = PrimaryMID(
@@ -126,6 +127,10 @@ async def create_primary_mid(
         payment_enrolment_status=mid_data.payment_enrolment_status,
         merchant=merchant,
     )
+
+    if mid_data.visa_bin and payment_scheme.slug != "visa":
+        raise InvalidData(PaymentScheme)
+
     await mid.save()
 
     return {

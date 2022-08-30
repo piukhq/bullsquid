@@ -82,14 +82,23 @@ class ResourceNotFoundError(APIError):
 
     @staticmethod
     def from_no_such_record(
-        ex: NoSuchRecord, *, loc: list[str], plural: bool = False
+        ex: NoSuchRecord,
+        *,
+        loc: list[str],
+        plural: bool = False,
+        override_field_name: str | None = None,
     ) -> "ResourceNotFoundError":
         """
         Returns a ResourceNotFoundError with the correct location and resource
         name from the given NoSuchRecord exception.
         """
+        ref_name = (
+            override_field_name
+            if override_field_name
+            else get_ref_name(ex.table, plural=plural)
+        )
         return ResourceNotFoundError(
-            loc=loc + [get_ref_name(ex.table, plural=plural)],
+            loc=loc + [ref_name],
             resource_name=get_pretty_table_name(ex.table),
         )
 

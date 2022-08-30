@@ -116,16 +116,27 @@ async def create_location_detail_response(
 async def list_locations(
     plan_ref: UUID,
     merchant_ref: UUID,
+    exclude_secondary_mid: UUID | None = Query(default=None),
     n: int = Query(default=10),
     p: int = Query(default=1),
 ) -> list[LocationOverviewResponse]:
     """List locations on a merchant."""
     try:
         locations = await db.list_locations(
-            plan_ref=plan_ref, merchant_ref=merchant_ref, n=n, p=p
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+            exclude_secondary_mid=exclude_secondary_mid,
+            n=n,
+            p=p,
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        loc = ["query"] if ex.table == SecondaryMID else ["path"]
+        override_field_name = (
+            "exclude_secondary_mid" if ex.table == SecondaryMID else None
+        )
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=loc, override_field_name=override_field_name
+        )
 
     payment_schemes = await list_payment_schemes()
     return [

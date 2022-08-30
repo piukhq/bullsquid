@@ -17,6 +17,7 @@ from tests.helpers import (
 from tests.merchant_data.factories import (
     default_payment_schemes,
     location_factory,
+    location_secondary_mid_link_factory,
     merchant_factory,
     plan_factory,
     primary_mid_factory,
@@ -138,6 +139,68 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/locations")
 
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can list locations excluding a secondary mid")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    payment_schemes = await default_payment_schemes()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    locations = [
+        await location_factory(merchant=merchant),
+        await location_factory(merchant=merchant),
+        await location_factory(merchant=merchant),
+        await location_factory(merchant=merchant),
+        await location_factory(merchant=merchant),
+    ]
+
+    # associate the first three locations with the secondary mid
+    for location in locations[:3]:
+        await location_secondary_mid_link_factory(
+            location=location, secondary_mid=secondary_mid
+        )
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations",
+        params={"exclude_secondary_mid": secondary_mid.pk},
+    )
+
+    assert resp.status_code == 200
+
+    expected = await Location.objects().where(
+        Location.pk.is_in([location.pk for location in locations[-2:]])
+    )
+    assert resp.json() == [
+        await location_to_json(location, payment_schemes) for location in expected
+    ]
+
+
+@test("can't exclude a secondary mid that doesn't exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations",
+        params={"exclude_secondary_mid": str(uuid4())},
+    )
+
+    assert_is_not_found_error(resp, loc=["query", "exclude_secondary_mid"])
+
+
+@test("can't exclude a secondary mid from a different merchant")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory()
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations",
+        params={"exclude_secondary_mid": secondary_mid.pk},
+    )
+
+    assert_is_not_found_error(resp, loc=["query", "exclude_secondary_mid"])
 
 
 @test("can get location details")
@@ -551,7 +614,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert resp.json() == [
         {
             "mid_ref": str(primary_mid.pk),
-            "payment_scheme_slug": primary_mid.payment_scheme,
+            "payment_scheme_slug": primary_mid.payment_scheme.slug,
             "mid_value": primary_mid.mid,
         }
     ]
@@ -637,7 +700,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         {
             "link_ref": str(link["pk"]),
             "secondary_mid_ref": str(secondary_mid.pk),
-            "payment_scheme_slug": secondary_mid.payment_scheme,
+            "payment_scheme_slug": secondary_mid.payment_scheme.slug,
             "secondary_mid_value": secondary_mid.secondary_mid,
         }
     ]

@@ -1,4 +1,5 @@
 """Fixtures & factory functions for building merchant data objects."""
+import random
 from typing import Any
 
 from piccolo.testing.model_builder import ModelBuilder
@@ -11,6 +12,7 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 
 
 async def plan_factory(*, persist: bool = True, **defaults: Any) -> Plan:
@@ -53,10 +55,12 @@ async def location_factory(*, persist: bool = True, **defaults: Any) -> Location
 
 async def primary_mid_factory(*, persist: bool = True, **defaults: Any) -> PrimaryMID:
     """Creates and returns a primary MID."""
+    payment_schemes = await default_payment_schemes()
     return await ModelBuilder.build(
         PrimaryMID,
         defaults={
             "status": ResourceStatus.ACTIVE,
+            "payment_scheme": random.choice(payment_schemes),
             **defaults,  # type: ignore
         },
         persist=persist,
@@ -67,10 +71,12 @@ async def secondary_mid_factory(
     *, persist: bool = True, **defaults: Any
 ) -> SecondaryMID:
     """Creates and returns a secondary MID."""
+    payment_schemes = await default_payment_schemes()
     return await ModelBuilder.build(
         SecondaryMID,
         defaults={
             "status": ResourceStatus.ACTIVE,
+            "payment_scheme": random.choice(payment_schemes),
             **defaults,  # type: ignore
         },
         persist=persist,
@@ -89,30 +95,37 @@ async def identifier_factory(*, persist: bool = True, **defaults: Any) -> Identi
     )
 
 
+async def location_secondary_mid_link_factory(
+    *, persist: bool = True, **defaults: Any
+) -> LocationSecondaryMIDLink:
+    return await ModelBuilder.build(
+        LocationSecondaryMIDLink,
+        defaults=defaults,  # type: ignore
+        persist=persist,
+    )
+
+
 async def default_payment_schemes() -> list[PaymentScheme]:
     return [
-        await ModelBuilder.build(
-            PaymentScheme,
+        await PaymentScheme.objects().get_or_create(
+            PaymentScheme.slug == "visa",
             defaults={
-                "slug": "visa",
-                "label": "VISA",
-                "code": 1,
+                PaymentScheme.label: "VISA",
+                PaymentScheme.code: 1,
             },
         ),
-        await ModelBuilder.build(
-            PaymentScheme,
+        await PaymentScheme.objects().get_or_create(
+            PaymentScheme.slug == "mastercard",
             defaults={
-                "slug": "mastercard",
-                "label": "MASTERCARD",
-                "code": 2,
+                PaymentScheme.label: "MASTERCARD",
+                PaymentScheme.code: 2,
             },
         ),
-        await ModelBuilder.build(
-            PaymentScheme,
+        await PaymentScheme.objects().get_or_create(
+            PaymentScheme.slug == "amex",
             defaults={
-                "slug": "amex",
-                "label": "AMEX",
-                "code": 3,
+                PaymentScheme.label: "AMEX",
+                PaymentScheme.code: 3,
             },
         ),
     ]

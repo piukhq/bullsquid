@@ -6,6 +6,8 @@ from uuid import UUID
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
+from bullsquid.merchant_data.secondary_mids.db import get_secondary_mid
+from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 
 from .tables import Location
 
@@ -46,27 +48,46 @@ LocationDetailResult = TypedDict(
 
 
 async def list_locations(
-    *, plan_ref: UUID, merchant_ref: UUID, n: int, p: int
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    exclude_secondary_mid: UUID | None,
+    n: int,
+    p: int,
 ) -> list[LocationResult]:
     """Return a list of all locations on the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
+    query = Location.select(
+        Location.pk,
+        Location.status,
+        Location.date_added,
+        Location.name,
+        Location.location_id,
+        Location.merchant_internal_id,
+        Location.is_physical_location,
+        Location.address_line_1,
+        Location.town_city,
+        Location.postcode,
+    ).where(
+        Location.merchant == merchant,
+        Location.status != ResourceStatus.DELETED,
+    )
+
+    if exclude_secondary_mid:
+        # validate secondary MID ref
+        await get_secondary_mid(
+            exclude_secondary_mid, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+        linked_location_pks = (
+            await LocationSecondaryMIDLink.select(LocationSecondaryMIDLink.location.pk)
+            .where(LocationSecondaryMIDLink.secondary_mid == exclude_secondary_mid)
+            .output(as_list=True)
+        )
+        query = query.where(Location.pk.not_in(linked_location_pks))
+
     return await paginate(
-        Location.select(
-            Location.pk,
-            Location.status,
-            Location.date_added,
-            Location.name,
-            Location.location_id,
-            Location.merchant_internal_id,
-            Location.is_physical_location,
-            Location.address_line_1,
-            Location.town_city,
-            Location.postcode,
-        ).where(
-            Location.merchant == merchant,
-            Location.status != ResourceStatus.DELETED,
-        ),
+        query,
         n=n,
         p=p,
     )

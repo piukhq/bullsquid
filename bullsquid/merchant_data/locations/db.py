@@ -47,6 +47,20 @@ LocationDetailResult = TypedDict(
     },
 )
 
+AvailableMIDResult = TypedDict(
+    "AvailableMIDResult",
+    {
+        "pk": UUID,
+        "mid": str,
+        "payment_scheme.slug": str,
+        "location.pk": UUID | None,
+        "location.name": str | None,
+        "location.address_line_1": str | None,
+        "location.town_city": str | None,
+        "location.postcode": str | None,
+    },
+)
+
 
 async def list_locations(
     *,
@@ -91,6 +105,29 @@ async def list_locations(
         query,
         n=n,
         p=p,
+    )
+
+
+async def list_available_primary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+) -> list[AvailableMIDResult]:
+    """List available mids for association with a location"""
+    await get_location(location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref)
+    return await PrimaryMID.select(
+        PrimaryMID.pk,
+        PrimaryMID.mid,
+        PrimaryMID.payment_scheme.slug,
+        PrimaryMID.location.pk,
+        PrimaryMID.location.name,
+        PrimaryMID.location.address_line_1,
+        PrimaryMID.location.town_city,
+        PrimaryMID.location.postcode,
+    ).where(
+        PrimaryMID.merchant == merchant_ref,
+        (PrimaryMID.location != location_ref) | (PrimaryMID.location.is_null()),
+        PrimaryMID.status != ResourceStatus.DELETED,
     )
 
 

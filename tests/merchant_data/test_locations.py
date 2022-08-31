@@ -821,3 +821,89 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert resp2.status_code == status.HTTP_200_OK
 
     assert resp1.json()[0]["link_ref"] == resp2.json()[0]["link_ref"]
+
+
+@test("can get primary mids to link to location")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+    location_2 = await location_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory(merchant=merchant, location=location_2)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{location.pk}/available_mids",
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json() == [
+        {
+            "mid": {
+                "mid_ref": str(primary_mid.pk),
+                "payment_scheme_slug": primary_mid.payment_scheme.slug,
+                "mid_value": primary_mid.mid,
+            },
+            "location_link": {
+                "location_ref": str(location_2.pk),
+                "location_title": location_2.title,
+            },
+        }
+    ]
+
+
+@test("can't get primary mids to link with invalid location ref")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{uuid4()}/available_mids",
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+@test("can't get primary mids to link with invalid merchant ref")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{merchant.plan}/merchants/{uuid4()}/locations/{location.pk}/available_mids",
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can't get primary mids to link with invalid plan ref")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/locations/{location.pk}/available_mids",
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+@test("can get primary mids to link to location that aren't already linked")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory(merchant=merchant, location=None)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{location.pk}/available_mids",
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json() == [
+        {
+            "mid": {
+                "mid_ref": str(primary_mid.pk),
+                "payment_scheme_slug": primary_mid.payment_scheme.slug,
+                "mid_value": primary_mid.mid,
+            },
+            "location_link": None,
+        }
+    ]

@@ -18,7 +18,11 @@ from bullsquid.tasks import (
     run_worker,
 )
 from tests.fixtures import database
-from tests.merchant_data.factories import merchant_factory, primary_mid_factory
+from tests.merchant_data.factories import (
+    location_factory,
+    merchant_factory,
+    primary_mid_factory,
+)
 
 
 @test("run_worker executes jobs")
@@ -118,6 +122,24 @@ async def _(_: None = database) -> None:
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.txm_status == TXMStatus.OFFBOARDED
     assert primary_mid.status == ResourceStatus.DELETED
+
+
+@test(
+    "offboarding & deleting a primary MID that is linked to a location nullifies the link"
+)
+async def _(_: None = database) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory(
+        merchant=merchant, location=location, txm_status=TXMStatus.ONBOARDED
+    )
+
+    await queue.push(OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]))
+    with patch("bullsquid.tasks.logger"):
+        await run_worker(burst=True)
+
+    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert primary_mid.location == None
 
 
 @test("the task worker can offboard and delete a merchant")

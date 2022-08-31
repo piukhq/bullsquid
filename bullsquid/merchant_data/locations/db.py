@@ -6,6 +6,7 @@ from uuid import UUID
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.db import get_secondary_mid
 from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 
@@ -186,3 +187,11 @@ async def update_locations_status(
     await Location.update({Location.status: status}).where(
         Location.pk.is_in(location_refs), Location.merchant == merchant
     )
+
+    if status == ResourceStatus.DELETED:
+        await PrimaryMID.update({PrimaryMID.location: None}).where(
+            PrimaryMID.location.is_in(location_refs)
+        )
+        await LocationSecondaryMIDLink.delete().where(
+            LocationSecondaryMIDLink.location.is_in(location_refs)
+        )

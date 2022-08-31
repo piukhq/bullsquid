@@ -130,7 +130,7 @@ async def _(
     assert resp.status_code == status.HTTP_201_CREATED
     plan = await get_plan(resp.json()["plan_ref"])
     assert resp.json() == await plan_to_json(plan, payment_schemes)
-    assert resp.json()["plan_metadata"]["slug"] == None
+    assert resp.json()["plan_metadata"]["slug"] is None
 
 
 @test("unable to create a plan with a duplicate name")

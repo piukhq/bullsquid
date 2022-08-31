@@ -21,6 +21,7 @@ from tests.helpers import (
 from tests.merchant_data.factories import (
     default_payment_schemes,
     location_factory,
+    location_secondary_mid_link_factory,
     merchant_factory,
     plan_factory,
     secondary_mid_factory,
@@ -521,6 +522,26 @@ async def _(
             ),
         }
     ]
+
+
+@test("deleting a secondary MID that is linked to a location also deletes the link")
+async def _(
+    _: None = database,
+    test_client: TestClient = test_client,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    await location_secondary_mid_link_factory(secondary_mid=secondary_mid)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/deletion",
+        json={"secondary_mid_refs": [str(secondary_mid.pk)]},
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    assert not await LocationSecondaryMIDLink.exists().where(
+        LocationSecondaryMIDLink.secondary_mid == secondary_mid
+    )
 
 
 @test("a secondary MID that is not onboarded is deleted and no qbert job is created")

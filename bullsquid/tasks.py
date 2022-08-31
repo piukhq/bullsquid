@@ -79,6 +79,7 @@ async def _run_job(message: BaseModel) -> None:
                 {
                     PrimaryMID.txm_status: TXMStatus.OFFBOARDED,
                     PrimaryMID.status: ResourceStatus.DELETED,
+                    PrimaryMID.location: None,
                 }
             ).where(PrimaryMID.pk.is_in(message.mid_refs))
 

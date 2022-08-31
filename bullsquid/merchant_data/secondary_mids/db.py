@@ -12,6 +12,7 @@ from bullsquid.merchant_data.enums import (
 from bullsquid.merchant_data.merchants.db import get_merchant, paginate
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
 from bullsquid.merchant_data.secondary_mids.models import SecondaryMIDMetadata
+from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 
 from .tables import SecondaryMID
 
@@ -161,3 +162,8 @@ async def update_secondary_mids_status(
     await SecondaryMID.update({SecondaryMID.status: status}).where(
         SecondaryMID.pk.is_in(secondary_mid_refs), SecondaryMID.merchant == merchant
     )
+
+    if status == ResourceStatus.DELETED:
+        await LocationSecondaryMIDLink.delete().where(
+            LocationSecondaryMIDLink.secondary_mid.is_in(secondary_mid_refs)
+        )

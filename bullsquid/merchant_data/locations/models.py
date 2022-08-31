@@ -5,6 +5,7 @@ from pydantic import UUID4, root_validator, validator
 
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.models import BaseModel
+from bullsquid.merchant_data.primary_mids.models import LocationLinkResponse
 from bullsquid.merchant_data.validators import (
     nullify_blank_strings,
     string_must_not_be_blank,
@@ -134,3 +135,10 @@ class SecondaryMIDLinkResponse(BaseModel):
     secondary_mid_ref: UUID4
     payment_scheme_slug: str
     secondary_mid_value: str
+
+
+class AvailablePrimaryMID(BaseModel):
+    """Response model for Populate Available Mids endpoint"""
+
+    location_link: LocationLinkResponse | None
+    mid: PrimaryMIDLinkResponse

@@ -15,11 +15,13 @@ from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.primary_mids.models import LocationLinkResponse
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 from . import db
 from .models import (
+    AvailablePrimaryMID,
     LocationDeletionRequest,
     LocationDeletionResponse,
     LocationDetailMetadata,
@@ -323,3 +325,39 @@ async def link_location_to_secondary_mid(
         content=content,
         status_code=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
     )
+
+
+@router.get("/{location_ref}/available_mids", response_model=list[AvailablePrimaryMID])
+async def list_available_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+) -> list[AvailablePrimaryMID]:
+    """returns the list of MIDs that are available for association with a location"""
+    try:
+        available_mids = await db.list_available_primary_mids(
+            plan_ref, merchant_ref=merchant_ref, location_ref=location_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+    return [
+        AvailablePrimaryMID(
+            location_link=LocationLinkResponse(
+                location_ref=mid["location.pk"],
+                location_title=Location.make_title(
+                    mid["location.name"],  # type: ignore
+                    mid["location.address_line_1"],
+                    mid["location.town_city"],
+                    mid["location.postcode"],
+                ),
+            )
+            if mid["location.pk"]
+            else None,
+            mid=PrimaryMIDLinkResponse(
+                mid_ref=mid["pk"],
+                payment_scheme_slug=mid["payment_scheme.slug"],
+                mid_value=mid["mid"],
+            ),
+        )
+        for mid in available_mids
+    ]

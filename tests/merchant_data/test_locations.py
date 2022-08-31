@@ -6,6 +6,7 @@ from ward import test
 
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 from tests.fixtures import database, test_client
 from tests.helpers import (
@@ -547,6 +548,43 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
     assert resp.json() == []
+
+
+@test("deleting a location with a linked primary MID clears the link")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory(merchant=merchant, location=location)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/deletion",
+        json={"location_refs": [str(location.pk)]},
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+
+    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert primary_mid.location is None
+
+
+@test("deleting a location with a linked secondary MID deletes the link")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    await location_secondary_mid_link_factory(location=location)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/deletion",
+        json={"location_refs": [str(location.pk)]},
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+
+    assert not await LocationSecondaryMIDLink.exists().where(
+        LocationSecondaryMIDLink.location == location
+    )
 
 
 @test("can't delete locations on a non-existent plan")

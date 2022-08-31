@@ -1,8 +1,10 @@
 """Database access layer for primary MID operations."""
 
 from datetime import datetime
-from typing import TypedDict
+from typing import Any, TypedDict
 from uuid import UUID
+
+from piccolo.columns import Column
 
 from bullsquid.db import InvalidData, NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import (
@@ -181,6 +183,11 @@ async def update_primary_mids_status(
 ) -> None:
     """Updates the status for a list of primary MIDs on a merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
-    await PrimaryMID.update({PrimaryMID.status: status}).where(
+    values: dict[Column | str, Any] = {PrimaryMID.status: status}
+
+    if status == ResourceStatus.DELETED:
+        values[PrimaryMID.location] = None
+
+    await PrimaryMID.update(values).where(
         PrimaryMID.pk.is_in(mid_refs), PrimaryMID.merchant == merchant
     )

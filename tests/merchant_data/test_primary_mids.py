@@ -1,6 +1,5 @@
 """Test merchant data API endpoints that operate on primary MIDs."""
 import random
-from operator import itemgetter
 from uuid import uuid4
 
 from fastapi import status
@@ -13,7 +12,6 @@ from bullsquid.merchant_data.enums import (
     ResourceStatus,
     TXMStatus,
 )
-from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
@@ -634,6 +632,27 @@ async def _(
         Job.message_type == OffboardAndDeletePrimaryMIDs.__name__,
         Job.message == OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]).dict(),
     )
+
+
+@test(
+    "deleting a primary MID associated to a location clears the associated foreign key"
+)
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory(
+        merchant=merchant, location=location, txm_status=TXMStatus.NOT_ONBOARDED
+    )
+
+    resp = test_client.post(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        json={"mid_refs": [str(primary_mid.pk)]},
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+
+    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert primary_mid.location is None
 
 
 @test("deleting a MID that doesn't exist gives a useful error")

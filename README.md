@@ -10,7 +10,7 @@ Ensure Poetry 1.2+ is installed:
 
 ```
 ❯ poetry --version
-Poetry (version 1.2.0a2)
+Poetry (version 1.2.0)
 ```
 
 Ensure `psql` is installed:

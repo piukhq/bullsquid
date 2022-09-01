@@ -7,7 +7,7 @@ from loguru import logger
 
 from bullsquid.db import InvalidData, NoSuchRecord
 from bullsquid.naming import get_pretty_table_name, get_ref_name
-from settings import settings
+from bullsquid.settings import settings
 
 
 def error_response(

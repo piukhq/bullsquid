@@ -2,7 +2,7 @@
 from piccolo.conf.apps import AppRegistry
 from piccolo.engine.postgres import PostgresEngine
 
-from settings import settings
+from bullsquid.settings import settings
 
 DB = PostgresEngine(
     config={

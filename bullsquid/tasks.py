@@ -12,7 +12,7 @@ from bullsquid.merchant_data.merchants.db import merchant_has_onboarded_resource
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.service.txm import txm
-from settings import settings
+from bullsquid.settings import settings
 
 
 class OnboardPrimaryMIDs(BaseModel):

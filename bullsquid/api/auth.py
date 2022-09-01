@@ -8,7 +8,7 @@ from fastapi import HTTPException, Request, status
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
 
-from settings import settings
+from bullsquid.settings import settings
 
 apikey_header = APIKeyHeader(name="Authorization")
 

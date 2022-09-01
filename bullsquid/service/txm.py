@@ -4,7 +4,7 @@ from uuid import UUID
 
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.service import ServiceInterface
-from settings import settings
+from bullsquid.settings import settings
 
 
 class TXMServiceInterface(ServiceInterface):

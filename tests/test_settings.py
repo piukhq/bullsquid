@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from ward import raises, test
 
-from settings import Settings
+from bullsquid.settings import Settings
 
 TXM_SETTING_MSG = """
 1 validation error for TXMSettings

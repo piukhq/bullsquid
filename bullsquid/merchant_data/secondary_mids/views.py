@@ -193,7 +193,10 @@ async def link_secondary_mid_to_location(
     """
     try:
         links, created = await create_location_secondary_mid_links(
-            refs=[(link_request.location_ref, secondary_mid_ref)],
+            refs=[
+                (location_ref, secondary_mid_ref)
+                for location_ref in link_request.location_refs
+            ],
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
         )
@@ -201,14 +204,15 @@ async def link_secondary_mid_to_location(
         loc = ["body"] if ex.table == Location else ["path"]
         raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
 
-    link = links.pop()
-
     content = jsonable_encoder(
-        LocationLinkResponse(
-            link_ref=link.pk,
-            location_ref=link.location.pk,
-            location_title=link.location.title,
-        )
+        [
+            LocationLinkResponse(
+                link_ref=link.pk,
+                location_ref=link.location.pk,
+                location_title=link.location.title,
+            )
+            for link in links
+        ]
     )
 
     return JSONResponse(

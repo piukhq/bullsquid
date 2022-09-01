@@ -60,7 +60,7 @@ class SecondaryMIDDeletionResponse(BaseModel):
 class LocationLinkRequest(BaseModel):
     """Request model for linking a secondary MID with a location."""
 
-    location_ref: UUID4
+    location_refs: list[UUID4]
 
 
 class LocationLinkResponse(BaseModel):

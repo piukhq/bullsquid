@@ -653,7 +653,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links",
-        json={"location_ref": str(location.pk)},
+        json={"location_refs": [str(location.pk)]},
     )
 
     assert resp.status_code == status.HTTP_201_CREATED
@@ -666,11 +666,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         )
         .first()
     )
-    assert resp.json() == {
-        "link_ref": str(link["pk"]),
-        "location_ref": str(location.pk),
-        "location_title": location.title,
-    }
+    assert resp.json() == [
+        {
+            "link_ref": str(link["pk"]),
+            "location_ref": str(location.pk),
+            "location_title": location.title,
+        }
+    ]
 
 
 @test("can't associate a location with a secondary mid on a different merchant")
@@ -681,7 +683,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links",
-        json={"location_ref": str(location.pk)},
+        json={"location_refs": [str(location.pk)]},
     )
 
     assert_is_not_found_error(resp, loc=["body", "location_ref"])
@@ -694,7 +696,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/{uuid4()}/secondary_mid_location_links",
-        json={"location_ref": str(location.pk)},
+        json={"location_refs": [str(location.pk)]},
     )
 
     assert_is_not_found_error(resp, loc=["path", "secondary_mid_ref"])
@@ -708,7 +710,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     resp = test_client.post(
         f"/api/v1/plans/{merchant.plan}/merchants/{uuid4()}/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links",
-        json={"location_ref": str(location.pk)},
+        json={"location_refs": [str(location.pk)]},
     )
 
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
@@ -722,7 +724,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     resp = test_client.post(
         f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links",
-        json={"location_ref": str(location.pk)},
+        json={"location_refs": [str(location.pk)]},
     )
 
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
@@ -741,7 +743,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     location = await location_factory(merchant=merchant)
 
     url = f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links"
-    json = {"location_ref": str(location.pk)}
+    json = {"location_refs": [str(location.pk)]}
 
     resp1 = test_client.post(url, json=json)
     assert resp1.status_code == status.HTTP_201_CREATED
@@ -749,4 +751,4 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     resp2 = test_client.post(url, json=json)
     assert resp2.status_code == status.HTTP_200_OK
 
-    assert resp1.json()["link_ref"] == resp2.json()["link_ref"]
+    assert resp1.json()[0]["link_ref"] == resp2.json()[0]["link_ref"]

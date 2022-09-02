@@ -4,7 +4,7 @@ from typing import Any
 
 from piccolo.testing.model_builder import ModelBuilder
 
-from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
@@ -60,6 +60,7 @@ async def primary_mid_factory(*, persist: bool = True, **defaults: Any) -> Prima
         PrimaryMID,
         defaults={
             "status": ResourceStatus.ACTIVE,
+            "txm_status": TXMStatus.NOT_ONBOARDED,
             "payment_scheme": random.choice(payment_schemes),
             **defaults,  # type: ignore
         },
@@ -76,6 +77,7 @@ async def secondary_mid_factory(
         SecondaryMID,
         defaults={
             "status": ResourceStatus.ACTIVE,
+            "txm_status": TXMStatus.NOT_ONBOARDED,
             "payment_scheme": random.choice(payment_schemes),
             **defaults,  # type: ignore
         },
@@ -89,6 +91,7 @@ async def identifier_factory(*, persist: bool = True, **defaults: Any) -> Identi
         Identifier,
         defaults={
             "status": ResourceStatus.ACTIVE,
+            "txm_status": TXMStatus.NOT_ONBOARDED,
             **defaults,  # type: ignore
         },
         persist=persist,

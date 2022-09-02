@@ -28,6 +28,15 @@ LocationResult = TypedDict(
     },
 )
 
+AssociatedPrimaryMIDResult = TypedDict(
+    "AssociatedPrimaryMIDResult",
+    {
+        "pk": UUID,
+        "mid": str,
+        "payment_scheme.slug": str,
+    },
+)
+
 LocationDetailResult = TypedDict(
     "LocationDetailResult",
     {
@@ -233,3 +242,27 @@ async def update_locations_status(
         await LocationSecondaryMIDLink.delete().where(
             LocationSecondaryMIDLink.location.is_in(location_refs)
         )
+
+
+async def list_associated_primary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    n: int,
+    p: int,
+) -> list[AssociatedPrimaryMIDResult]:
+    """List available mids in association with a location"""
+    await get_location(location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref)
+    return await paginate(
+        PrimaryMID.select(
+            PrimaryMID.pk,
+            PrimaryMID.mid,
+            PrimaryMID.payment_scheme.slug,
+        ).where(
+            PrimaryMID.merchant == merchant_ref,
+            (PrimaryMID.location == location_ref),
+            PrimaryMID.status != ResourceStatus.DELETED,
+        ),
+        n=n,
+        p=p,
+    )

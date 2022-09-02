@@ -926,3 +926,26 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
             "location_link": None,
         }
     ]
+
+
+@test("can list mids associated with a location")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory(merchant=merchant, location=location)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/mids"
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    location = await Location.objects().get(Location.pk == location.pk)
+
+    assert resp.json() == [
+        {
+            "mid_ref": str(primary_mid.pk),
+            "payment_scheme_slug": primary_mid.payment_scheme.slug,
+            "mid_value": primary_mid.mid,
+        }
+    ]

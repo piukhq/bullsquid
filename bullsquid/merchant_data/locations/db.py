@@ -99,7 +99,8 @@ async def list_locations(
             .where(LocationSecondaryMIDLink.secondary_mid == exclude_secondary_mid)
             .output(as_list=True)
         )
-        query = query.where(Location.pk.not_in(linked_location_pks))
+        if linked_location_pks:
+            query = query.where(Location.pk.not_in(linked_location_pks))
 
     return await paginate(
         query,

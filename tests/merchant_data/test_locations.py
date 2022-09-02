@@ -177,6 +177,25 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     ]
 
 
+@test("can list locations excluding a secondary mid that isn't linked to anything")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    payment_schemes = await default_payment_schemes()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations",
+        params={"exclude_secondary_mid": secondary_mid.pk},
+    )
+
+    assert resp.status_code == 200
+
+    location = await Location.objects().get(Location.pk == location.pk)
+    assert resp.json() == [await location_to_json(location, payment_schemes)]
+
+
 @test("can't exclude a secondary mid that doesn't exist")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
     plan = await plan_factory()

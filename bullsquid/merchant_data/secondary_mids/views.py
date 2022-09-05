@@ -50,16 +50,25 @@ def create_secondary_mid_response(
 async def list_secondary_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
+    exclude_location: UUID | None = Query(default=None),
     n: int = Query(default=10),
     p: int = Query(default=1),
 ) -> list[SecondaryMIDResponse]:
     """Lists all secondary MIDs for a merchant."""
     try:
         secondary_mids = await db.list_secondary_mids(
-            plan_ref=plan_ref, merchant_ref=merchant_ref, n=n, p=p
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+            exclude_location=exclude_location,
+            n=n,
+            p=p,
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        loc = ["query"] if ex.table == Location else ["path"]
+        override_field_name = "exclude_location" if ex.table == Location else None
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=loc, override_field_name=override_field_name
+        )
 
     return [create_secondary_mid_response(mid) for mid in secondary_mids]
 

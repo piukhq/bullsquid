@@ -144,6 +144,90 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
+@test("can list secondary MIDs excluding a location")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    payment_schemes = await default_payment_schemes()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    secondary_mids = [
+        await secondary_mid_factory(merchant=merchant),
+        await secondary_mid_factory(merchant=merchant),
+        await secondary_mid_factory(merchant=merchant),
+        await secondary_mid_factory(merchant=merchant),
+        await secondary_mid_factory(merchant=merchant),
+    ]
+
+    # associate the first three locations with the secondary mid
+    for secondary_mid in secondary_mids[:3]:
+        await location_secondary_mid_link_factory(
+            location=location, secondary_mid=secondary_mid
+        )
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids",
+        params={"exclude_location": location.pk},
+    )
+
+    assert resp.status_code == 200
+
+    expected = await SecondaryMID.objects().where(
+        SecondaryMID.pk.is_in(
+            [secondary_mid.pk for secondary_mid in secondary_mids[-2:]]
+        )
+    )
+    assert resp.json() == [
+        await secondary_mid_to_json(secondary_mid) for secondary_mid in expected
+    ]
+
+
+@test("can list secondary mids excluding a location that isn't linked to anything")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids",
+        params={"exclude_location": location.pk},
+    )
+
+    assert resp.status_code == 200
+
+    secondary_mid = await SecondaryMID.objects().get(
+        SecondaryMID.pk == secondary_mid.pk
+    )
+    assert resp.json() == [await secondary_mid_to_json(secondary_mid)]
+
+
+@test("can't exclude a location that doesn't exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids",
+        params={"exclude_location": str(uuid4())},
+    )
+
+    assert_is_not_found_error(resp, loc=["query", "exclude_location"])
+
+
+@test("can't exclude a location from a different merchant")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory()
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids",
+        params={"exclude_location": location.pk},
+    )
+
+    assert_is_not_found_error(resp, loc=["query", "exclude_location"])
+
+
 @test("can get secondary MID details")
 async def _(
     _db: None = database,

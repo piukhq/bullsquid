@@ -7,7 +7,7 @@ from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
-from bullsquid.merchant_data.secondary_mids.db import get_secondary_mid
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 
 from .tables import Location
@@ -100,9 +100,12 @@ async def list_locations(
 
     if exclude_secondary_mid:
         # validate secondary MID ref
-        await get_secondary_mid(
-            exclude_secondary_mid, plan_ref=plan_ref, merchant_ref=merchant_ref
-        )
+        if not await SecondaryMID.exists().where(
+            SecondaryMID.pk == exclude_secondary_mid,
+            SecondaryMID.merchant == merchant,
+        ):
+            raise NoSuchRecord(SecondaryMID)
+
         linked_location_pks = (
             await LocationSecondaryMIDLink.select(LocationSecondaryMIDLink.location.pk)
             .where(LocationSecondaryMIDLink.secondary_mid == exclude_secondary_mid)

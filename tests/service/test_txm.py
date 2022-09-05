@@ -19,7 +19,7 @@ async def _(
 ) -> None:
     primary_mid = await primary_mid_factory()
     mock_responses.post(
-        "https://testbink.com/txm/mids/",
+        "https://testbink.com/txm/mids",
         status=status.HTTP_200_OK,
         payload={"test": "success"},
     )

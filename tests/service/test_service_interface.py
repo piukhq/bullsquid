@@ -56,3 +56,27 @@ async def _(mock_responses: aioresponses = mock_responses) -> None:
     with raises(ClientResponseError) as ex:
         await service.post("/api/v1/test", {"test": "test"})
     assert ex.raised.code == status.HTTP_400_BAD_REQUEST
+
+
+@test("url parts with no slashes are joined correctly")
+async def _() -> None:
+    parts, expected = ("https://test.url", "a/b"), "https://test.url/a/b"
+    assert ServiceInterface._urljoin(*parts) == expected
+
+
+@test("url parts with slashes are joined correctly")
+async def _() -> None:
+    parts, expected = ("https://test.url/", "/a/b/"), "https://test.url/a/b"
+    assert ServiceInterface._urljoin(*parts) == expected
+
+
+@test("url parts with existing path parts are joined correctly")
+async def _() -> None:
+    parts, expected = ("https://test.url/a", "b/c"), "https://test.url/a/b/c"
+    assert ServiceInterface._urljoin(*parts) == expected
+
+
+@test("url parts with existing path parts and slashes are joined correctly")
+async def _() -> None:
+    parts, expected = ("https://test.url/a/", "/b/c/"), "https://test.url/a/b/c"
+    assert ServiceInterface._urljoin(*parts) == expected

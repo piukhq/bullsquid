@@ -2,7 +2,6 @@
 
 
 from typing import Any, Mapping
-from urllib.parse import urljoin
 
 import aiohttp
 
@@ -14,8 +13,14 @@ class ServiceInterface:
         self.base_url = base_url
         self.headers: dict[str, str] = {}
 
+    @staticmethod
+    def _urljoin(*args: str) -> str:
+        # a version of stdlib urljoin with less surprising behaviour.
+        # https://stackoverflow.com/questions/1793261/how-to-join-components-of-a-path-when-you-are-constructing-a-url-in-python
+        return "/".join(arg.strip("/") for arg in args)
+
     def _build_url(self, path: str) -> str:
-        return urljoin(self.base_url, path)
+        return self._urljoin(self.base_url, path)
 
     async def get(self, path: str, **kwargs: Any) -> dict:
         """

@@ -172,7 +172,7 @@ async def link_primary_mid_to_location(
     mid_ref: UUID,
     link_request: LocationLinkRequest,
 ) -> LocationLinkResponse:
-    """Create link between location and primary mid"""
+    """Link a location to a primary MID."""
     try:
         primary_mid = await db.get_primary_mid_instance(
             mid_ref,
@@ -193,3 +193,19 @@ async def link_primary_mid_to_location(
         location_ref=location.pk,
         location_title=location.title,
     )
+
+
+@router.delete("/{mid_ref}/location_link")
+async def delete_primary_mid_location_link(
+    plan_ref: UUID, merchant_ref: UUID, mid_ref: UUID
+) -> None:
+    """Delete the link between a location and a primary MID."""
+    try:
+        primary_mid = await db.get_primary_mid_instance(
+            mid_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+
+    primary_mid.location = None
+    await primary_mid.save()

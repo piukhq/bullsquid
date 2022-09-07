@@ -755,3 +755,68 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+@test("can delete the link between a primary MID and a location.")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+    mid = await primary_mid_factory(merchant=merchant, location=location)
+
+    resp = test_client.delete(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{mid.pk}/location_link"
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+
+    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+    assert mid.location == None
+
+
+@test("deleting a link on a mid without a location does not fail")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    mid = await primary_mid_factory(merchant=merchant)
+
+    resp = test_client.delete(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{mid.pk}/location_link"
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+
+
+@test("can't delete the location link on a primary MID that does not exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+
+    resp = test_client.delete(
+        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{uuid4()}/location_link"
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "mid_ref"])
+
+
+@test("can't delete the primary MID location link on a merchant that does not exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+    mid = await primary_mid_factory(merchant=merchant, location=location)
+
+    resp = test_client.delete(
+        f"/api/v1/plans/{merchant.plan}/merchants/{uuid4()}/mids/{mid.pk}/location_link"
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can't delete the primary MID location link on a plan that does not exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    merchant = await merchant_factory()
+    location = await location_factory(merchant=merchant)
+    mid = await primary_mid_factory(merchant=merchant, location=location)
+
+    resp = test_client.delete(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/mids/{mid.pk}/location_link"
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])

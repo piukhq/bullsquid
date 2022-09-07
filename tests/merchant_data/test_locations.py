@@ -949,3 +949,45 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
             "mid_value": primary_mid.mid,
         }
     ]
+
+
+@test("can't list mids associated with a location that does not exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    primary_mid = await primary_mid_factory(merchant=merchant, location=location)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/mids"
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+@test("can't list mids associated with a location on a merchant that does not exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    await primary_mid_factory(merchant=merchant, location=location)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/locations/{location.pk}/mids"
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+@test("can't list mids associated with a location on a plan that does not exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    await primary_mid_factory(merchant=merchant, location=location)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/locations/{location.pk}/mids"
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])

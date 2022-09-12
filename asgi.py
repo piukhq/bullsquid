@@ -6,13 +6,15 @@ import sentry_sdk
 
 from bullsquid.api.app import create_app
 from bullsquid.log_conf import set_loguru_intercept
+from bullsquid.settings import settings
 
 # redirect all logging into loguru.
 set_loguru_intercept()
 
-# use sentry's own environment variables to configure the connection.
-# https://docs.sentry.io/platforms/python/configuration/options/#common-options
-sentry_sdk.init()  # pylint: disable=abstract-class-instantiated
+if settings.sentry.dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry.dsn, environment=settings.sentry.env
+    )  # pylint: disable=abstract-class-instantiated
 
 # initialise the asgi app instance.
 app = create_app()

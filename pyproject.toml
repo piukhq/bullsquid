@@ -30,6 +30,7 @@ inflection = "^0.5.1"
 PyJWT = {extras = ["crypto"], version = "^2.4.0"}
 PyYAML = "^6.0"
 docopt-ng = "^0.8.1"
+tomli = "^2.0.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.6.0"
@@ -90,6 +91,7 @@ omit = [
     "*/piccolo_migrations/*",  # migrations aren't run in tests currently
     "*/piccolo_app.py",        # just piccolo ORM configuration, nothing to test
     "*/tables.py",             # table definitions are not directly tested
+    "bullsquid/settings.py",   # not much use testing settings at this stage
     "bullsquid/log_conf.py",   # log_conf sets up a complex log intercept that is hard to test
     "bullsquid/api/app.py",    # api app initialisation sets up db pools and so on that are hard to test
     "bullsquid/api/auth.py",   # TEMPORARY: will probably need a lot of mocking

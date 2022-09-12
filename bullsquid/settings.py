@@ -1,8 +1,25 @@
 """Pydantic-validated application configuration."""
+from pathlib import Path
 from typing import Any
 
+import tomli
 from pydantic import AnyHttpUrl, BaseSettings, Field, root_validator, validator
+from pydantic.env_settings import SettingsSourceCallable
 from url_normalize import url_normalize
+
+
+def toml_settings_source(_: BaseSettings) -> dict[str, Any]:
+    """
+    Load settings from a ``config.toml`` file in the current working directory
+    if it exists.
+    """
+    config_path = Path("config.toml")
+
+    if not config_path.exists() or not config_path.is_file():
+        return {}
+
+    with config_path.open("rb") as config_file:
+        return tomli.load(config_file)
 
 
 class DatabaseSettings(BaseSettings):
@@ -12,7 +29,10 @@ class DatabaseSettings(BaseSettings):
     """
 
     class Config:
-        """Set database settings with database_dsn and database_dbname."""
+        """
+        If using env variables, set database settings with database_dsn and
+        database_dbname.
+        """
 
         env_prefix = "database_"
 
@@ -24,7 +44,10 @@ class TXMSettings(BaseSettings):
     """Settings for the transaction matching API."""
 
     class Config:
-        """Set TXM settings with txm_base_url and txm_api_key."""
+        """
+        If using env variables, set TXM settings with txm_base_url and
+        txm_api_key.
+        """
 
         env_prefix = "txm_"
 
@@ -47,7 +70,10 @@ class OAuthSettings(BaseSettings):
     """Settings for the OAuth provider."""
 
     class Config:
-        """Set OAuth settings with oauth_domain, oauth_audience, et cetera."""
+        """
+        If using env variables, set OAuth settings with oauth_domain,
+        oauth_audience, et cetera.
+        """
 
         env_prefix = "oauth_"
 
@@ -63,8 +89,44 @@ class OAuthSettings(BaseSettings):
         return url_normalize(v)
 
 
+class SentrySettings(BaseSettings):
+    """
+    Settings for the Sentry SDK. If DSN is None, Sentry SDK will not be
+    initialised and the other settings will be ignored.
+    """
+
+    class Config:
+        """
+        If using env variables, set Sentry settings with sentry_dsn and
+        sentry_env.
+        """
+
+        env_prefix = "sentry_"
+
+    dsn = AnyHttpUrl | None
+    env = str | None
+
+
 class Settings(BaseSettings):
     """Top level settings for the app."""
+
+    class Config:
+        """Base settings configuration."""
+
+        @classmethod
+        def customise_sources(
+            cls,
+            init_settings: SettingsSourceCallable,
+            env_settings: SettingsSourceCallable,
+            file_secret_settings: SettingsSourceCallable,
+        ) -> tuple[SettingsSourceCallable, ...]:
+            """Include a TOML settings source."""
+            return (
+                init_settings,
+                toml_settings_source,
+                env_settings,
+                file_secret_settings,
+            )
 
     # Debug mode should be enabled when running locally. This will show more error
     # tracebacks rather than hiding them.
@@ -73,7 +135,7 @@ class Settings(BaseSettings):
     # Turning this on will print all SQL queries to the console. Very noisy.
     trace_queries = False
 
-    # Databse connection settings.
+    # Database connection settings.
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
 
     # Transaction matching API settings.
@@ -81,6 +143,9 @@ class Settings(BaseSettings):
 
     # OAuth settings.
     oauth: OAuthSettings = Field(default_factory=OAuthSettings)
+
+    # Sentry SDK settings.
+    sentry: SentrySettings = Field(default_factory=SentrySettings)
 
     # TEMPORARY: for compatibility until the frontend has transitioned over to
     # using OAuth.

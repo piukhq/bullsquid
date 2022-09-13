@@ -1,10 +1,11 @@
 """API authentication dependencies."""
+from enum import Enum
 from typing import Callable
 from urllib.parse import urljoin
 
 import jwt
 import sentry_sdk
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
 
@@ -23,9 +24,50 @@ else:
     JWKS_CLIENT = None
 
 
-def verify_jwt(token: str) -> dict:
+class AccessLevel(str, Enum):
     """
-    Verifies the given JWT token string.
+    Defines a level of access to the application.
+    """
+
+    READ_ONLY = "ro"
+    READ_WRITE = "rw"
+    READ_WRITE_DELETE = "rwd"
+
+    def role_name(self, app_name: str) -> str:
+        """
+        Returns the role name for this access level.
+        This role name will match those present in the `permissions` claim of an
+        Auth0 RBAC-enabled JWT.
+        """
+        return f"{app_name}:{self.value}"
+
+
+def role_to_access_level(role: str, *, app_name: str) -> AccessLevel:
+    """
+    Valides the given role string and, if possible, returns the ``AccessLevel``
+    it represents.
+
+    >>> role_to_access_level("merchant_data:rwd", app_name="merchant_data")
+    <AccessLevel.READ_WRITE_DELETE: 'rwd'>
+
+    >>> role_to_access_level("badrole", app_name="merchant_data")
+    ValueError: Roles must start with "app_name:", in this case "merchant_data:"
+
+    >>> role_to_access_level("merchant_data:badrole", app_name="merchant_data")
+    ValueError: 'badrole' is not a valid AccessLevel
+    """
+    prefix = f"{app_name}:"
+    if not role.startswith(prefix):
+        raise ValueError('Roles must start with "app_name:", in this case "{prefix}"')
+
+    role = role[len(prefix) :]
+
+    return AccessLevel(role)
+
+
+def decode_jwt(token: str) -> dict:
+    """
+    Decodes the given JWT token string.
     Returns the token's contents.
     Raises a 401 Unauthorized HTTPException if the token fails validation or
     the signing key cannot be found.
@@ -59,6 +101,15 @@ def verify_jwt(token: str) -> dict:
         ) from ex
 
 
+class JWTCredentials(HTTPAuthorizationCredentials):
+    """
+    Adds a claims dictionary to HTTPAuthorizationCredentials.
+    This allows us to check claims in dependents of jwt_bearer.
+    """
+
+    claims: dict
+
+
 class JWTBearer(HTTPBearer):
     """
     FastAPI view dependency providing JWT header validation and verification.
@@ -67,27 +118,52 @@ class JWTBearer(HTTPBearer):
     def __init__(self) -> None:
         super().__init__(auto_error=True)
 
-    async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
+    async def __call__(self, request: Request) -> JWTCredentials | None:
         credentials = await super().__call__(request)
 
         # when auto_error is true, credentials can never be null.
         assert credentials is not None
 
-        if not verify_jwt(credentials.credentials):
+        if not (payload := decode_jwt(credentials.credentials)):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token",
             )
 
-        return credentials
+        return JWTCredentials(
+            scheme=credentials.scheme,
+            credentials=credentials.credentials,
+            claims=payload,
+        )
 
 
 jwt_bearer: Callable
 if settings.debug:
 
-    def jwt_bearer() -> HTTPAuthorizationCredentials:
+    def jwt_bearer() -> JWTCredentials:
         """A fake jwt_bearer dependency for use in debug mode."""
-        return HTTPAuthorizationCredentials(scheme="Debug", credentials="")
+        return JWTCredentials(scheme="Debug", credentials="", claims={})
 
 else:
     jwt_bearer = JWTBearer()
+
+
+def require_access_level(level: AccessLevel, *, app_name: str) -> Callable[[], None]:
+    """
+    FastAPI dependency that ensures a given access level exists in the client's access token.
+    """
+
+    def check_credentials(
+        credentials: JWTCredentials = Depends(jwt_bearer),
+    ) -> None:
+        if credentials.scheme != "Bearer":
+            # we don't check permissions for non-bearer tokens.
+            return
+
+        if level.role_name(app_name) not in credentials.claims["permissions"]:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing required permissions.",
+            )
+
+    return check_credentials

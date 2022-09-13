@@ -2,23 +2,23 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from bullsquid.api.errors import APIMultiError, ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.merchant_data.auth import AccessLevel, require_access_level
 from bullsquid.merchant_data.merchants.db import count_merchants
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
-
-from . import db
-from .models import (
+from bullsquid.merchant_data.plans import db
+from bullsquid.merchant_data.plans.models import (
     CreatePlanRequest,
     PlanCountsResponse,
     PlanMetadataResponse,
     PlanPaymentSchemeCountResponse,
     PlanResponse,
 )
-from .tables import Plan
+from bullsquid.merchant_data.plans.tables import Plan
 
 router = APIRouter(prefix="/plans")
 
@@ -53,7 +53,9 @@ async def create_plan_response(
 
 @router.get("", response_model=list[PlanResponse])
 async def list_plans(
-    n: int = Query(default=10), p: int = Query(default=1)
+    n: int = Query(default=10),
+    p: int = Query(default=1),
+    _: None = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[PlanResponse]:
     """List all plans."""
     payment_schemes = await list_payment_schemes()
@@ -64,7 +66,10 @@ async def list_plans(
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=PlanResponse)
-async def create_plan(plan_data: CreatePlanRequest) -> PlanResponse:
+async def create_plan(
+    plan_data: CreatePlanRequest,
+    _: None = Depends(require_access_level(AccessLevel.READ_WRITE)),
+) -> PlanResponse:
     """Create a new plan."""
     plan_data = plan_data.dict()
     if errors := [
@@ -79,7 +84,9 @@ async def create_plan(plan_data: CreatePlanRequest) -> PlanResponse:
 
 
 @router.get("/{plan_ref}", response_model=PlanResponse)
-async def get_plan_details(plan_ref: UUID) -> PlanResponse:
+async def get_plan_details(
+    plan_ref: UUID, _: None = Depends(require_access_level(AccessLevel.READ_ONLY))
+) -> PlanResponse:
     """Get plan details by ref."""
     try:
         plan = await db.get_plan(plan_ref)
@@ -90,7 +97,11 @@ async def get_plan_details(plan_ref: UUID) -> PlanResponse:
 
 
 @router.put("/{plan_ref}", response_model=PlanResponse)
-async def update_plan(plan_ref: UUID, plan_data: CreatePlanRequest) -> PlanResponse:
+async def update_plan(
+    plan_ref: UUID,
+    plan_data: CreatePlanRequest,
+    _: None = Depends(require_access_level(AccessLevel.READ_WRITE)),
+) -> PlanResponse:
     """Update a plan's details."""
     plan_data = plan_data.dict()
     if errors := [

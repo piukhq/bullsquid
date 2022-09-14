@@ -5,12 +5,11 @@ from uuid import UUID
 
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
-
-from .tables import Location
 
 LocationResult = TypedDict(
     "LocationResult",
@@ -34,6 +33,16 @@ AssociatedPrimaryMIDResult = TypedDict(
         "pk": UUID,
         "mid": str,
         "payment_scheme.slug": str,
+    },
+)
+
+AssociatedSecondaryMIDResult = TypedDict(
+    "AssociatedSecondaryMIDResult",
+    {
+        "pk": UUID,
+        "secondary_mid.pk": UUID,
+        "secondary_mid.secondary_mid": str,
+        "secondary_mid.payment_scheme.slug": str,
     },
 )
 
@@ -266,6 +275,29 @@ async def list_associated_primary_mids(
             (PrimaryMID.location == location_ref),
             PrimaryMID.status != ResourceStatus.DELETED,
         ),
+        n=n,
+        p=p,
+    )
+
+
+async def list_associated_secondary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    n: int,
+    p: int,
+) -> list[AssociatedSecondaryMIDResult]:
+    """List available secondary mids in association with a location"""
+    location = await get_location_instance(
+        location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+    return await paginate(
+        LocationSecondaryMIDLink.select(
+            LocationSecondaryMIDLink.pk,
+            LocationSecondaryMIDLink.secondary_mid.pk,
+            LocationSecondaryMIDLink.secondary_mid.payment_scheme.slug,  # type: ignore
+            LocationSecondaryMIDLink.secondary_mid.secondary_mid,
+        ).where(LocationSecondaryMIDLink.location == location),
         n=n,
         p=p,
     )

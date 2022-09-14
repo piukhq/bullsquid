@@ -390,3 +390,36 @@ async def list_location_primary_mids(
         )
         for mid in mids
     ]
+
+
+@router.get(
+    "/{location_ref}/secondary_mid_links", response_model=list[SecondaryMIDLinkResponse]
+)
+async def list_location_secondary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    n: int = Query(default=10),
+    p: int = Query(default=1),
+) -> list[SecondaryMIDLinkResponse]:
+    """List Secondary MIDs associated with location."""
+    try:
+        mids = await db.list_associated_secondary_mids(
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+            location_ref=location_ref,
+            n=n,
+            p=p,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+
+    return [
+        SecondaryMIDLinkResponse(
+            link_ref=mid["pk"],
+            secondary_mid_ref=mid["secondary_mid.pk"],
+            payment_scheme_slug=mid["secondary_mid.payment_scheme.slug"],
+            secondary_mid_value=mid["secondary_mid.secondary_mid"],
+        )
+        for mid in mids
+    ]

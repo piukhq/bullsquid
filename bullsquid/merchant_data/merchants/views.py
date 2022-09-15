@@ -8,14 +8,8 @@ from bullsquid import tasks
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.enums import ResourceStatus
-from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
-from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
-from bullsquid.merchant_data.plans.db import get_plan
-from bullsquid.merchant_data.plans.models import PlanMetadataResponse
-from bullsquid.merchant_data.plans.tables import Plan
-
-from . import db
-from .models import (
+from bullsquid.merchant_data.merchants import db
+from bullsquid.merchant_data.merchants.models import (
     CreateMerchantRequest,
     MerchantCountsResponse,
     MerchantDeletionResponse,
@@ -24,7 +18,12 @@ from .models import (
     MerchantOverviewResponse,
     MerchantPaymentSchemeCountResponse,
 )
-from .tables import Merchant
+from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
+from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.plans.db import get_plan
+from bullsquid.merchant_data.plans.models import PlanMetadataResponse
+from bullsquid.merchant_data.plans.tables import Plan
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants")
 
@@ -98,7 +97,9 @@ async def list_merchants(
     status_code=status.HTTP_201_CREATED,
     response_model=MerchantOverviewResponse,
 )
-async def create_merchant(plan_ref: UUID, merchant_data: CreateMerchantRequest) -> dict:
+async def create_merchant(
+    plan_ref: UUID, merchant_data: CreateMerchantRequest
+) -> MerchantOverviewResponse:
     """Add a new merchant to a plan."""
     try:
         plan = await get_plan(plan_ref)

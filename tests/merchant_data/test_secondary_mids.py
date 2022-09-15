@@ -166,7 +166,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     resp = test_client.get(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids",
-        params={"exclude_location": location.pk},
+        params={"exclude_location": str(location.pk)},
     )
 
     assert resp.status_code == 200
@@ -190,7 +190,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     resp = test_client.get(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids",
-        params={"exclude_location": location.pk},
+        params={"exclude_location": str(location.pk)},
     )
 
     assert resp.status_code == 200
@@ -222,7 +222,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     resp = test_client.get(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids",
-        params={"exclude_location": location.pk},
+        params={"exclude_location": str(location.pk)},
     )
 
     assert_is_not_found_error(resp, loc=["query", "exclude_location"])

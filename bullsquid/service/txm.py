@@ -18,7 +18,7 @@ class TXMServiceInterface(ServiceInterface):
         """Onboard MIDs into Harmonia."""
         mids = await PrimaryMID.select(
             PrimaryMID.mid,
-            PrimaryMID.merchant.plan.slug.as_alias("loyalty_plan"),
+            PrimaryMID.merchant.plan.slug.as_alias("loyalty_plan"),  # type: ignore
             PrimaryMID.payment_scheme.slug.as_alias("payment_scheme"),
             PrimaryMID.location.location_id.as_alias("location_id"),
         ).where(PrimaryMID.pk.is_in(mid_refs))

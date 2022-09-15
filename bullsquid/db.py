@@ -1,8 +1,8 @@
 """Database access layer."""
-from typing import Any, Type
+from typing import Any, Type, TypeVar
 from uuid import UUID
 
-from piccolo.query import Select
+from piccolo.query import Objects, Select
 from piccolo.table import Table
 
 
@@ -37,7 +37,10 @@ async def field_is_unique(
     return not await model.exists().where(field == value)
 
 
-def paginate(query: Select, *, n: int, p: int) -> Select:
+Paginatable = TypeVar("Paginatable", Select, Objects)
+
+
+def paginate(query: Paginatable, *, n: int, p: int) -> Paginatable:
     """
     Applies pagination to the given select query.
     `n` controls how many results are in the page.

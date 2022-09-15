@@ -14,7 +14,7 @@ Options:
 from docopt import docopt
 from loguru import logger
 
-from . import __version__
+from bullsquid import __version__
 
 
 def main() -> None:

@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 
+from bullsquid.api.auth import JWTCredentials
 from bullsquid.api.errors import APIMultiError, ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.auth import AccessLevel, require_access_level
@@ -55,7 +56,7 @@ async def create_plan_response(
 async def list_plans(
     n: int = Query(default=10),
     p: int = Query(default=1),
-    _: None = Depends(require_access_level(AccessLevel.READ_ONLY)),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[PlanResponse]:
     """List all plans."""
     payment_schemes = await list_payment_schemes()
@@ -68,24 +69,27 @@ async def list_plans(
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=PlanResponse)
 async def create_plan(
     plan_data: CreatePlanRequest,
-    _: None = Depends(require_access_level(AccessLevel.READ_WRITE)),
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> PlanResponse:
     """Create a new plan."""
-    plan_data = plan_data.dict()
+    plan_fields = plan_data.dict()
     if errors := [
         UniqueError(loc=["body", field])
         for field in ["name", "slug", "plan_id"]
-        if not await field_is_unique(Plan, field, plan_data[field])
+        if not await field_is_unique(Plan, field, plan_fields[field])
     ]:
         raise APIMultiError(errors)
 
-    plan = await db.create_plan(plan_data)
+    plan = await db.create_plan(plan_fields)
     return await create_plan_response(plan, await list_payment_schemes())
 
 
 @router.get("/{plan_ref}", response_model=PlanResponse)
 async def get_plan_details(
-    plan_ref: UUID, _: None = Depends(require_access_level(AccessLevel.READ_ONLY))
+    plan_ref: UUID,
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> PlanResponse:
     """Get plan details by ref."""
     try:
@@ -100,19 +104,21 @@ async def get_plan_details(
 async def update_plan(
     plan_ref: UUID,
     plan_data: CreatePlanRequest,
-    _: None = Depends(require_access_level(AccessLevel.READ_WRITE)),
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> PlanResponse:
     """Update a plan's details."""
-    plan_data = plan_data.dict()
+    plan_fields = plan_data.dict()
     if errors := [
         UniqueError(loc=["body", field])
         for field in ["name", "slug", "plan_id"]
-        if not await field_is_unique(Plan, field, plan_data[field], pk=plan_ref)
+        if not await field_is_unique(Plan, field, plan_fields[field], pk=plan_ref)
     ]:
         raise APIMultiError(errors)
 
     try:
-        plan = await db.update_plan(plan_ref, plan_data)
+        plan = await db.update_plan(plan_ref, plan_fields)
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 

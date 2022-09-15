@@ -6,10 +6,9 @@ from uuid import UUID
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.models import IdentifierMetadata
+from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
-
-from .tables import Identifier
 
 IdentifierResult = TypedDict(
     "IdentifierResult",
@@ -133,7 +132,7 @@ async def create_identifier(
         "value": identifier.value,
         "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
         "date_added": identifier.date_added,
-        "status": identifier.status,
+        "status": ResourceStatus(identifier.status),
     }
 
 

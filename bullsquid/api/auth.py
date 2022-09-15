@@ -148,22 +148,26 @@ else:
     jwt_bearer = JWTBearer()
 
 
-def require_access_level(level: AccessLevel, *, app_name: str) -> Callable[[], None]:
+def require_access_level(
+    level: AccessLevel, *, app_name: str
+) -> Callable[[], JWTCredentials]:
     """
     FastAPI dependency that ensures a given access level exists in the client's access token.
     """
 
     def check_credentials(
         credentials: JWTCredentials = Depends(jwt_bearer),
-    ) -> None:
+    ) -> JWTCredentials:
         if credentials.scheme != "Bearer":
             # we don't check permissions for non-bearer tokens.
-            return
+            return credentials
 
         if level.role_name(app_name) not in credentials.claims["permissions"]:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Missing required permissions.",
             )
+
+        return credentials
 
     return check_credentials

@@ -1,5 +1,7 @@
 """Defines the base error types used by the API."""
 
+from typing import Sequence
+
 import sentry_sdk
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
@@ -61,7 +63,7 @@ class APIError(HTTPException):
 class APIMultiError(HTTPException):
     """Allows raising multiple errors in one response."""
 
-    def __init__(self, errors: list[APIError]) -> None:
+    def __init__(self, errors: Sequence[APIError]) -> None:
         """Initialize the exception."""
         super().__init__(
             status_code=errors[0].status_code,

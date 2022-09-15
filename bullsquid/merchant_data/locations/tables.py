@@ -32,7 +32,9 @@ class Location(Table):
     status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE)
     merchant = ForeignKey(Merchant, required=True)
 
-    secondary_mids = M2M(LazyTableReference("secondary_mid", "merchant_data"))
+    secondary_mids = M2M(
+        LazyTableReference("LocationSecondaryMIDLink", "merchant_data")
+    )
 
     @staticmethod
     def make_title(

@@ -3,5 +3,5 @@
 
 isort --check .
 black --check .
-pylint bullsquid asgi settings
+pylint bullsquid asgi
 mypy .

@@ -2,11 +2,13 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from bullsquid import tasks
+from bullsquid.api.auth import JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.merchant_data.auth import AccessLevel, require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants import db
 from bullsquid.merchant_data.merchants.models import (
@@ -77,7 +79,10 @@ async def create_merchant_detail_response(
 
 @router.get("", response_model=list[MerchantOverviewResponse])
 async def list_merchants(
-    plan_ref: UUID, n: int = Query(default=10), p: int = Query(default=1)
+    plan_ref: UUID,
+    n: int = Query(default=10),
+    p: int = Query(default=1),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[MerchantOverviewResponse]:
     """List merchants on a plan."""
     try:
@@ -98,7 +103,11 @@ async def list_merchants(
     response_model=MerchantOverviewResponse,
 )
 async def create_merchant(
-    plan_ref: UUID, merchant_data: CreateMerchantRequest
+    plan_ref: UUID,
+    merchant_data: CreateMerchantRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> MerchantOverviewResponse:
     """Add a new merchant to a plan."""
     try:
@@ -117,7 +126,11 @@ async def create_merchant(
 
 
 @router.get("/{merchant_ref}", response_model=MerchantDetailResponse)
-async def get_merchant(plan_ref: UUID, merchant_ref: UUID) -> MerchantDetailResponse:
+async def get_merchant(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
+) -> MerchantDetailResponse:
     """Get merchant details."""
     try:
         merchant = await db.get_merchant(merchant_ref, plan_ref=plan_ref)
@@ -130,7 +143,12 @@ async def get_merchant(plan_ref: UUID, merchant_ref: UUID) -> MerchantDetailResp
 
 @router.put("/{merchant_ref}", response_model=MerchantOverviewResponse)
 async def update_merchant(
-    plan_ref: UUID, merchant_ref: UUID, merchant_data: CreateMerchantRequest
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    merchant_data: CreateMerchantRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> MerchantOverviewResponse:
     """Update a merchant with new details."""
 
@@ -157,6 +175,9 @@ async def update_merchant(
 async def delete_merchant(
     plan_ref: UUID,
     merchant_ref: UUID,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE_DELETE)
+    ),
 ) -> MerchantDeletionResponse:
     """
     Mark a merchant as deleted, also deleting its associated resources.

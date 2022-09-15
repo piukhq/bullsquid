@@ -103,8 +103,8 @@ class SentrySettings(BaseSettings):
 
         env_prefix = "sentry_"
 
-    dsn = AnyHttpUrl | None
-    env = str | None
+    dsn: AnyHttpUrl | None
+    env: str | None
 
 
 class Settings(BaseSettings):

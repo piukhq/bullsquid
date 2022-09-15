@@ -28,15 +28,15 @@ async def create_location_primary_mid_links(
         location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
     )
 
-    primary_mid_ref_set = set(primary_mid_refs)
+    primary_mid_refs = list(set(primary_mid_refs))
     where = (
-        PrimaryMID.pk.is_in(primary_mid_ref_set),
+        PrimaryMID.pk.is_in(primary_mid_refs),
         PrimaryMID.merchant == merchant_ref,
         PrimaryMID.status != ResourceStatus.DELETED,
     )
     primary_mids = await PrimaryMID.objects().where(*where)
 
-    if len(primary_mids) != len(primary_mid_ref_set):
+    if len(primary_mids) != len(primary_mid_refs):
         raise NoSuchRecord(PrimaryMID)
 
     await PrimaryMID.update({PrimaryMID.location: location}).where(*where)
@@ -54,7 +54,7 @@ async def create_location_secondary_mid_links(
     """
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    location_refs = {r[0] for r in refs}
+    location_refs = list(set(r[0] for r in refs))
     locations = await Location.objects().where(
         Location.pk.is_in(location_refs),
         Location.merchant == merchant,
@@ -64,7 +64,7 @@ async def create_location_secondary_mid_links(
     if len(location_refs) != len(locations):
         raise NoSuchRecord(Location)
 
-    secondary_mid_refs = {r[1] for r in refs}
+    secondary_mid_refs = list(set(r[1] for r in refs))
     secondary_mids = await SecondaryMID.objects().where(
         SecondaryMID.pk.is_in(secondary_mid_refs),
         SecondaryMID.merchant == merchant,

@@ -13,9 +13,8 @@ from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant, paginate
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
 from bullsquid.merchant_data.secondary_mids.models import SecondaryMIDMetadata
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
-
-from .tables import SecondaryMID
 
 SecondaryMIDResult = TypedDict(
     "SecondaryMIDResult",
@@ -162,10 +161,12 @@ async def create_secondary_mid(
         "payment_scheme.code": payment_scheme.code,
         "secondary_mid": secondary_mid.secondary_mid,
         "payment_scheme_store_name": secondary_mid.payment_scheme_store_name,
-        "payment_enrolment_status": secondary_mid.payment_enrolment_status,
+        "payment_enrolment_status": PaymentEnrolmentStatus(
+            secondary_mid.payment_enrolment_status
+        ),
         "date_added": secondary_mid.date_added,
-        "txm_status": secondary_mid.txm_status,
-        "status": secondary_mid.status,
+        "txm_status": TXMStatus(secondary_mid.txm_status),
+        "status": ResourceStatus(secondary_mid.status),
     }
 
 

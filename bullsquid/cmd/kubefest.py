@@ -17,9 +17,8 @@ import yaml
 from docopt import docopt
 from pydantic import BaseModel
 
+from bullsquid import __version__
 from bullsquid.api.app import create_app
-
-from . import __version__
 
 NAMESPACE = "default"
 LINKERD_API_VERSION = "linkerd.io/v1alpha2"

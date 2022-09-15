@@ -19,8 +19,7 @@ from bullsquid.merchant_data.primary_mids.models import (
     PrimaryMIDMetadata,
     UpdatePrimaryMIDRequest,
 )
-
-from .tables import PrimaryMID
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 
 PrimaryMIDResult = TypedDict(
     "PrimaryMIDResult",
@@ -140,10 +139,12 @@ async def create_primary_mid(
         "payment_scheme.code": payment_scheme.code,
         "mid": mid.mid,
         "visa_bin": mid.visa_bin,
-        "payment_enrolment_status": mid.payment_enrolment_status,
-        "status": mid.status,
+        "payment_enrolment_status": PaymentEnrolmentStatus(
+            mid.payment_enrolment_status
+        ),
+        "status": ResourceStatus(mid.status),
         "date_added": mid.date_added,
-        "txm_status": mid.txm_status,
+        "txm_status": TXMStatus(mid.txm_status),
     }
 
 
@@ -167,10 +168,12 @@ async def update_primary_mid(
         "payment_scheme.code": mid.payment_scheme.code,
         "mid": mid.mid,
         "visa_bin": mid.visa_bin,
-        "payment_enrolment_status": mid.payment_enrolment_status,
-        "status": mid.status,
+        "payment_enrolment_status": PaymentEnrolmentStatus(
+            mid.payment_enrolment_status
+        ),
+        "status": ResourceStatus(mid.status),
         "date_added": mid.date_added,
-        "txm_status": mid.txm_status,
+        "txm_status": TXMStatus(mid.txm_status),
     }
 
 

@@ -4,6 +4,7 @@ Running this file directly also starts uvicorn for local development.
 """
 import sentry_sdk
 
+from bullsquid import __version__
 from bullsquid.api.app import create_app
 from bullsquid.log_conf import set_loguru_intercept
 from bullsquid.settings import settings
@@ -13,7 +14,9 @@ set_loguru_intercept()
 
 if settings.sentry.dsn:
     sentry_sdk.init(
-        dsn=settings.sentry.dsn, environment=settings.sentry.env
+        dsn=settings.sentry.dsn,
+        release=__version__,
+        environment=settings.sentry.env,
     )  # pylint: disable=abstract-class-instantiated
 
 # initialise the asgi app instance.

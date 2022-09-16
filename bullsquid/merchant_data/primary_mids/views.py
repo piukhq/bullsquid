@@ -12,9 +12,8 @@ from bullsquid.merchant_data.locations.db import get_location_instance
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
-
-from . import db
-from .models import (
+from bullsquid.merchant_data.primary_mids import db
+from bullsquid.merchant_data.primary_mids.models import (
     CreatePrimaryMIDRequest,
     LocationLinkRequest,
     LocationLinkResponse,
@@ -24,7 +23,7 @@ from .models import (
     PrimaryMIDResponse,
     UpdatePrimaryMIDRequest,
 )
-from .tables import PrimaryMID
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/mids")
 
@@ -195,7 +194,7 @@ async def link_primary_mid_to_location(
     )
 
 
-@router.delete("/{mid_ref}/location_link")
+@router.delete("/{mid_ref}/location_link", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_primary_mid_location_link(
     plan_ref: UUID, merchant_ref: UUID, mid_ref: UUID
 ) -> None:

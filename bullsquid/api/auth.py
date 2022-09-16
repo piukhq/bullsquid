@@ -72,15 +72,28 @@ def decode_jwt(token: str) -> dict:
     Raises a 401 Unauthorized HTTPException if the token fails validation or
     the signing key cannot be found.
     """
-    if JWKS_CLIENT is None:
-        raise RuntimeError("OAuth must be configured when not running in debug mode.")
-
-    if settings.api_key is not None and token == settings.api_key:
+    if settings.api_key is not None:
         logger.warning(
             "Falling back on legacy token authentication. "
-            "If the frontend can use Oauth now, this should be removed!"
+            "This is much less secure than OAuth2 and should not be relied upon in production!"
         )
-        return {"sub": "legacy-api-key-user"}
+
+        if token != settings.api_key:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid API key"
+            )
+
+        return {
+            "sub": "legacy-api-key-user",
+            "permissions": [
+                level.role_name(app_name)
+                for app_name in ["merchant_data", "customer_wallet"]
+                for level in AccessLevel
+            ],
+        }
+
+    if JWKS_CLIENT is None:
+        raise RuntimeError("OAuth must be configured when not running in debug mode.")
 
     try:
         key = JWKS_CLIENT.get_signing_key_from_jwt(token).key

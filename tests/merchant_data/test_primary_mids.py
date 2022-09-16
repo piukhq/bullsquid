@@ -767,7 +767,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{mid.pk}/location_link"
     )
 
-    assert resp.status_code == status.HTTP_200_OK
+    assert resp.status_code == status.HTTP_204_NO_CONTENT
 
     mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
     assert mid.location == None
@@ -782,7 +782,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{mid.pk}/location_link"
     )
 
-    assert resp.status_code == status.HTTP_200_OK
+    assert resp.status_code == status.HTTP_204_NO_CONTENT
 
 
 @test("can't delete the location link on a primary MID that does not exist")

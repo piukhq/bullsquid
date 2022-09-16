@@ -1004,7 +1004,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
     resp = test_client.get(
-        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/secondary_mid_links"
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/secondary_mid_location_links"
     )
 
     assert resp.status_code == status.HTTP_200_OK
@@ -1031,7 +1031,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
     resp = test_client.get(
-        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/secondary_mid_links"
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/secondary_mid_location_links"
     )
 
     assert_is_not_found_error(resp, loc=["path", "location_ref"])
@@ -1050,7 +1050,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
     resp = test_client.get(
-        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/locations/{location.pk}/secondary_mid_links"
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/locations/{location.pk}/secondary_mid_location_links"
     )
 
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
@@ -1069,7 +1069,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
     resp = test_client.get(
-        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/locations/{location.pk}/secondary_mid_links"
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/locations/{location.pk}/secondary_mid_location_links"
     )
 
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])

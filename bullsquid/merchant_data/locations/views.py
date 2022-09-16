@@ -12,8 +12,15 @@ from bullsquid.merchant_data.db import (
     create_location_secondary_mid_links,
 )
 from bullsquid.merchant_data.enums import ResourceStatus
-from bullsquid.merchant_data.locations import db
-from bullsquid.merchant_data.locations.models import (
+from bullsquid.merchant_data.merchants.db import get_merchant
+from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
+from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.primary_mids.models import LocationLinkResponse
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+
+from . import db
+from .models import (
     AvailablePrimaryMID,
     LocationDeletionRequest,
     LocationDeletionResponse,
@@ -27,13 +34,7 @@ from bullsquid.merchant_data.locations.models import (
     SecondaryMIDLinkRequest,
     SecondaryMIDLinkResponse,
 )
-from bullsquid.merchant_data.locations.tables import Location
-from bullsquid.merchant_data.merchants.db import get_merchant
-from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
-from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
-from bullsquid.merchant_data.primary_mids.models import LocationLinkResponse
-from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
-from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from .tables import Location
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/locations")
 
@@ -393,7 +394,8 @@ async def list_location_primary_mids(
 
 
 @router.get(
-    "/{location_ref}/secondary_mid_links", response_model=list[SecondaryMIDLinkResponse]
+    "/{location_ref}/secondary_mid_location_links",
+    response_model=list[SecondaryMIDLinkResponse],
 )
 async def list_location_secondary_mids(
     plan_ref: UUID,

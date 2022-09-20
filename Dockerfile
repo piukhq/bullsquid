@@ -3,9 +3,9 @@ FROM ghcr.io/binkhq/python:3.10 as build
 WORKDIR /src
 
 RUN apt update && apt -y install git
-RUN pip install poetry==1.2.0b3
-RUN pip install poetry-dynamic-versioning-plugin
+RUN pip install poetry
 RUN poetry config virtualenvs.create false
+RUN poetry self add poetry-dynamic-versioning[plugin]
 
 ADD . .
 

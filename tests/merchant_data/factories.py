@@ -11,8 +11,10 @@ from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mid_location_links.tables import (
+    SecondaryMIDLocationLink,
+)
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 
 
 async def plan_factory(*, persist: bool = True, **defaults: Any) -> Plan:
@@ -98,11 +100,11 @@ async def identifier_factory(*, persist: bool = True, **defaults: Any) -> Identi
     )
 
 
-async def location_secondary_mid_link_factory(
+async def secondary_mid_location_link_factory(
     *, persist: bool = True, **defaults: Any
-) -> LocationSecondaryMIDLink:
+) -> SecondaryMIDLocationLink:
     return await ModelBuilder.build(
-        LocationSecondaryMIDLink,
+        SecondaryMIDLocationLink,
         defaults=defaults,  # type: ignore
         persist=persist,
     )

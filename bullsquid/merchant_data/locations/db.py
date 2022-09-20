@@ -8,8 +8,10 @@ from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mid_location_links.tables import (
+    SecondaryMIDLocationLink,
+)
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 
 LocationResult = TypedDict(
     "LocationResult",
@@ -116,8 +118,8 @@ async def list_locations(
             raise NoSuchRecord(SecondaryMID)
 
         linked_location_pks = (
-            await LocationSecondaryMIDLink.select(LocationSecondaryMIDLink.location.pk)
-            .where(LocationSecondaryMIDLink.secondary_mid == exclude_secondary_mid)
+            await SecondaryMIDLocationLink.select(SecondaryMIDLocationLink.location.pk)
+            .where(SecondaryMIDLocationLink.secondary_mid == exclude_secondary_mid)
             .output(as_list=True)
         )
         if linked_location_pks:
@@ -251,8 +253,8 @@ async def update_locations_status(
         await PrimaryMID.update({PrimaryMID.location: None}).where(
             PrimaryMID.location.is_in(location_refs)
         )
-        await LocationSecondaryMIDLink.delete().where(
-            LocationSecondaryMIDLink.location.is_in(location_refs)
+        await SecondaryMIDLocationLink.delete().where(
+            SecondaryMIDLocationLink.location.is_in(location_refs)
         )
 
 
@@ -292,12 +294,12 @@ async def list_associated_secondary_mids(
         location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
     )
     return await paginate(
-        LocationSecondaryMIDLink.select(
-            LocationSecondaryMIDLink.pk,
-            LocationSecondaryMIDLink.secondary_mid.pk,
-            LocationSecondaryMIDLink.secondary_mid.payment_scheme.slug,  # type: ignore
-            LocationSecondaryMIDLink.secondary_mid.secondary_mid,
-        ).where(LocationSecondaryMIDLink.location == location),
+        SecondaryMIDLocationLink.select(
+            SecondaryMIDLocationLink.pk,
+            SecondaryMIDLocationLink.secondary_mid.pk,
+            SecondaryMIDLocationLink.secondary_mid.payment_scheme.slug,  # type: ignore
+            SecondaryMIDLocationLink.secondary_mid.secondary_mid,
+        ).where(SecondaryMIDLocationLink.location == location),
         n=n,
         p=p,
     )

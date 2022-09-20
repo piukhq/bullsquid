@@ -33,7 +33,7 @@ class Location(Table):
     merchant = ForeignKey(Merchant, required=True)
 
     secondary_mids = M2M(
-        LazyTableReference("LocationSecondaryMIDLink", "merchant_data")
+        LazyTableReference("SecondaryMIDLocationLink", "merchant_data")
     )
 
     @staticmethod

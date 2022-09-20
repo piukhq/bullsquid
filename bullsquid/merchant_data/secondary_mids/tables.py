@@ -26,4 +26,4 @@ class SecondaryMID(Table):
     status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE, index=True)
     merchant = ForeignKey(Merchant, required=True)
 
-    locations = M2M(LazyTableReference("LocationSecondaryMIDLink", "merchant_data"))
+    locations = M2M(LazyTableReference("SecondaryMIDLocationLink", "merchant_data"))

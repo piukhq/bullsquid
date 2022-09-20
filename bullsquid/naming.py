@@ -6,6 +6,9 @@ from piccolo.table import Table
 
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mid_location_links.tables import (
+    SecondaryMIDLocationLink,
+)
 
 
 def get_pretty_table_name(table: Type[Table]) -> str:
@@ -48,6 +51,8 @@ def get_ref_name(table: Type[Table], *, plural: bool = False) -> str:
             name = "mid_ref"
         case PaymentScheme.__qualname__:
             name = "payment_scheme_code"
+        case SecondaryMIDLocationLink.__qualname__:
+            name = "link_ref"
         case _:
             name = f"{underscore(table.__name__)}_ref"
 

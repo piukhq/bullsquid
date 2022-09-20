@@ -7,15 +7,15 @@ from fastapi.responses import JSONResponse
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
-from bullsquid.merchant_data.db import create_location_secondary_mid_links
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
-from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-
-from . import db
-from .models import (
+from bullsquid.merchant_data.secondary_mid_location_links.db import (
+    create_secondary_mid_location_links,
+)
+from bullsquid.merchant_data.secondary_mids import db
+from bullsquid.merchant_data.secondary_mids.models import (
     AssociatedLocationResponse,
     CreateSecondaryMIDRequest,
     LocationLinkRequest,
@@ -25,6 +25,7 @@ from .models import (
     SecondaryMIDMetadata,
     SecondaryMIDResponse,
 )
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/secondary_mids")
 
@@ -202,9 +203,9 @@ async def link_secondary_mid_to_location(
     Link a location to a secondary MID.
     """
     try:
-        links, created = await create_location_secondary_mid_links(
+        links, created = await create_secondary_mid_location_links(
             refs=[
-                (location_ref, secondary_mid_ref)
+                (secondary_mid_ref, location_ref)
                 for location_ref in link_request.location_refs
             ],
             plan_ref=plan_ref,

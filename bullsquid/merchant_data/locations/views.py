@@ -7,20 +7,9 @@ from fastapi.responses import JSONResponse
 
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
-from bullsquid.merchant_data.db import (
-    create_location_primary_mid_links,
-    create_location_secondary_mid_links,
-)
 from bullsquid.merchant_data.enums import ResourceStatus
-from bullsquid.merchant_data.merchants.db import get_merchant
-from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
-from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
-from bullsquid.merchant_data.primary_mids.models import LocationLinkResponse
-from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
-from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-
-from . import db
-from .models import (
+from bullsquid.merchant_data.locations import db
+from bullsquid.merchant_data.locations.models import (
     AvailablePrimaryMID,
     LocationDeletionRequest,
     LocationDeletionResponse,
@@ -34,7 +23,17 @@ from .models import (
     SecondaryMIDLinkRequest,
     SecondaryMIDLinkResponse,
 )
-from .tables import Location
+from bullsquid.merchant_data.locations.tables import Location
+from bullsquid.merchant_data.merchants.db import get_merchant
+from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
+from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.primary_mids.models import LocationLinkResponse
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mid_location_links.db import (
+    create_location_primary_mid_links,
+    create_secondary_mid_location_links,
+)
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/locations")
 
@@ -298,9 +297,9 @@ async def link_location_to_secondary_mid(
     Link a secondary MID to a location.
     """
     try:
-        links, created = await create_location_secondary_mid_links(
+        links, created = await create_secondary_mid_location_links(
             refs=[
-                (location_ref, secondary_mid_ref)
+                (secondary_mid_ref, location_ref)
                 for secondary_mid_ref in link_request.secondary_mid_refs
             ],
             plan_ref=plan_ref,
@@ -397,7 +396,7 @@ async def list_location_primary_mids(
     "/{location_ref}/secondary_mid_location_links",
     response_model=list[SecondaryMIDLinkResponse],
 )
-async def list_location_secondary_mids(
+async def list_secondary_mid_location_links(
     plan_ref: UUID,
     merchant_ref: UUID,
     location_ref: UUID,

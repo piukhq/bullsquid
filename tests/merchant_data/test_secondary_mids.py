@@ -9,8 +9,10 @@ from ward import test
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.secondary_mid_location_links.tables import (
+    SecondaryMIDLocationLink,
+)
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 from tests.fixtures import database, test_client
 from tests.helpers import (
     assert_is_missing_field_error,
@@ -21,10 +23,10 @@ from tests.helpers import (
 from tests.merchant_data.factories import (
     default_payment_schemes,
     location_factory,
-    location_secondary_mid_link_factory,
     merchant_factory,
     plan_factory,
     secondary_mid_factory,
+    secondary_mid_location_link_factory,
 )
 
 
@@ -160,7 +162,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     # associate the first three locations with the secondary mid
     for secondary_mid in secondary_mids[:3]:
-        await location_secondary_mid_link_factory(
+        await secondary_mid_location_link_factory(
             location=location, secondary_mid=secondary_mid
         )
 
@@ -616,15 +618,15 @@ async def _(
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
-    await location_secondary_mid_link_factory(secondary_mid=secondary_mid)
+    await secondary_mid_location_link_factory(secondary_mid=secondary_mid)
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/deletion",
         json={"secondary_mid_refs": [str(secondary_mid.pk)]},
     )
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
-    assert not await LocationSecondaryMIDLink.exists().where(
-        LocationSecondaryMIDLink.secondary_mid == secondary_mid
+    assert not await SecondaryMIDLocationLink.exists().where(
+        SecondaryMIDLocationLink.secondary_mid == secondary_mid
     )
 
 
@@ -764,10 +766,10 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert resp.status_code == status.HTTP_201_CREATED
 
     link = (
-        await LocationSecondaryMIDLink.select(LocationSecondaryMIDLink.pk)
+        await SecondaryMIDLocationLink.select(SecondaryMIDLocationLink.pk)
         .where(
-            LocationSecondaryMIDLink.location == location,
-            LocationSecondaryMIDLink.secondary_mid == secondary_mid,
+            SecondaryMIDLocationLink.secondary_mid == secondary_mid,
+            SecondaryMIDLocationLink.location == location,
         )
         .first()
     )
@@ -865,7 +867,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
-    link = await location_secondary_mid_link_factory(
+    link = await secondary_mid_location_link_factory(
         location=location, secondary_mid=secondary_mid
     )
 
@@ -890,7 +892,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
-    await location_secondary_mid_link_factory(
+    await secondary_mid_location_link_factory(
         location=location, secondary_mid=secondary_mid
     )
 
@@ -909,7 +911,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
-    await location_secondary_mid_link_factory(
+    await secondary_mid_location_link_factory(
         location=location, secondary_mid=secondary_mid
     )
 
@@ -928,7 +930,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
-    await location_secondary_mid_link_factory(
+    await secondary_mid_location_link_factory(
         location=location, secondary_mid=secondary_mid
     )
 

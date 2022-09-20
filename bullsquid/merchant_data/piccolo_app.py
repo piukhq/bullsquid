@@ -15,7 +15,6 @@ APP_CONFIG = AppConfig(
     migrations_folder_path=os.path.join(CURRENT_DIRECTORY, "piccolo_migrations"),
     table_classes=table_finder(
         [
-            "bullsquid.merchant_data.tables",
             "bullsquid.merchant_data.locations.tables",
             "bullsquid.merchant_data.identifiers.tables",
             "bullsquid.merchant_data.merchants.tables",
@@ -23,6 +22,7 @@ APP_CONFIG = AppConfig(
             "bullsquid.merchant_data.plans.tables",
             "bullsquid.merchant_data.primary_mids.tables",
             "bullsquid.merchant_data.secondary_mids.tables",
+            "bullsquid.merchant_data.secondary_mid_location_links.tables",
         ],
         exclude_imported=True,
     ),

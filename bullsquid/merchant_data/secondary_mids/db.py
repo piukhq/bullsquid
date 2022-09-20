@@ -12,9 +12,11 @@ from bullsquid.merchant_data.enums import (
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant, paginate
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
+from bullsquid.merchant_data.secondary_mid_location_links.tables import (
+    SecondaryMIDLocationLink,
+)
 from bullsquid.merchant_data.secondary_mids.models import SecondaryMIDMetadata
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from bullsquid.merchant_data.tables import LocationSecondaryMIDLink
 
 SecondaryMIDResult = TypedDict(
     "SecondaryMIDResult",
@@ -70,10 +72,10 @@ async def list_secondary_mids(
             raise NoSuchRecord(Location)
 
         linked_secondary_mid_pks = (
-            await LocationSecondaryMIDLink.select(
-                LocationSecondaryMIDLink.secondary_mid.pk
+            await SecondaryMIDLocationLink.select(
+                SecondaryMIDLocationLink.secondary_mid.pk
             )
-            .where(LocationSecondaryMIDLink.location == exclude_location)
+            .where(SecondaryMIDLocationLink.location == exclude_location)
             .output(as_list=True)
         )
         if linked_secondary_mid_pks:
@@ -196,8 +198,8 @@ async def update_secondary_mids_status(
     )
 
     if status == ResourceStatus.DELETED:
-        await LocationSecondaryMIDLink.delete().where(
-            LocationSecondaryMIDLink.secondary_mid.is_in(secondary_mid_refs)
+        await SecondaryMIDLocationLink.delete().where(
+            SecondaryMIDLocationLink.secondary_mid.is_in(secondary_mid_refs)
         )
 
 
@@ -214,14 +216,14 @@ async def list_associated_locations(
         secondary_mid_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
     )
     return await paginate(
-        LocationSecondaryMIDLink.select(
-            LocationSecondaryMIDLink.pk,
-            LocationSecondaryMIDLink.location,
-            LocationSecondaryMIDLink.location.name,
-            LocationSecondaryMIDLink.location.address_line_1,
-            LocationSecondaryMIDLink.location.town_city,
-            LocationSecondaryMIDLink.location.postcode,
-        ).where(LocationSecondaryMIDLink.secondary_mid == secondary_mid_ref),
+        SecondaryMIDLocationLink.select(
+            SecondaryMIDLocationLink.pk,
+            SecondaryMIDLocationLink.location,
+            SecondaryMIDLocationLink.location.name,
+            SecondaryMIDLocationLink.location.address_line_1,
+            SecondaryMIDLocationLink.location.town_city,
+            SecondaryMIDLocationLink.location.postcode,
+        ).where(SecondaryMIDLocationLink.secondary_mid == secondary_mid_ref),
         n=n,
         p=p,
     )

@@ -30,6 +30,18 @@ SecondaryMIDResult = TypedDict(
     },
 )
 
+AssociatedLocationResult = TypedDict(
+    "AssociatedLocationResult",
+    {
+        "pk": str | None,
+        "location": str | None,
+        "location.name": str,
+        "location.address_line_1": str | None,
+        "location.town_city": str | None,
+        "location.postcode": str | None,
+    },
+)
+
 
 async def list_secondary_mids(
     *, plan_ref: UUID, merchant_ref: UUID, exclude_location: UUID | None, n: int, p: int
@@ -187,3 +199,29 @@ async def update_secondary_mids_status(
         await LocationSecondaryMIDLink.delete().where(
             LocationSecondaryMIDLink.secondary_mid.is_in(secondary_mid_refs)
         )
+
+
+async def list_associated_locations(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    secondary_mid_ref: UUID,
+    *,
+    n: int,
+    p: int,
+) -> list[AssociatedLocationResult]:
+    """List available locations in association with a secondary MID"""
+    await get_secondary_mid(
+        secondary_mid_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+    return await paginate(
+        LocationSecondaryMIDLink.select(
+            LocationSecondaryMIDLink.pk,
+            LocationSecondaryMIDLink.location,
+            LocationSecondaryMIDLink.location.name,
+            LocationSecondaryMIDLink.location.address_line_1,
+            LocationSecondaryMIDLink.location.town_city,
+            LocationSecondaryMIDLink.location.postcode,
+        ).where(LocationSecondaryMIDLink.secondary_mid == secondary_mid_ref),
+        n=n,
+        p=p,
+    )

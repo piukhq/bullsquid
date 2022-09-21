@@ -69,3 +69,11 @@ class LocationLinkResponse(BaseModel):
     link_ref: UUID4
     location_ref: UUID4
     location_title: str
+
+
+class AssociatedLocationResponse(BaseModel):
+    """Response model for listing locations associated to a secondary MID"""
+
+    link_ref: UUID4
+    location_ref: UUID4
+    location_title: str

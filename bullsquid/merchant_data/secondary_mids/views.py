@@ -16,6 +16,7 @@ from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 from . import db
 from .models import (
+    AssociatedLocationResponse,
     CreateSecondaryMIDRequest,
     LocationLinkRequest,
     LocationLinkResponse,
@@ -228,3 +229,41 @@ async def link_secondary_mid_to_location(
         content=content,
         status_code=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
     )
+
+
+@router.get(
+    "/{secondary_mid_ref}/secondary_mid_location_links",
+    response_model=list[AssociatedLocationResponse],
+)
+async def list_location_secondary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    secondary_mid_ref: UUID,
+    n: int = Query(default=10),
+    p: int = Query(default=1),
+) -> list[AssociatedLocationResponse]:
+    """List Secondary MIDs associated with location."""
+    try:
+        links = await db.list_associated_locations(
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+            secondary_mid_ref=secondary_mid_ref,
+            n=n,
+            p=p,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+
+    return [
+        AssociatedLocationResponse(
+            link_ref=link["pk"],
+            location_ref=link["location"],
+            location_title=Location.make_title(
+                link["location.name"],
+                link["location.address_line_1"],
+                link["location.town_city"],
+                link["location.postcode"],
+            ),
+        )
+        for link in links
+    ]

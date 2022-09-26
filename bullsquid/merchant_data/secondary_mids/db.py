@@ -89,7 +89,10 @@ async def list_secondary_mids(
 
 
 async def get_secondary_mid(
-    pk: UUID, *, plan_ref: UUID, merchant_ref: UUID
+    pk: UUID,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
 ) -> SecondaryMIDResult:
     """Returns a secondary MID."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
@@ -119,7 +122,10 @@ async def get_secondary_mid(
 
 
 async def filter_onboarded_secondary_mids(
-    secondary_mid_refs: list[UUID], *, plan_ref: UUID, merchant_ref: UUID
+    secondary_mid_refs: list[UUID],
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
 ) -> tuple[list[UUID], list[UUID]]:
     """
     Split the given list of secondary MID refs into onboarded and not onboarded/offboarded.

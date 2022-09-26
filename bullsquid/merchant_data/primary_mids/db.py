@@ -37,7 +37,10 @@ PrimaryMIDResult = TypedDict(
 
 
 async def get_primary_mid_instance(
-    pk: UUID, *, plan_ref: UUID, merchant_ref: UUID
+    pk: UUID,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
 ) -> PrimaryMID:
     """Get a primary MID instance by primary key."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)

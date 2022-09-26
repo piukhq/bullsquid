@@ -1,12 +1,14 @@
 """SecondaryMID API views."""
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
+from bullsquid.api.auth import AccessLevel, JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.merchant_data.auth import require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
@@ -55,6 +57,7 @@ async def list_secondary_mids(
     exclude_location: UUID | None = Query(default=None),
     n: int = Query(default=10),
     p: int = Query(default=1),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[SecondaryMIDResponse]:
     """Lists all secondary MIDs for a merchant."""
     try:
@@ -77,7 +80,10 @@ async def list_secondary_mids(
 
 @router.get("/{secondary_mid_ref}", response_model=SecondaryMIDResponse)
 async def get_secondary_mid_details(
-    plan_ref: UUID, merchant_ref: UUID, secondary_mid_ref: UUID
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    secondary_mid_ref: UUID,
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> SecondaryMIDResponse:
     """Returns details of a single secondary MID."""
     try:
@@ -99,6 +105,9 @@ async def create_secondary_mid(
     plan_ref: UUID,
     merchant_ref: UUID,
     secondary_mid_data: CreateSecondaryMIDRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> SecondaryMIDResponse:
     """Create a secondary MID for a merchant."""
 
@@ -139,7 +148,12 @@ async def create_secondary_mid(
     response_model=list[SecondaryMIDDeletionResponse],
 )
 async def delete_secondary_mids(
-    plan_ref: UUID, merchant_ref: UUID, deletion: SecondaryMIDDeletionRequest
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    deletion: SecondaryMIDDeletionRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE_DELETE)
+    ),
 ) -> list[SecondaryMIDDeletionResponse]:
     """Remove a number of secondary MIDs from a merchant."""
     if not deletion.secondary_mid_refs:
@@ -198,6 +212,9 @@ async def link_secondary_mid_to_location(
     merchant_ref: UUID,
     secondary_mid_ref: UUID,
     link_request: LocationLinkRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> JSONResponse:
     """
     Link a location to a secondary MID.
@@ -242,6 +259,7 @@ async def list_location_secondary_mids(
     secondary_mid_ref: UUID,
     n: int = Query(default=10),
     p: int = Query(default=1),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[AssociatedLocationResponse]:
     """List Secondary MIDs associated with location."""
     try:

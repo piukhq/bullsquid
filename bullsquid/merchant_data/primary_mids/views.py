@@ -2,11 +2,13 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from bullsquid import tasks
+from bullsquid.api.auth import AccessLevel, JWTCredentials
 from bullsquid.api.errors import DataError, ResourceNotFoundError, UniqueError
 from bullsquid.db import InvalidData, NoSuchRecord, field_is_unique
+from bullsquid.merchant_data.auth import require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.locations.db import get_location_instance
 from bullsquid.merchant_data.locations.tables import Location
@@ -52,6 +54,7 @@ async def list_primary_mids(
     merchant_ref: UUID,
     n: int = Query(default=10),
     p: int = Query(default=1),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[PrimaryMIDResponse]:
     """List all primary MIDs for a merchant."""
     try:
@@ -66,7 +69,12 @@ async def list_primary_mids(
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=PrimaryMIDResponse)
 async def create_primary_mid(
-    plan_ref: UUID, merchant_ref: UUID, mid_data: CreatePrimaryMIDRequest
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    mid_data: CreatePrimaryMIDRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> PrimaryMIDResponse:
     """Create a primary MID for a merchant."""
 
@@ -97,6 +105,9 @@ async def update_primary_mid(
     merchant_ref: UUID,
     mid_ref: UUID,
     mid_data: UpdatePrimaryMIDRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> PrimaryMIDResponse:
     """Update a primary MID's editable fields."""
     try:
@@ -117,7 +128,12 @@ async def update_primary_mid(
     response_model=list[PrimaryMIDDeletionResponse],
 )
 async def delete_primary_mids(
-    plan_ref: UUID, merchant_ref: UUID, deletion: PrimaryMIDDeletionRequest
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    deletion: PrimaryMIDDeletionRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE_DELETE)
+    ),
 ) -> list[PrimaryMIDDeletionResponse]:
     """Remove a number of primary MIDs from a merchant."""
 
@@ -170,6 +186,9 @@ async def link_primary_mid_to_location(
     merchant_ref: UUID,
     mid_ref: UUID,
     link_request: LocationLinkRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> LocationLinkResponse:
     """Link a location to a primary MID."""
     try:
@@ -196,7 +215,12 @@ async def link_primary_mid_to_location(
 
 @router.delete("/{mid_ref}/location_link", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_primary_mid_location_link(
-    plan_ref: UUID, merchant_ref: UUID, mid_ref: UUID
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    mid_ref: UUID,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> None:
     """Delete the link between a location and a primary MID."""
     try:

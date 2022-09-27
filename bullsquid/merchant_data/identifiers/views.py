@@ -1,10 +1,12 @@
 """Identifier API views."""
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
+from bullsquid.api.auth import AccessLevel, JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.merchant_data.auth import require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.merchants.tables import Merchant
@@ -42,6 +44,7 @@ async def list_identifiers(
     merchant_ref: UUID,
     n: int = Query(default=10),
     p: int = Query(default=1),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[IdentifierResponse]:
     """List all identifiers for a merchant."""
     try:
@@ -56,7 +59,10 @@ async def list_identifiers(
 
 @router.get("/{identifier_ref}", response_model=IdentifierResponse)
 async def get_identifier_details(
-    plan_ref: UUID, merchant_ref: UUID, identifier_ref: UUID
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    identifier_ref: UUID,
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> IdentifierResponse:
     """Returns details of a single identifier."""
     try:
@@ -76,6 +82,9 @@ async def create_identifier(
     plan_ref: UUID,
     merchant_ref: UUID,
     identifier_data: CreateIdentifierRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> IdentifierResponse:
     """Create an identifier for a merchant."""
 
@@ -114,7 +123,12 @@ async def create_identifier(
     response_model=list[IdentifierDeletionResponse],
 )
 async def delete_identifiers(
-    plan_ref: UUID, merchant_ref: UUID, deletion: IdentifierDeletionRequest
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    deletion: IdentifierDeletionRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE_DELETE)
+    ),
 ) -> list[IdentifierDeletionResponse]:
     """Remove a number of identifiers from a merchant."""
     if not deletion.identifier_refs:

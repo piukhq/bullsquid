@@ -5,18 +5,27 @@ from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
+from qbert.tables import Job
 from ward import test
 
+from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from bullsquid.tasks import OffboardAndDeletePlan
 from tests.fixtures import database, test_client
 from tests.helpers import assert_is_not_found_error, assert_is_uniqueness_error
 from tests.merchant_data.factories import (
     default_payment_schemes,
+    identifier_factory,
     merchant_factory,
     plan_factory,
+    primary_mid_factory,
+    secondary_mid_factory,
 )
 
 
@@ -275,3 +284,86 @@ async def _(
         },
     )
     assert_is_uniqueness_error(resp, loc=["body", "plan_id"])
+
+
+@test("a plan with no onboarded resources is immediately deleted")
+async def _(
+    _: None = database,
+    test_client: TestClient = test_client,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    primary_mid = await primary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
+    )
+    secondary_mid = await secondary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
+    )
+    identifier = await identifier_factory(
+        merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
+    )
+
+    resp = test_client.delete(f"/api/v1/plans/{plan.pk}")
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    assert resp.json() == {"plan_status": "deleted"}
+
+    plan = await Plan.select(Plan.status).where(Plan.pk == plan.pk).first()
+    merchant = (
+        await Merchant.select(Merchant.status).where(Merchant.pk == merchant.pk).first()
+    )
+    primary_mid = (
+        await PrimaryMID.select(PrimaryMID.status)
+        .where(PrimaryMID.pk == primary_mid.pk)
+        .first()
+    )
+    secondary_mid = (
+        await SecondaryMID.select(SecondaryMID.status)
+        .where(SecondaryMID.pk == secondary_mid.pk)
+        .first()
+    )
+    identifier = (
+        await Identifier.select(Identifier.status)
+        .where(Identifier.pk == identifier.pk)
+        .first()
+    )
+
+    assert plan["status"] == ResourceStatus.DELETED
+    assert merchant["status"] == ResourceStatus.DELETED
+    assert primary_mid["status"] == ResourceStatus.DELETED
+    assert secondary_mid["status"] == ResourceStatus.DELETED
+    assert identifier["status"] == ResourceStatus.DELETED
+
+
+@test("a plan with onboarded resources is set to pending deletion")
+async def _(
+    _: None = database,
+    test_client: TestClient = test_client,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    await primary_mid_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
+    await secondary_mid_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
+    await identifier_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
+
+    resp = test_client.delete(f"/api/v1/plans/{plan.pk}")
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED
+    assert resp.json() == {"plan_status": "pending_deletion"}
+
+    assert await Job.exists().where(
+        Job.message_type == OffboardAndDeletePlan.__name__,
+        Job.message == OffboardAndDeletePlan(plan_ref=plan.pk).dict(),
+    )
+
+    plan = await Plan.select(Plan.status).where(Plan.pk == plan.pk).first()
+    assert plan["status"] == ResourceStatus.PENDING_DELETION
+
+
+@test("deleting a non-existent plan returns a ref error")
+async def _(
+    _db: None = database,
+    test_client: TestClient = test_client,
+) -> None:
+    resp = test_client.delete(f"/api/v1/plans/{uuid4()}")
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])

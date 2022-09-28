@@ -62,7 +62,7 @@ async def list_primary_mids(
             plan_ref=plan_ref, merchant_ref=merchant_ref, n=n, p=p
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return [await create_primary_mid_response(mid) for mid in mids]
 
@@ -147,7 +147,9 @@ async def delete_primary_mids(
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == PrimaryMID else ["path"]
         plural = ex.table == PrimaryMID
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc, plural=plural)
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=loc, plural=plural
+        ) from ex
 
     if onboarded:
         await db.update_primary_mids_status(
@@ -202,7 +204,7 @@ async def link_primary_mid_to_location(
         )
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == Location else ["path"]
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
 
     primary_mid.location = location
     await primary_mid.save()
@@ -228,7 +230,7 @@ async def delete_primary_mid_location_link(
             mid_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     primary_mid.location = None
     await primary_mid.save()

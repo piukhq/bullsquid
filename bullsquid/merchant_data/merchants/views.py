@@ -88,7 +88,7 @@ async def list_merchants(
     try:
         merchants = await db.list_merchants(plan_ref, n=n, p=p)
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     payment_schemes = await list_payment_schemes()
     return [
@@ -113,7 +113,7 @@ async def create_merchant(
     try:
         plan = await get_plan(plan_ref)
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     if not await field_is_unique(Merchant, "name", merchant_data.name):
         raise UniqueError(loc=["body", "name"])
@@ -135,7 +135,7 @@ async def get_merchant(
     try:
         merchant = await db.get_merchant(merchant_ref, plan_ref=plan_ref)
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     plan = await merchant.get_related(Merchant.plan)
     return await create_merchant_detail_response(merchant, plan)
@@ -160,7 +160,7 @@ async def update_merchant(
             merchant_ref, merchant_data, plan_ref=plan_ref
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return await create_merchant_overview_response(
         merchant, await list_payment_schemes()
@@ -186,7 +186,7 @@ async def delete_merchant(
     try:
         merchant = await db.get_merchant(merchant_ref, plan_ref=plan_ref)
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     if await db.merchant_has_onboarded_resources(merchant.pk):
         await db.update_merchant_status(merchant.pk, ResourceStatus.PENDING_DELETION)
@@ -194,5 +194,6 @@ async def delete_merchant(
             tasks.OffboardAndDeleteMerchant(merchant_ref=merchant.pk)
         )
         return MerchantDeletionResponse(merchant_status=ResourceStatus.PENDING_DELETION)
+
     await db.update_merchant_status(merchant.pk, ResourceStatus.DELETED, cascade=True)
     return MerchantDeletionResponse(merchant_status=ResourceStatus.DELETED)

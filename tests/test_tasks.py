@@ -8,9 +8,11 @@ from ward import raises, test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.tasks import (
     OffboardAndDeleteMerchant,
+    OffboardAndDeletePlan,
     OffboardAndDeletePrimaryMIDs,
     OffboardPrimaryMIDs,
     OnboardPrimaryMIDs,
@@ -21,6 +23,7 @@ from tests.fixtures import database
 from tests.merchant_data.factories import (
     location_factory,
     merchant_factory,
+    plan_factory,
     primary_mid_factory,
 )
 
@@ -139,7 +142,7 @@ async def _(_: None = database) -> None:
         await run_worker(burst=True)
 
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert primary_mid.location == None
+    assert primary_mid.location is None
 
 
 @test("the task worker can offboard and delete a merchant")
@@ -162,3 +165,30 @@ async def _(_: None = database) -> None:
     assert primary_mid.txm_status == TXMStatus.OFFBOARDED
     assert primary_mid.status == ResourceStatus.DELETED
     assert merchant.status == ResourceStatus.DELETED
+
+
+@test("the task worker can offboard and delete a plan")
+async def _(_: None = database) -> None:
+    plan = await plan_factory(status=ResourceStatus.PENDING_DELETION)
+    merchant = await merchant_factory(plan=plan)
+    primary_mid = await primary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.ONBOARDED
+    )
+
+    await queue.push(OffboardAndDeletePlan(plan_ref=plan.pk))
+    with patch("bullsquid.tasks.logger"):
+        # run this three times
+        # 1. OffboardAndDeletePlan
+        # 2. OffboardAndDeleteMerchant
+        # 3. OffboardAndDeletePrimaryMIDs
+        # TODO: fix burst mode
+        for _i in range(3):
+            await run_worker(burst=True)
+
+    plan = await Plan.objects().get(Plan.pk == plan.pk)
+    merchant = await Merchant.objects().get(Merchant.pk == merchant.pk)
+    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert primary_mid.txm_status == TXMStatus.OFFBOARDED
+    assert primary_mid.status == ResourceStatus.DELETED
+    assert merchant.status == ResourceStatus.DELETED
+    assert plan.status == ResourceStatus.DELETED

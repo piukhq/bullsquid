@@ -10,6 +10,8 @@ from qbert import Queue
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.merchants.db import merchant_has_onboarded_resources
 from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.plans.db import plan_has_onboarded_resources
+from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.service.txm import txm
 from bullsquid.settings import settings
@@ -34,9 +36,15 @@ class OffboardAndDeletePrimaryMIDs(BaseModel):
 
 
 class OffboardAndDeleteMerchant(BaseModel):
-    """Offboard merchant from Harmonia, then mark them as deleted"""
+    """Offboard all resources under a merchant, then mark it as deleted."""
 
     merchant_ref: UUID
+
+
+class OffboardAndDeletePlan(BaseModel):
+    """Offboard all resources under a plan and then mark it as deleted."""
+
+    plan_ref: UUID
 
 
 queue = Queue(
@@ -45,18 +53,33 @@ queue = Queue(
         OffboardPrimaryMIDs,
         OffboardAndDeletePrimaryMIDs,
         OffboardAndDeleteMerchant,
+        OffboardAndDeletePlan,
     ]
 )
 
 
+async def delete_fully_offboarded_plan(plan_ref: UUID) -> None:
+    """Delete the given plan if it is fully offboarded."""
+    if not await plan_has_onboarded_resources(plan_ref):
+        await Plan.update({Plan.status: ResourceStatus.DELETED}).where(
+            Plan.pk == plan_ref,
+            Plan.status == ResourceStatus.PENDING_DELETION,
+        )
+
+
 async def delete_fully_offboarded_merchants(merchant_refs: list[UUID]) -> None:
-    """Delete fully offboarded merchants"""
+    """Delete the given merchants if they are fully offboarded."""
     for merchant_ref in merchant_refs:
         if not await merchant_has_onboarded_resources(merchant_ref):
-            await Merchant.update({Merchant.status: ResourceStatus.DELETED}).where(
-                Merchant.pk == merchant_ref,
-                Merchant.status == ResourceStatus.PENDING_DELETION,
-            )
+            merchant = await Merchant.objects().get(Merchant.pk == merchant_ref)
+
+            if merchant.status != ResourceStatus.PENDING_DELETION:
+                continue
+
+            merchant.status = ResourceStatus.DELETED
+            await merchant.save()
+
+            await delete_fully_offboarded_plan(merchant.plan)
 
 
 async def _run_job(message: BaseModel) -> None:
@@ -98,10 +121,24 @@ async def _run_job(message: BaseModel) -> None:
                 )
                 .output(as_list=True)
             )
+
+            await PrimaryMID.update(
+                {PrimaryMID.status: ResourceStatus.PENDING_DELETION}
+            ).where(PrimaryMID.pk.is_in(onboarded_primary_mids))
+
             await queue.push(
                 OffboardAndDeletePrimaryMIDs(mid_refs=onboarded_primary_mids)
             )
             # TODO: also offboard & delete secondary MIDs and identifiers
+
+        case OffboardAndDeletePlan():
+            merchants = await Merchant.objects().where(
+                Merchant.plan == message.plan_ref
+            )
+            for merchant in merchants:
+                merchant.status = ResourceStatus.PENDING_DELETION
+                await merchant.save()
+                await queue.push(OffboardAndDeleteMerchant(merchant_ref=merchant.pk))
 
 
 async def run_worker(*, burst: bool = False) -> None:

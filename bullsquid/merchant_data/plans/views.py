@@ -4,10 +4,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 
+from bullsquid import tasks
 from bullsquid.api.auth import JWTCredentials
 from bullsquid.api.errors import APIMultiError, ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.auth import AccessLevel, require_access_level
+from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.db import count_merchants
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
@@ -15,6 +17,7 @@ from bullsquid.merchant_data.plans import db
 from bullsquid.merchant_data.plans.models import (
     CreatePlanRequest,
     PlanCountsResponse,
+    PlanDeletionResponse,
     PlanMetadataResponse,
     PlanPaymentSchemeCountResponse,
     PlanResponse,
@@ -120,6 +123,39 @@ async def update_plan(
     try:
         plan = await db.update_plan(plan_ref, plan_fields)
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return await create_plan_response(plan, await list_payment_schemes())
+
+
+@router.delete(
+    "/{plan_ref}",
+    response_model=PlanDeletionResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def delete_plan(
+    plan_ref: UUID,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> PlanDeletionResponse:
+    """
+    Delete a plan. All merchants under the plan are also deleted, as well as any
+    resources owned by those merchants. Onboarded identifiers are offboarded
+    before the deletion completes.
+
+    If there are any onboarded identifiers, this process is run offline via the
+    task queue to avoid blocking the client.
+    """
+    try:
+        plan = await db.get_plan(plan_ref)
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
+
+    if await db.plan_has_onboarded_resources(plan.pk):
+        await db.update_plan_status(plan.pk, ResourceStatus.PENDING_DELETION)
+        await tasks.queue.push(tasks.OffboardAndDeletePlan(plan_ref=plan.pk))
+        return PlanDeletionResponse(plan_status=ResourceStatus.PENDING_DELETION)
+
+    await db.update_plan_status(plan.pk, ResourceStatus.DELETED, cascade=True)
+    return PlanDeletionResponse(plan_status=ResourceStatus.DELETED)

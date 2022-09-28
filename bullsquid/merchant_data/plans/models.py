@@ -63,3 +63,9 @@ class PlanResponse(BaseModel):
     plan_counts: PlanCountsResponse
 
     _ = validator("plan_status", allow_reuse=True)(string_must_not_be_blank)
+
+
+class PlanDeletionResponse(BaseModel):
+    """Response model for the deletion of a plan."""
+
+    plan_status: ResourceStatus

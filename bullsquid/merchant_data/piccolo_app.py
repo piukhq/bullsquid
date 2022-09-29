@@ -23,6 +23,7 @@ APP_CONFIG = AppConfig(
             "bullsquid.merchant_data.primary_mids.tables",
             "bullsquid.merchant_data.secondary_mids.tables",
             "bullsquid.merchant_data.secondary_mid_location_links.tables",
+            "bullsquid.merchant_data.comments.tables",
         ],
         exclude_imported=True,
     ),

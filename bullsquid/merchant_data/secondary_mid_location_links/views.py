@@ -1,11 +1,13 @@
 """
 Endpoints that operate on secondary MID location links.
 """
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 from pydantic import UUID4
 
+from bullsquid.api.auth import JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError
 from bullsquid.db import NoSuchRecord
+from bullsquid.merchant_data.auth import AccessLevel, require_access_level
 from bullsquid.merchant_data.secondary_mid_location_links import db
 
 router = APIRouter(
@@ -15,7 +17,12 @@ router = APIRouter(
 
 @router.delete("/{link_ref}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_secondary_mid_location_link(
-    plan_ref: UUID4, merchant_ref: UUID4, link_ref: UUID4
+    plan_ref: UUID4,
+    merchant_ref: UUID4,
+    link_ref: UUID4,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> None:
     """
     Delete the link between a secondary MID and a location.

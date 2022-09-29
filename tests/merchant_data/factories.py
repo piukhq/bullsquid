@@ -4,6 +4,7 @@ from typing import Any
 
 from piccolo.testing.model_builder import ModelBuilder
 
+from bullsquid.merchant_data.comments.tables import Comment
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.locations.tables import Location
@@ -134,3 +135,11 @@ async def default_payment_schemes() -> list[PaymentScheme]:
             },
         ),
     ]
+
+
+async def comment_factory(*, persist: bool = True, **defaults: Any) -> Comment:
+    defaults = {
+        "parent": None,  # FIXME: modelbuilder crashes on 'self' foreign keys
+        **defaults,
+    }
+    return await ModelBuilder.build(Comment, defaults=defaults, persist=persist)  # type: ignore

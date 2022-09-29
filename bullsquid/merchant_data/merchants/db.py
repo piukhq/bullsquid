@@ -8,29 +8,31 @@ from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.models import CreateMerchantRequest
+from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
-from .tables import Merchant
 
-
-async def get_merchant(pk: UUID, *, plan_ref: UUID) -> Merchant:
+async def get_merchant(
+    pk: UUID, *, plan_ref: UUID | None, validate_plan: bool = True
+) -> Merchant:
     """Return a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
 
-    plan = await get_plan(plan_ref)
-    merchant = (
-        await Merchant.objects()
-        .where(
-            Merchant.pk == pk,
-            Merchant.plan == plan,
-            Merchant.status != ResourceStatus.DELETED,
-        )
-        .first()
-    )
+    where = (Merchant.pk == pk) & (Merchant.status != ResourceStatus.DELETED)
+    if validate_plan:
+        if plan_ref is None:
+            raise ValueError("validate_plan cannot be true if plan_ref is null")
+
+        plan = await get_plan(plan_ref)
+        where &= Merchant.plan == plan
+
+    merchant = await Merchant.objects().where(where).first()
+
     if not merchant:
         raise NoSuchRecord(Merchant)
+
     return merchant
 
 

@@ -5,7 +5,7 @@ from uuid import uuid4
 from fastapi import status
 from fastapi.testclient import TestClient
 from qbert.tables import Job
-from ward import test
+from ward import raises, test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
@@ -441,3 +441,10 @@ async def _(
     merchant = await merchant_factory()
     resp = test_client.delete(f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}")
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+@test("get_merchant fails if validate_plan is true and plan_ref is null")
+async def _() -> None:
+    with raises(ValueError) as ex:
+        await get_merchant(uuid4(), plan_ref=None)
+    assert ex.raised.args[0] == "validate_plan cannot be true if plan_ref is null"

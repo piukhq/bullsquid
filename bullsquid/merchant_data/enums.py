@@ -2,6 +2,20 @@
 from enum import Enum
 
 
+class ResourceType(str, Enum):
+    """
+    An enum representing the types of resources that can be managed in the
+    merchant data portal.
+    """
+
+    PLAN = "plan"
+    MERCHANT = "merchant"
+    LOCATION = "location"
+    PRIMARY_MID = "mid"
+    SECONDARY_MID = "secondary_mid"
+    PSIMI = "psimi"
+
+
 class ResourceStatus(str, Enum):
     """Status enum shared between most publishable/deletable resources."""
 

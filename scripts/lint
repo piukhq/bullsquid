@@ -1,7 +1,19 @@
 #!/bin/sh
 . scripts/_common
 
+info 'isort'
 isort --check .
+
+info 'black'
 black --check .
+
+info 'pylint'
 pylint bullsquid asgi
+
+info 'refurb'
+refurb bullsquid tests asgi.py
+
+info 'mypy'
 mypy .
+
+success 'all linters passed successfully'

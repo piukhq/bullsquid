@@ -86,7 +86,7 @@ async def create_primary_mid(
             mid_data.mid_metadata, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
-        loc = ["path"] if ex.table in [Plan, Merchant] else ["body", "mid_metadata"]
+        loc = ["path"] if ex.table in (Plan, Merchant) else ["body", "mid_metadata"]
         raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
     except InvalidData as ex:
         raise DataError.from_invalid_data(

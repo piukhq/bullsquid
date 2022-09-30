@@ -80,7 +80,7 @@ async def create_plan(
     plan_fields = plan_data.dict()
     if errors := [
         UniqueError(loc=["body", field])
-        for field in ["name", "slug", "plan_id"]
+        for field in ("name", "slug", "plan_id")
         if not await field_is_unique(Plan, field, plan_fields[field])
     ]:
         raise APIMultiError(errors)
@@ -115,7 +115,7 @@ async def update_plan(
     plan_fields = plan_data.dict()
     if errors := [
         UniqueError(loc=["body", field])
-        for field in ["name", "slug", "plan_id"]
+        for field in ("name", "slug", "plan_id")
         if not await field_is_unique(Plan, field, plan_fields[field], pk=plan_ref)
     ]:
         raise APIMultiError(errors)

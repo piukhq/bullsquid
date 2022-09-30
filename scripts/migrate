@@ -1,4 +1,7 @@
 #!/bin/sh
 . scripts/_common
 
+info 'running database migrations'
 piccolo migrations forward all
+
+success 'migration complete'

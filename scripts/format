@@ -1,5 +1,10 @@
 #!/bin/sh
 . scripts/_common
 
+info 'isort'
 isort .
+
+info 'black'
 black .
+
+success 'code formatting complete'

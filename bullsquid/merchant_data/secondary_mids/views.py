@@ -73,7 +73,7 @@ async def list_secondary_mids(
         override_field_name = "exclude_location" if ex.table == Location else None
         raise ResourceNotFoundError.from_no_such_record(
             ex, loc=loc, override_field_name=override_field_name
-        )
+        ) from ex
 
     return [create_secondary_mid_response(mid) for mid in secondary_mids]
 
@@ -91,7 +91,7 @@ async def get_secondary_mid_details(
             secondary_mid_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return create_secondary_mid_response(mid)
 
@@ -127,10 +127,10 @@ async def create_secondary_mid(
     except NoSuchRecord as ex:
         loc = (
             ["path"]
-            if ex.table in [Plan, Merchant]
+            if ex.table in (Plan, Merchant)
             else ["body", "secondary_mid_metadata"]
         )
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
 
     if secondary_mid_data.onboard:
         # TODO: implement once harmonia has support for secondary MID onboarding.
@@ -166,7 +166,9 @@ async def delete_secondary_mids(
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == SecondaryMID else ["path"]
         plural = ex.table == SecondaryMID
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc, plural=plural)
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=loc, plural=plural
+        ) from ex
 
     if onboarded:
         await db.update_secondary_mids_status(
@@ -230,7 +232,7 @@ async def link_secondary_mid_to_location(
         )
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == Location else ["path"]
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
 
     content = jsonable_encoder(
         [
@@ -271,7 +273,7 @@ async def list_location_secondary_mids(
             p=p,
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return [
         AssociatedLocationResponse(

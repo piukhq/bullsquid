@@ -26,4 +26,4 @@ class PrimaryMID(Table):
     txm_status = Text(choices=TXMStatus, default=TXMStatus.NOT_ONBOARDED)
     status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE, index=True)
     merchant = ForeignKey(Merchant, required=True)
-    location = ForeignKey(Location, null=True, default=None)
+    location = ForeignKey(Location)

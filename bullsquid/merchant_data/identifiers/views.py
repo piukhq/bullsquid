@@ -8,18 +8,17 @@ from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.auth import require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
-from bullsquid.merchant_data.identifiers.tables import Identifier
-from bullsquid.merchant_data.merchants.tables import Merchant
-from bullsquid.merchant_data.plans.tables import Plan
-
-from . import db
-from .models import (
+from bullsquid.merchant_data.identifiers import db
+from bullsquid.merchant_data.identifiers.models import (
     CreateIdentifierRequest,
     IdentifierDeletionRequest,
     IdentifierDeletionResponse,
     IdentifierMetadata,
     IdentifierResponse,
 )
+from bullsquid.merchant_data.identifiers.tables import Identifier
+from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.plans.tables import Plan
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/identifiers")
 
@@ -102,10 +101,10 @@ async def create_identifier(
     except NoSuchRecord as ex:
         loc = (
             ["path"]
-            if ex.table in [Plan, Merchant]
+            if ex.table in (Plan, Merchant)
             else ["body", "identifier_metadata"]
         )
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
 
     if identifier_data.onboard:
         # TODO: implement once harmonia has support for identifier onboarded.

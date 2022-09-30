@@ -44,7 +44,7 @@ class Location(Table):
         postcode: str | None,
     ) -> str:
         """Makes a location "title" from the given fields."""
-        parts = [part for part in [name, address_line_1, town_city, postcode] if part]
+        parts = [part for part in (name, address_line_1, town_city, postcode) if part]
         return ", ".join(parts)
 
     @property

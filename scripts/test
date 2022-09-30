@@ -6,6 +6,13 @@ export debug=true
 unset txm_base_url
 unset txm_api_key
 
+info 'running tests'
 coverage run -m ward --progress-style bar "$@"
+
+info 'generating coverage xml'
 coverage xml
+
+info 'reporting coverage'
 coverage report --skip-covered --skip-empty --show-missing
+
+success 'all done'

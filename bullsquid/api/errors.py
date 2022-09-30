@@ -94,11 +94,7 @@ class ResourceNotFoundError(APIError):
         Returns a ResourceNotFoundError with the correct location and resource
         name from the given NoSuchRecord exception.
         """
-        ref_name = (
-            override_field_name
-            if override_field_name
-            else get_ref_name(ex.table, plural=plural)
-        )
+        ref_name = override_field_name or get_ref_name(ex.table, plural=plural)
         return ResourceNotFoundError(
             loc=loc + [ref_name],
             resource_name=get_pretty_table_name(ex.table),

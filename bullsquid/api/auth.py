@@ -87,7 +87,7 @@ def decode_jwt(token: str) -> dict:
             "sub": "legacy-api-key-user",
             "permissions": [
                 level.role_name(app_name)
-                for app_name in ["merchant_data", "customer_wallet"]
+                for app_name in ("merchant_data", "customer_wallet")
                 for level in AccessLevel
             ],
         }
@@ -110,7 +110,7 @@ def decode_jwt(token: str) -> dict:
         sentry_sdk.capture_exception()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication failed: {repr(ex)}",
+            detail=f"Authentication failed: {ex!r}",
         ) from ex
 
 

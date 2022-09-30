@@ -2,18 +2,16 @@
 . scripts/_common
 
 if [ -n "${VIRTUAL_ENV-}" ]; then
-    warn 'This script should not be run inside a virtual environment.'
+    warn 'this script should not be run inside a virtual environment.'
     exit 1
 fi
 
 if ! poetry --version | grep 1.2; then
-    warn 'Poetry version 1.2 is required. This script may not function correctly.'
+    warn 'poetry version 1.2 is required. this script may not function correctly.'
 fi
 
 install() {
-    info 'Installing dependencies...'
     poetry install
-    hr
 }
 
 psql_cmd() {
@@ -26,33 +24,27 @@ test_postgres() {
 
 make_postgres() {
     if ! which docker; then
-        warn 'Docker not found.'
-        info 'Please either setup PostgreSQL on localhost:5432 or install Docker.'
+        warn 'docker not found.'
+        info 'please either setup postgres on localhost:5432 or install docker.'
         exit 1
     fi
 
-    info 'Creating PostgreSQL docker container...'
+    info 'creating postgres docker container...'
     docker run -d --rm --name postgres -e POSTGRES_HOST_AUTH_METHOD=trust -p5432:5432 postgres
-    hr
 }
 
 make_databases() {
-    info 'Making bullsquid & bullsquid_test databases...'
     psql_cmd 'create database bullsquid' >/dev/null 2>&1 || true
     psql_cmd 'create database bullsquid_test' >/dev/null 2>&1 || true
-    hr
 }
 
 load_fixtures() {
-    info 'Loading default fixture...'
     poetry run piccolo fixtures load --path=fixtures/default.json
-    hr
 }
 
 ensure_postgres() {
     if test_postgres; then
-        info 'Postgres is available on localhost:5432'
-        hr
+        info 'postgres is available on localhost:5432'
     else
         make_postgres
         for i in $(seq 5); do test_postgres && break || sleep 3; done
@@ -60,8 +52,15 @@ ensure_postgres() {
     make_databases
 }
 
+info 'installing dependencies'
 install
+
+info 'ensuring postgres availability'
 ensure_postgres
+
 poetry run scripts/migrate
-hr
+
+info 'loading data fixtures'
 load_fixtures
+
+success 'all done!'

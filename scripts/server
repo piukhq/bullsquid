@@ -1,4 +1,5 @@
 #!/bin/sh
 . scripts/_common
 
+info 'starting asgi server'
 python asgi.py

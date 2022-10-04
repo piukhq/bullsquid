@@ -27,7 +27,7 @@ def comment_json(
     plan: Plan | None,
     merchant: Merchant | None,
     subject_type: ResourceType,
-    entity_ref: UUID
+    entity_ref: UUID,
 ) -> dict:
     return {
         "comment_ref": str(comment.pk),
@@ -322,3 +322,58 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
     assert_is_value_error(resp, loc=["body", "metadata", "owner_type"])
+
+
+@test("can create a comment reply on a plan")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    comment = await comment_factory(persist=False)
+    parent_comment = await comment_factory()
+
+    resp = test_client.post(
+        f"/api/v1/directory_comments/{parent_comment.pk}",
+        json={
+            "metadata": {
+                "comment_owner": str(plan.pk),
+                "owner_type": "plan",
+                "text": comment.text,
+            },
+            "subjects": [str(plan.pk)],
+            "subject_type": "plan",
+        },
+    )
+    assert resp.status_code == status.HTTP_201_CREATED
+
+    comment = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
+    assert comment is not None
+    assert comment.parent == parent_comment.pk
+
+    assert resp.json() == comment_json(
+        comment,
+        plan=plan,
+        merchant=None,
+        subject_type=ResourceType.PLAN,
+        entity_ref=plan.pk,
+    )
+
+
+@test("can't reply to a comment that does not exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    comment = await comment_factory(persist=False)
+    parent_comment = await comment_factory()
+
+    resp = test_client.post(
+        f"/api/v1/directory_comments/{uuid4()}",
+        json={
+            "metadata": {
+                "comment_owner": str(plan.pk),
+                "owner_type": "plan",
+                "text": comment.text,
+            },
+            "subjects": [str(plan.pk)],
+            "subject_type": "plan",
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "comment_ref"])

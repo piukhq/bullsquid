@@ -7,6 +7,7 @@ from uuid import UUID
 from piccolo.columns import Column
 from piccolo.table import Table
 
+from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.comments.models import (
     CommentMetadata,
     CommentResponse,
@@ -51,12 +52,17 @@ def get_subject_merchant_ref(subject: Table) -> UUID | None:
     return cast(Location, subject).merchant
 
 
-async def create_comment(comment_data: CreateCommentRequest) -> CommentResponse:
+async def create_comment(
+    comment_data: CreateCommentRequest, parent: UUID | None
+) -> CommentResponse:
     """
     Create a comment from the given request data.
     Returns a CommentResponse instance.
     """
     # fetch the related records and raise errors if they do not exist.
+    if parent and not await Comment.exists().where(Comment.pk == parent):
+        raise NoSuchRecord(Comment)
+
     plan: UUID
     if comment_data.metadata.owner_type == ResourceType.PLAN:
         plan = (await get_plan(comment_data.metadata.comment_owner)).pk
@@ -73,7 +79,7 @@ async def create_comment(comment_data: CreateCommentRequest) -> CommentResponse:
         owner_type=comment_data.metadata.owner_type,
         subjects=comment_data.subjects,
         subject_type=comment_data.subject_type,
-        parent=None,
+        parent=parent,
         created_by="somebody",
     )
     await comment.save()

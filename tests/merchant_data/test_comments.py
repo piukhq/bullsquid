@@ -281,6 +281,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
     comment = await comment_factory(persist=False)
 
     resp = test_client.post(
@@ -291,8 +292,8 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
                 "owner_type": "merchant",
                 "text": comment.text,
             },
-            "subjects": [str(merchant.pk)],
-            "subject_type": "merchant",
+            "subjects": [str(location.pk)],
+            "subject_type": "location",
         },
     )
 
@@ -377,3 +378,82 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
     assert_is_not_found_error(resp, loc=["path", "comment_ref"])
+
+
+@test("can't comment on a subject that doesn't exist")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(persist=False)
+
+    resp = test_client.post(
+        "/api/v1/directory_comments",
+        json={
+            "metadata": {
+                "comment_owner": str(plan.pk),
+                "owner_type": "plan",
+                "text": comment.text,
+            },
+            "subjects": [
+                str(merchant.pk),
+                str(uuid4()),
+            ],
+            "subject_type": "merchant",
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "merchant_ref"])
+    assert not await Comment.exists().where(Comment.owner == plan.pk)
+
+
+@test("can't comment on a subject from another owner")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    merchant2 = await merchant_factory()
+    comment = await comment_factory(persist=False)
+
+    resp = test_client.post(
+        "/api/v1/directory_comments",
+        json={
+            "metadata": {
+                "comment_owner": str(plan.pk),
+                "owner_type": "plan",
+                "text": comment.text,
+            },
+            "subjects": [
+                str(merchant.pk),
+                str(merchant2.pk),
+            ],
+            "subject_type": "merchant",
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "merchant_ref"])
+    assert not await Comment.exists().where(Comment.owner == plan.pk)
+
+
+@test("can't comment on a subject with the wrong owner type")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    comment = await comment_factory(persist=False)
+
+    resp = test_client.post(
+        "/api/v1/directory_comments",
+        json={
+            "metadata": {
+                "comment_owner": str(plan.pk),
+                "owner_type": "plan",
+                "text": comment.text,
+            },
+            "subjects": [
+                str(location.pk),
+            ],
+            "subject_type": "location",
+        },
+    )
+
+    assert_is_value_error(resp, loc=["body", "__root__"])
+    assert not await Comment.exists().where(Comment.owner == plan.pk)

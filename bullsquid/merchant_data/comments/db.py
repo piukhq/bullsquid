@@ -17,11 +17,14 @@ from bullsquid.merchant_data.comments.models import (
 from bullsquid.merchant_data.comments.tables import Comment
 from bullsquid.merchant_data.db import RESOURCE_TYPE_TO_TABLE
 from bullsquid.merchant_data.enums import ResourceType
+from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 T = TypeVar("T", bound=Table)
 
@@ -32,7 +35,10 @@ async def find_subjects(table: Type[T], entity_refs: list[UUID]) -> list[T]:
     """
     # clearly this function can only be called on tables with a pk field.
     pk: Column = table.pk  # type: ignore
-    return await table.objects().where(pk.is_in(entity_refs))
+    subjects = await table.objects().where(pk.is_in(entity_refs))
+    if len(subjects) != len(entity_refs):
+        raise NoSuchRecord(table)
+    return subjects
 
 
 def get_subject_merchant_ref(subject: Table) -> UUID | None:
@@ -50,6 +56,37 @@ def get_subject_merchant_ref(subject: Table) -> UUID | None:
     # a `merchant` field on it, i.e. Location, PrimaryMID, SecondaryMID, or
     # PSIMI.
     return cast(Location, subject).merchant
+
+
+def validate_subject_owners(
+    subjects: list[Table], *, subject_type: ResourceType, owner: UUID
+) -> None:
+    """
+    Raise a NoSuchRecord error if the given subjects do not match the given owner.
+    """
+
+    def plan_owner(subject: Table) -> bool:
+        return isinstance(subject, Plan) and subject.pk == owner
+
+    def merchant_owner(subject: Table) -> bool:
+        return isinstance(subject, Merchant) and subject.plan == owner
+
+    def other_owner(subject: Table) -> bool:
+        return (
+            isinstance(subject, Location | PrimaryMID | SecondaryMID | Identifier)
+            and subject.merchant == owner
+        )
+
+    match subject_type:
+        case ResourceType.PLAN:
+            predicate = plan_owner
+        case ResourceType.MERCHANT:
+            predicate = merchant_owner
+        case _:
+            predicate = other_owner
+
+    if not all(predicate(subject) for subject in subjects):
+        raise NoSuchRecord(RESOURCE_TYPE_TO_TABLE[subject_type])
 
 
 async def create_comment(
@@ -73,6 +110,16 @@ async def create_comment(
             )
         ).plan
 
+    subjects = await find_subjects(
+        RESOURCE_TYPE_TO_TABLE[ResourceType(comment_data.subject_type)],
+        comment_data.subjects,
+    )
+    validate_subject_owners(
+        subjects,
+        subject_type=comment_data.subject_type,
+        owner=comment_data.metadata.comment_owner,
+    )
+
     comment = Comment(
         text=comment_data.metadata.text,
         owner=comment_data.metadata.comment_owner,
@@ -83,10 +130,6 @@ async def create_comment(
         created_by="somebody",
     )
     await comment.save()
-
-    subjects = await find_subjects(
-        RESOURCE_TYPE_TO_TABLE[ResourceType(comment.subject_type)], comment.subjects
-    )
 
     return CommentResponse(
         comment_ref=comment.pk,

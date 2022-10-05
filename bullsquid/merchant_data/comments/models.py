@@ -3,7 +3,7 @@ Request & response models for the comments module.
 """
 from datetime import datetime
 
-from pydantic import UUID4, BaseModel, validator
+from pydantic import UUID4, BaseModel, root_validator, validator
 
 from bullsquid.merchant_data.enums import ResourceType
 from bullsquid.merchant_data.validators import (
@@ -43,6 +43,36 @@ class CreateCommentRequest(BaseModel):
     metadata: CommentMetadata
     subjects: list[UUID4]
     subject_type: ResourceType
+
+    @root_validator
+    @classmethod
+    def correct_subject_and_owner_types(cls, values: dict) -> dict:
+        """
+        Ensure that the given owner type matches the given subject type.
+        """
+        # no metadata means it failed validation, so no point checking this.
+        if "metadata" not in values:
+            return values
+
+        owner_types = {
+            ResourceType.PLAN: ResourceType.PLAN,
+            ResourceType.MERCHANT: ResourceType.PLAN,
+            ResourceType.LOCATION: ResourceType.MERCHANT,
+            ResourceType.PRIMARY_MID: ResourceType.MERCHANT,
+            ResourceType.SECONDARY_MID: ResourceType.MERCHANT,
+            ResourceType.PSIMI: ResourceType.MERCHANT,
+        }
+
+        subject_type = ResourceType(values["subject_type"])
+        actual = ResourceType(values["metadata"].owner_type)
+        expected = owner_types[subject_type]
+        if actual != expected:
+            raise ValueError(
+                f"a subject of type {subject_type} should have an owner type of "
+                f"{expected}, but {actual} was passed instead."
+            )
+
+        return values
 
 
 class CommentSubject(BaseModel):

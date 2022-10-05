@@ -50,6 +50,11 @@ async def plan_has_onboarded_resources(pk: UUID) -> bool:
     Returns true if the given plan has any onboarded primary MIDs,
     secondary MIDs, or identifiers.
     """
+    # small optimisation; if a plan has no merchants then it can't have any
+    # onboarded resources.
+    if not await Merchant.exists().where(Merchant.plan == pk):
+        return False
+
     primary_mids = PrimaryMID.exists().where(
         PrimaryMID.merchant.plan == pk, PrimaryMID.txm_status == TXMStatus.ONBOARDED
     )
@@ -74,16 +79,16 @@ async def update_plan_status(
         await Plan.update({Plan.status: status}).where(Plan.pk == pk)
 
         if cascade:
-            await Merchant.update({Merchant.status: status}).where(Merchant.plan == pk)
-
-            # temporary workaround for joins not being supported in updates.
-            # https://github.com/piccolo-orm/piccolo/issues/625
-            # TODO: remove when piccolo is updated.
             merchant_refs = (
                 await Merchant.select(Merchant.pk)
                 .where(Merchant.plan == pk)
                 .output(as_list=True)
             )
+            if not merchant_refs:
+                # nothing more to do
+                return
+
+            await Merchant.update({Merchant.status: status}).where(Merchant.plan == pk)
 
             await PrimaryMID.update({PrimaryMID.status: status}).where(
                 PrimaryMID.merchant.is_in(merchant_refs)

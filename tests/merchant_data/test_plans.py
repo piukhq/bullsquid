@@ -286,6 +286,13 @@ async def _(
     assert_is_uniqueness_error(resp, loc=["body", "plan_id"])
 
 
+@test("a plan with no dependent resources is immediately deleted")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    resp = test_client.delete(f"/api/v1/plans/{plan.pk}")
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+
+
 @test("a plan with no onboarded resources is immediately deleted")
 async def _(
     _: None = database,

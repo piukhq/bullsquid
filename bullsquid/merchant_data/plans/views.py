@@ -136,7 +136,7 @@ async def update_plan(
 async def delete_plan(
     plan_ref: UUID,
     _credentials: JWTCredentials = Depends(
-        require_access_level(AccessLevel.READ_WRITE)
+        require_access_level(AccessLevel.READ_WRITE_DELETE)
     ),
 ) -> PlanDeletionResponse:
     """

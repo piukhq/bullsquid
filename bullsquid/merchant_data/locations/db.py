@@ -230,7 +230,9 @@ async def confirm_locations_exist(
     location_refs = list(set(location_refs))
 
     count = await Location.count().where(
-        Location.pk.is_in(location_refs), Location.merchant == merchant
+        Location.pk.is_in(location_refs),
+        Location.merchant == merchant,
+        Location.status != ResourceStatus.DELETED,
     )
     if count != len(location_refs):
         raise NoSuchRecord(Location)

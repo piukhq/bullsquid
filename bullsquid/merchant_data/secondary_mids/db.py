@@ -135,7 +135,10 @@ async def filter_onboarded_secondary_mids(
     # remove duplicates to ensure count mismatches are not caused by duplicate secondary MIDs
     secondary_mid_refs = list(set(secondary_mid_refs))
 
-    count = await SecondaryMID.count().where(SecondaryMID.pk.is_in(secondary_mid_refs))
+    count = await SecondaryMID.count().where(
+        SecondaryMID.pk.is_in(secondary_mid_refs),
+        SecondaryMID.status != ResourceStatus.DELETED,
+    )
     if count != len(secondary_mid_refs):
         raise NoSuchRecord(SecondaryMID)
 

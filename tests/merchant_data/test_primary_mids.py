@@ -97,16 +97,13 @@ async def _(
     _db: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchants = [await merchant_factory() for _ in range(3)]
+    plan = await plan_factory()
+    merchants = [await merchant_factory(plan=plan) for _ in range(3)]
     for merchant in merchants:
         for _ in range(random.randint(1, 3)):
             await primary_mid_factory(merchant=merchant)
 
-    plan_ref = (await Plan.select(Plan.pk).where(Plan.pk == merchants[0].plan).first())[
-        "pk"
-    ]
-
-    resp = test_client.get(f"/api/v1/plans/{plan_ref}/merchants/{merchants[0].pk}/mids")
+    resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{merchants[0].pk}/mids")
 
     expected = await PrimaryMID.objects().where(PrimaryMID.merchant == merchants[0])
 
@@ -143,11 +140,12 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     payment_schemes = await default_payment_schemes()
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
         json={
             "onboard": False,
             "mid_metadata": {
@@ -176,13 +174,14 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     payment_schemes = await default_payment_schemes()
     primary_mid = await primary_mid_factory(
         persist=False, payment_scheme=payment_schemes[2], visa_bin="test"
     )
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
         json={
             "onboard": False,
             "mid_metadata": {
@@ -201,11 +200,12 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     payment_schemes = await default_payment_schemes()
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
         json={
             "onboard": True,
             "mid_metadata": {
@@ -234,11 +234,12 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
+    plan = await plan_factory()
     payment_schemes = await default_payment_schemes()
-    merchant = await merchant_factory()
+    merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
         json={
             "onboard": False,
             "mid_metadata": {
@@ -311,12 +312,13 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
+    plan = await plan_factory()
     payment_schemes = await default_payment_schemes()
     existing_mid = await primary_mid_factory()
-    merchant = await merchant_factory()
+    merchant = await merchant_factory(plan=plan)
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
         json={
             "onboard": False,
             "mid_metadata": {
@@ -336,10 +338,11 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
         json={
             "onboard": False,
             "mid_metadata": {
@@ -360,10 +363,11 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
         json={
             "onboard": False,
             "mid_metadata": {
@@ -383,11 +387,12 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
+    plan = await plan_factory()
     payment_schemes = await default_payment_schemes()
-    merchant = await merchant_factory()
+    merchant = await merchant_factory(plan=plan)
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
         json={
             "onboard": False,
             "mid_metadata": {
@@ -406,11 +411,12 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
+    plan = await plan_factory()
     payment_schemes = await default_payment_schemes()
-    merchant = await merchant_factory()
+    merchant = await merchant_factory(plan=plan)
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
         json={
             "onboard": False,
             "mid_metadata": {
@@ -552,12 +558,13 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(
         merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
     )
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/deletion",
         json={"mid_refs": [str(primary_mid.pk)]},
     )
 
@@ -581,12 +588,13 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(
         merchant=merchant, txm_status=TXMStatus.OFFBOARDED
     )
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/deletion",
         json={"mid_refs": [str(primary_mid.pk)]},
     )
 
@@ -610,12 +618,13 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(
         merchant=merchant, txm_status=TXMStatus.ONBOARDED
     )
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/deletion",
         json={"mid_refs": [str(primary_mid.pk)]},
     )
 
@@ -638,14 +647,15 @@ async def _(
     "deleting a primary MID associated to a location clears the associated foreign key"
 )
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     primary_mid = await primary_mid_factory(
         merchant=merchant, location=location, txm_status=TXMStatus.NOT_ONBOARDED
     )
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/deletion",
         json={"mid_refs": [str(primary_mid.pk)]},
     )
 
@@ -660,9 +670,10 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/deletion",
         json={"mid_refs": [str(uuid4())]},
     )
 
@@ -674,9 +685,10 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/deletion",
         json={"mid_refs": []},
     )
 
@@ -686,12 +698,13 @@ async def _(
 
 @test("can associate a location with a primary mid")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(merchant=merchant)
     location = await location_factory(merchant=merchant)
 
     resp = test_client.put(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{primary_mid.pk}/location_link",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{primary_mid.pk}/location_link",
         json={"location_ref": str(location.pk)},
     )
 
@@ -704,12 +717,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't associate a location with a primary mid on a different merchant")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(merchant=merchant)
     location = await location_factory()
 
     resp = test_client.put(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{primary_mid.pk}/location_link",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{primary_mid.pk}/location_link",
         json={"location_ref": str(location.pk)},
     )
 
@@ -718,11 +732,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't associate a location with a primary mid that doesn't exist")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
 
     resp = test_client.put(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{uuid4()}/location_link",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{uuid4()}/location_link",
         json={"location_ref": str(location.pk)},
     )
 
@@ -731,12 +746,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't associate a location with a primary mid on a non-existent merchant")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(merchant=merchant)
     location = await location_factory(merchant=merchant)
 
     resp = test_client.put(
-        f"/api/v1/plans/{merchant.plan}/merchants/{uuid4()}/mids/{primary_mid.pk}/location_link",
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/mids/{primary_mid.pk}/location_link",
         json={"location_ref": str(location.pk)},
     )
 
@@ -759,12 +775,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can delete the link between a primary MID and a location.")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     mid = await primary_mid_factory(merchant=merchant, location=location)
 
     resp = test_client.delete(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{mid.pk}/location_link"
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}/location_link"
     )
 
     assert resp.status_code == status.HTTP_204_NO_CONTENT
@@ -775,11 +792,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("deleting a link on a mid without a location does not fail")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     mid = await primary_mid_factory(merchant=merchant)
 
     resp = test_client.delete(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{mid.pk}/location_link"
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}/location_link"
     )
 
     assert resp.status_code == status.HTTP_204_NO_CONTENT
@@ -787,10 +805,11 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't delete the location link on a primary MID that does not exist")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
 
     resp = test_client.delete(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/mids/{uuid4()}/location_link"
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{uuid4()}/location_link"
     )
 
     assert_is_not_found_error(resp, loc=["path", "mid_ref"])
@@ -798,12 +817,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't delete the primary MID location link on a merchant that does not exist")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     mid = await primary_mid_factory(merchant=merchant, location=location)
 
     resp = test_client.delete(
-        f"/api/v1/plans/{merchant.plan}/merchants/{uuid4()}/mids/{mid.pk}/location_link"
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/mids/{mid.pk}/location_link"
     )
 
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])

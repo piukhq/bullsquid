@@ -86,7 +86,10 @@ async def filter_onboarded_identifiers(
     # remove duplicates to ensure count mismatches are not caused by duplicate identifiers
     identifier_refs = list(set(identifier_refs))
 
-    count = await Identifier.count().where(Identifier.pk.is_in(identifier_refs))
+    count = await Identifier.count().where(
+        Identifier.pk.is_in(identifier_refs),
+        Identifier.status != ResourceStatus.DELETED,
+    )
     if count != len(identifier_refs):
         raise NoSuchRecord(Identifier)
 

@@ -164,10 +164,11 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    existing_merchant = await merchant_factory()
+    plan = await plan_factory()
+    existing_merchant = await merchant_factory(plan=plan)
     new_merchant = await merchant_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{existing_merchant.plan}/merchants",
+        f"/api/v1/plans/{plan.pk}/merchants",
         json={
             "name": existing_merchant.name,
             "icon_url": new_merchant.icon_url,
@@ -235,10 +236,11 @@ async def _(
     _db: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     new_details = await merchant_factory(persist=False)
     resp = test_client.put(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}",
         json={
             "name": new_details.name,
             "icon_url": new_details.icon_url,
@@ -261,9 +263,10 @@ async def _(
     _db: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     resp = test_client.put(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}",
         json={"location_label": "new location"},
     )
     assert_is_missing_field_error(resp, loc=["body", "name"])
@@ -274,9 +277,10 @@ async def _(
     _db: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     resp = test_client.put(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}",
         json={"name": "new name"},
     )
     assert_is_missing_field_error(resp, loc=["body", "location_label"])
@@ -339,13 +343,14 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     payment_schemes = await default_payment_schemes()
 
     # create a deleted merchant that shouldn't be in the response
     await merchant_factory(status=ResourceStatus.DELETED)
 
-    resp = test_client.get(f"/api/v1/plans/{merchant.plan}/merchants")
+    resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants")
 
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [merchant_overview_json(merchant, payment_schemes)]
@@ -356,7 +361,8 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(
         merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
     )
@@ -367,7 +373,7 @@ async def _(
         merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
     )
 
-    resp = test_client.delete(f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}")
+    resp = test_client.delete(f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}")
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert resp.json() == {"merchant_status": "deleted"}
@@ -402,12 +408,13 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     await primary_mid_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
     await secondary_mid_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
     await identifier_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
 
-    resp = test_client.delete(f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}")
+    resp = test_client.delete(f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}")
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert resp.json() == {"merchant_status": "pending_deletion"}

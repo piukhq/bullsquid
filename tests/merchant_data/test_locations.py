@@ -659,12 +659,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can associate a primary mid with a location")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     primary_mid = await primary_mid_factory(merchant=merchant)
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{location.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/mids",
         json={"mid_refs": [str(primary_mid.pk)]},
     )
 
@@ -681,12 +682,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't associate a primary mid with a location on a different merchant")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     primary_mid = await primary_mid_factory()
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{location.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/mids",
         json={"mid_refs": [str(primary_mid.pk)]},
     )
 
@@ -695,11 +697,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't associate a primary mid with a location that doesn't exist")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(merchant=merchant)
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{uuid4()}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/mids",
         json={"mid_refs": [str(primary_mid.pk)]},
     )
 
@@ -708,12 +711,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't associate a primary mid with a location on a non-existent merchant")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     primary_mid = await primary_mid_factory(merchant=merchant)
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{uuid4()}/locations/{location.pk}/mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/locations/{location.pk}/mids",
         json={"mid_refs": [str(primary_mid.pk)]},
     )
 
@@ -736,12 +740,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can associate a secondary mid with a location")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{location.pk}/secondary_mid_location_links",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/secondary_mid_location_links",
         json={"secondary_mid_refs": [str(secondary_mid.pk)]},
     )
 
@@ -767,12 +772,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't associate a secondary mid with a location on a different merchant")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     secondary_mid = await secondary_mid_factory()
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{location.pk}/secondary_mid_location_links",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/secondary_mid_location_links",
         json={"secondary_mid_refs": [str(secondary_mid.pk)]},
     )
 
@@ -781,11 +787,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't associate a secondary mid with a location that doesn't exist")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{uuid4()}/secondary_mid_location_links",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/secondary_mid_location_links",
         json={"secondary_mid_refs": [str(secondary_mid.pk)]},
     )
 
@@ -794,12 +801,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't associate a secondary mid with a location on a non-existent merchant")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{uuid4()}/locations/{location.pk}/secondary_mid_location_links",
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/locations/{location.pk}/secondary_mid_location_links",
         json={"secondary_mid_refs": [str(secondary_mid.pk)]},
     )
 
@@ -808,7 +816,8 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't associate a secondary mid with a location on a non-existent plan")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
 
@@ -828,11 +837,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     We don't actually need to check the database in this test - the unique
     constraint will prevent the insertion of a second association.
     """
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
     location = await location_factory(merchant=merchant)
 
-    url = f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{location.pk}/secondary_mid_location_links"
+    url = f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/secondary_mid_location_links"
     json = {"secondary_mid_refs": [str(secondary_mid.pk)]}
 
     resp1 = test_client.post(url, json=json)
@@ -846,13 +856,14 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can get primary mids to link to location")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     location_2 = await location_factory(merchant=merchant)
     primary_mid = await primary_mid_factory(merchant=merchant, location=location_2)
 
     resp = test_client.get(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{location.pk}/available_mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/available_mids",
     )
 
     assert resp.status_code == status.HTTP_200_OK
@@ -873,11 +884,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't get primary mids to link with invalid location ref")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
 
     resp = test_client.get(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{uuid4()}/available_mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/available_mids",
     )
 
     assert_is_not_found_error(resp, loc=["path", "location_ref"])
@@ -885,11 +897,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can't get primary mids to link with invalid merchant ref")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
 
     resp = test_client.get(
-        f"/api/v1/plans/{merchant.plan}/merchants/{uuid4()}/locations/{location.pk}/available_mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/locations/{location.pk}/available_mids",
     )
 
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
@@ -909,12 +922,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
 @test("can get primary mids to link to location that aren't already linked")
 async def _(_: None = database, test_client: TestClient = test_client) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     primary_mid = await primary_mid_factory(merchant=merchant, location=None)
 
     resp = test_client.get(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/locations/{location.pk}/available_mids",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/available_mids",
     )
 
     assert resp.status_code == status.HTTP_200_OK

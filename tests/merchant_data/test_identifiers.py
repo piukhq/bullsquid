@@ -1,6 +1,5 @@
 """Tests for identifier API endpoints."""
 import random
-from operator import itemgetter
 from uuid import uuid4
 
 from fastapi import status
@@ -9,8 +8,6 @@ from ward import test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
-from bullsquid.merchant_data.merchants.models import MerchantPaymentSchemeCountResponse
-from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from tests.fixtures import database, test_client
@@ -94,17 +91,14 @@ async def _(
     _db: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchants = [await merchant_factory() for _ in range(3)]
+    plan = await plan_factory()
+    merchants = [await merchant_factory(plan=plan) for _ in range(3)]
     for merchant in merchants:
         for _ in range(random.randint(1, 3)):
             await identifier_factory(merchant=merchant)
 
-    plan_ref = (await Plan.select(Plan.pk).where(Plan.pk == merchants[0].plan).first())[
-        "pk"
-    ]
-
     resp = test_client.get(
-        f"/api/v1/plans/{plan_ref}/merchants/{merchants[0].pk}/identifiers",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchants[0].pk}/identifiers",
     )
 
     expected = await Identifier.objects().where(Identifier.merchant == merchants[0])
@@ -205,11 +199,12 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
+    plan = await plan_factory()
     payment_schemes = await default_payment_schemes()
-    merchant = await merchant_factory()
+    merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers",
         json={
             "onboard": False,
             "identifier_metadata": {
@@ -238,11 +233,12 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
+    plan = await plan_factory()
     payment_schemes = await default_payment_schemes()
-    merchant = await merchant_factory()
+    merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers",
         json={
             "onboard": True,
             "identifier_metadata": {
@@ -317,12 +313,13 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
+    plan = await plan_factory()
     existing_identifier = await identifier_factory()
     payment_schemes = await default_payment_schemes()
-    merchant = await merchant_factory()
+    merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers",
         json={
             "onboard": False,
             "identifier_metadata": {
@@ -341,10 +338,11 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers",
         json={
             "onboard": False,
             "identifier_metadata": {
@@ -364,10 +362,11 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers",
         json={
             "onboard": False,
             "identifier_metadata": {
@@ -388,11 +387,12 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
+    plan = await plan_factory()
     payment_schemes = await default_payment_schemes()
-    merchant = await merchant_factory()
+    merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers",
         json={
             "onboard": False,
             "identifier_metadata": {
@@ -410,11 +410,12 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
+    plan = await plan_factory()
     payment_schemes = await default_payment_schemes()
-    merchant = await merchant_factory()
+    merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers",
         json={
             "onboard": False,
             "identifier_metadata": {
@@ -459,13 +460,14 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(
         merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
     )
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers/deletion",
         json={"identifier_refs": [str(identifier.pk)]},
     )
 
@@ -490,13 +492,14 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(
         merchant=merchant, txm_status=TXMStatus.OFFBOARDED
     )
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers/deletion",
         json={"identifier_refs": [str(identifier.pk)]},
     )
 
@@ -523,13 +526,14 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(
         merchant=merchant, txm_status=TXMStatus.ONBOARDED
     )
 
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers/deletion",
         json={"identifier_refs": [str(identifier.pk)]},
     )
 
@@ -539,7 +543,7 @@ async def _(
         .first()
     )["status"]
 
-    assert resp.status_code == status.HTTP_202_ACCEPTED
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
     assert identifier_status == ResourceStatus.PENDING_DELETION
 
     # TODO: uncomment once harmonia supports identifier/PSIMI onboarding.
@@ -554,9 +558,10 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers/deletion",
         json={"identifier_refs": [str(uuid4())]},
     )
 
@@ -568,9 +573,10 @@ async def _(
     _: None = database,
     test_client: TestClient = test_client,
 ) -> None:
-    merchant = await merchant_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
     resp = test_client.post(
-        f"/api/v1/plans/{merchant.plan}/merchants/{merchant.pk}/identifiers/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/identifiers/deletion",
         json={"identifier_refs": []},
     )
 

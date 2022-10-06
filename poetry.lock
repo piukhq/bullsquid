@@ -806,7 +806,7 @@ ulid-py = ">=1.1.0,<2.0.0"
 
 [[package]]
 name = "refurb"
-version = "1.2.0"
+version = "1.3.0"
 description = "A tool for refurbish and modernize Python codebases"
 category = "dev"
 optional = false
@@ -2023,8 +2023,8 @@ qbert = [
     {file = "qbert-0.1.7.tar.gz", hash = "sha256:387733e86540034fe95800a1a83c0e7161498425d92d9dc901dce8a0f8d8bbfa"},
 ]
 refurb = [
-    {file = "refurb-1.2.0-py3-none-any.whl", hash = "sha256:0acd19ce497cdb6d5287f80e1ce04737c19917dbc39ab4c37f2d736bc870e6e7"},
-    {file = "refurb-1.2.0.tar.gz", hash = "sha256:b1bc227ba34a5083a72935d437cb0caff1994960059bb945d76a6933177b7371"},
+    {file = "refurb-1.3.0-py3-none-any.whl", hash = "sha256:d2186feafc71a4b76750d32ab257069445fbf09f79710baa6c5babed2d1c4262"},
+    {file = "refurb-1.3.0.tar.gz", hash = "sha256:8e1f6f2e364acbbca2d6502d2242affa472f26a3c5fa5bf322fc6f804f669fcf"},
 ]
 requests = [
     {file = "requests-2.28.1-py3-none-any.whl", hash = "sha256:8fefa2a1a1365bf5520aac41836fbee479da67864514bdb821f31ce07ce65349"},

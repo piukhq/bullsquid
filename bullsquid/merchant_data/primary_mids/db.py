@@ -93,7 +93,9 @@ async def filter_onboarded_mid_refs(
     # remove duplicates to ensure count mismatches are not caused by duplicate MIDs
     mid_refs = list(set(mid_refs))
 
-    count = await PrimaryMID.count().where(PrimaryMID.pk.is_in(mid_refs))
+    count = await PrimaryMID.count().where(
+        PrimaryMID.pk.is_in(mid_refs), PrimaryMID.status != ResourceStatus.DELETED
+    )
     if count != len(mid_refs):
         raise NoSuchRecord(PrimaryMID)
 

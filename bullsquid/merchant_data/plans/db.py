@@ -14,7 +14,11 @@ from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 async def get_plan(pk: UUID) -> Plan:
     """Return a plan by its primary key. Raises NoSuchRecord if `pk` is not found."""
-    plan = await Plan.objects().get(Plan.pk == pk)
+    plan = (
+        await Plan.objects()
+        .where(Plan.pk == pk, Plan.status != ResourceStatus.DELETED)
+        .first()
+    )
     if not plan:
         raise NoSuchRecord(Plan)
     return plan

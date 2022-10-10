@@ -3,11 +3,13 @@ View functions for endpoints in the comments module.
 """
 from uuid import UUID
 
-from fastapi import status
+from fastapi import Depends, status
 from fastapi.routing import APIRouter
 
+from bullsquid.api.auth import JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError
 from bullsquid.db import NoSuchRecord
+from bullsquid.merchant_data.auth import AccessLevel, require_access_level
 from bullsquid.merchant_data.comments import db
 from bullsquid.merchant_data.comments.models import (
     CommentResponse,
@@ -19,7 +21,12 @@ router = APIRouter(prefix="/directory_comments")
 
 
 @router.post("", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
-async def create_comment(comment_data: CreateCommentRequest) -> CommentResponse:
+async def create_comment(
+    comment_data: CreateCommentRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> CommentResponse:
     """
     Create and return a comment on a subject.
     """
@@ -38,7 +45,11 @@ async def create_comment(comment_data: CreateCommentRequest) -> CommentResponse:
     status_code=status.HTTP_201_CREATED,
 )
 async def create_comment_reply(
-    comment_data: CreateCommentRequest, comment_ref: UUID
+    comment_data: CreateCommentRequest,
+    comment_ref: UUID,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> CommentResponse:
     """
     Create and return a response to a top level comment

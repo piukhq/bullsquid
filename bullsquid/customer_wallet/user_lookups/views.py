@@ -1,10 +1,17 @@
 """Customer wallet API endpoints."""
-from fastapi import APIRouter, Header, Query, status
+from fastapi import APIRouter, Depends, Header, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from . import db
-from .models import LookupResponse, User, UserLookupRequest, UserLookupResponse
+from bullsquid.api.auth import AccessLevel, JWTCredentials
+from bullsquid.customer_wallet.auth import require_access_level
+from bullsquid.customer_wallet.user_lookups import db
+from bullsquid.customer_wallet.user_lookups.models import (
+    LookupResponse,
+    User,
+    UserLookupRequest,
+    UserLookupResponse,
+)
 
 router = APIRouter(prefix="/user_lookups")
 
@@ -30,6 +37,7 @@ async def list_user_lookups(
     user: str = Header(),
     n: int = Query(default=5),
     p: int = Query(default=1),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[UserLookupResponse]:
     """List user lookups for the given user header."""
     return [
@@ -50,6 +58,9 @@ async def upsert_user_lookup(
     user: str = Header(),
     n: int = Query(default=5),
     p: int = Query(default=1),
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> JSONResponse:
     """Upsert a user lookup for the given user header."""
     results, created = await db.upsert_user_lookup(

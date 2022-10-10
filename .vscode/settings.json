@@ -4,9 +4,4 @@
         "source.organizeImports": true
     },
     "editor.formatOnSave": true,
-    "conventionalCommits.scopes": [
-        "api",
-        "db",
-        "scripts",
-    ]
 }

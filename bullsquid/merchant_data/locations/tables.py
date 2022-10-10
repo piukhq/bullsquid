@@ -1,23 +1,21 @@
 """Location table definitions."""
 from piccolo.columns import (
     M2M,
-    UUID,
     Boolean,
     ForeignKey,
     LazyTableReference,
     Text,
     Timestamptz,
 )
-from piccolo.table import Table
 
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.tables import TableWithPK
 
 
-class Location(Table):
+class Location(TableWithPK):
     """Represents a location that can have multiple MIDs."""
 
-    pk = UUID(primary_key=True)
     location_id = Text(required=True, unique=True)
     name = Text(required=True)
     is_physical_location = Boolean(default=True)

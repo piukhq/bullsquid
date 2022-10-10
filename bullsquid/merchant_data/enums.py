@@ -16,6 +16,19 @@ class ResourceType(str, Enum):
     PSIMI = "psimi"
 
 
+class FilterSubjectType(Enum):
+    """
+    All the ResourceTypes except plan.
+    Used as a parameter to filter comments by subject type.
+    """
+
+    MERCHANT = ResourceType.MERCHANT.value
+    LOCATION = ResourceType.LOCATION.value
+    PRIMARY_MID = ResourceType.PRIMARY_MID.value
+    SECONDARY_MID = ResourceType.SECONDARY_MID.value
+    PSIMI = ResourceType.PSIMI.value
+
+
 class ResourceStatus(str, Enum):
     """Status enum shared between most publishable/deletable resources."""
 

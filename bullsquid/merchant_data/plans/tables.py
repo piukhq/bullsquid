@@ -1,14 +1,13 @@
 """Plan table definitions."""
-from piccolo.columns import UUID, Integer, Text
-from piccolo.table import Table
+from piccolo.columns import Integer, Text
 
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.tables import TableWithPK
 
 
-class Plan(Table):
+class Plan(TableWithPK):
     """Represents a loyalty plan that may contain any number of merchants."""
 
-    pk = UUID(primary_key=True)
     name = Text(required=True, unique=True)
     icon_url = Text(null=True, default=None)
     slug = Text(null=True, default=None, unique=True)

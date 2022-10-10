@@ -1,6 +1,5 @@
 """Primary MID table definitions."""
-from piccolo.columns import UUID, ForeignKey, Text, Timestamptz
-from piccolo.table import Table
+from piccolo.columns import ForeignKey, Text, Timestamptz
 
 from bullsquid.merchant_data.enums import (
     PaymentEnrolmentStatus,
@@ -10,12 +9,12 @@ from bullsquid.merchant_data.enums import (
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.tables import TableWithPK
 
 
-class PrimaryMID(Table):
+class PrimaryMID(TableWithPK):
     """Represents a primary MID value."""
 
-    pk = UUID(primary_key=True)
     mid = Text(unique=True)
     visa_bin = Text(null=True, default=None)
     payment_scheme = ForeignKey(PaymentScheme, required=True)

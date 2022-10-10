@@ -1,32 +1,31 @@
 """
 Database access functions for the comments module.
 """
-from typing import Type, TypeVar, cast
+from collections import defaultdict
+from typing import Type, TypeVar
 from uuid import UUID
 
-from piccolo.columns import Column
 from piccolo.table import Table
 
-from bullsquid.db import NoSuchRecord
+from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.comments.models import (
     CommentMetadata,
     CommentResponse,
     CommentSubject,
     CreateCommentRequest,
+    SubjectComments,
 )
 from bullsquid.merchant_data.comments.tables import Comment
-from bullsquid.merchant_data.db import RESOURCE_TYPE_TO_TABLE
-from bullsquid.merchant_data.enums import ResourceType
+from bullsquid.merchant_data.db import RESOURCE_TYPE_TO_TABLE, TableWithPK
+from bullsquid.merchant_data.enums import FilterSubjectType, ResourceType
 from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.locations.tables import Location
-from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.merchants.tables import Merchant
-from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
-T = TypeVar("T", bound=Table)
+T = TypeVar("T", bound=TableWithPK)
 
 
 async def find_subjects(table: Type[T], entity_refs: list[UUID]) -> list[T]:
@@ -34,32 +33,14 @@ async def find_subjects(table: Type[T], entity_refs: list[UUID]) -> list[T]:
     Query the given table for all entities in the entity_refs list.
     """
     # clearly this function can only be called on tables with a pk field.
-    pk: Column = table.pk  # type: ignore
-    subjects = await table.objects().where(pk.is_in(entity_refs))
+    subjects = await table.objects().where(table.pk.is_in(entity_refs))
     if len(subjects) != len(entity_refs):
         raise NoSuchRecord(table)
     return subjects
 
 
-def get_subject_merchant_ref(subject: Table) -> UUID | None:
-    """
-    Returns the associated merchant ref for the given subject.
-    If the subjet is a plan, then None is returned instead.
-    """
-    match subject.__class__.__qualname__:
-        case Plan.__qualname__:
-            return None
-        case Merchant.__qualname__:
-            return cast(Merchant, subject).pk
-
-    # we cast to Location for mypy's benefit. this can actually be any type with
-    # a `merchant` field on it, i.e. Location, PrimaryMID, SecondaryMID, or
-    # PSIMI.
-    return cast(Location, subject).merchant
-
-
 def validate_subject_owners(
-    subjects: list[Table], *, subject_type: ResourceType, owner: UUID
+    subjects: list[TableWithPK], *, subject_type: ResourceType, owner: UUID
 ) -> None:
     """
     Raise a NoSuchRecord error if the given subjects do not match the given owner.
@@ -89,6 +70,122 @@ def validate_subject_owners(
         raise NoSuchRecord(RESOURCE_TYPE_TO_TABLE[subject_type])
 
 
+async def _list_comments_by_parent(parent: Comment) -> list[CommentResponse]:
+    comments = await Comment.objects().where(Comment.parent == parent)
+    return [
+        await create_comment_response(
+            comment,
+            subjects=await find_subjects(
+                RESOURCE_TYPE_TO_TABLE[ResourceType(parent.subject_type)],
+                comment.subjects,
+            ),
+        )
+        for comment in comments
+    ]
+
+
+async def create_comment_response(
+    comment: Comment, *, subjects: list[TableWithPK]
+) -> CommentResponse:
+    """
+    Create and return a CommentResponse instace for the given comment and list
+    of subjects.
+    """
+    return CommentResponse(
+        comment_ref=comment.pk,
+        created_at=comment.created_at,
+        created_by=comment.created_by,
+        is_edited=comment.is_edited,
+        is_deleted=comment.is_deleted,
+        subjects=[
+            CommentSubject(
+                display_text="string",
+                subject_ref=subject.pk,
+                icon_slug=None,
+            )
+            for subject in subjects
+        ],
+        metadata=CommentMetadata(
+            owner_ref=comment.owner,
+            owner_type=comment.owner_type,
+            text=comment.text,
+        ),
+        responses=await _list_comments_by_parent(comment),
+    )
+
+
+async def list_comments_by_owner(
+    ref: UUID, *, n: int, p: int, filter_subject_type: FilterSubjectType | None = None
+) -> list[SubjectComments]:
+    """
+    List all comments with the given ref as their owner.
+    Returns a list of SubjectComments instances.
+    """
+
+    # we exclude plan comments because they will already show up in the
+    # query-by-subject part of the process.
+    where = (Comment.owner == ref) & (Comment.subject_type != ResourceType.PLAN)
+    if filter_subject_type is not None:
+        where &= Comment.subject_type == ResourceType(filter_subject_type.value)
+
+    comments = await paginate(Comment.objects().where(where), n=n, p=p)
+
+    comments_by_subject_type = defaultdict(list)
+    for comment in comments:
+        comments_by_subject_type[comment.subject_type].append(comment)
+
+    # TODO: rewrite with list comprehensions once 3.11 is out.
+    # at least as far as 3.10.8 you can't have an async comprehension inside a sync one.
+    result = []
+    for subject_type, comments in comments_by_subject_type.items():
+        result.append(
+            SubjectComments(
+                subject_type=subject_type,
+                comments=[
+                    await create_comment_response(
+                        comment,
+                        subjects=await find_subjects(
+                            RESOURCE_TYPE_TO_TABLE[ResourceType(comment.subject_type)],
+                            entity_refs=comment.subjects,
+                        ),
+                    )
+                    for comment in comments
+                ],
+            )
+        )
+    return result
+
+
+async def list_comments_by_subject(
+    ref: UUID, *, n: int, p: int
+) -> SubjectComments | None:
+    """
+    List all comments with the given ref as one of their subjects.
+    Returns a list of CommentResponse instances.
+    """
+    comments = await paginate(
+        Comment.objects().where(Comment.subjects.any(ref)), n=n, p=p
+    )
+
+    return (
+        SubjectComments(
+            subject_type=comments[0].subject_type,
+            comments=[
+                await create_comment_response(
+                    comment,
+                    subjects=await find_subjects(
+                        RESOURCE_TYPE_TO_TABLE[ResourceType(comment.subject_type)],
+                        entity_refs=comment.subjects,
+                    ),
+                )
+                for comment in comments
+            ],
+        )
+        if comments
+        else None
+    )
+
+
 async def create_comment(
     comment_data: CreateCommentRequest, parent: UUID | None
 ) -> CommentResponse:
@@ -100,15 +197,14 @@ async def create_comment(
     if parent and not await Comment.exists().where(Comment.pk == parent):
         raise NoSuchRecord(Comment)
 
-    if comment_data.metadata.owner_type == ResourceType.PLAN:
-        await get_plan(comment_data.metadata.owner_ref)
-    elif comment_data.metadata.owner_type == ResourceType.MERCHANT:
-        await get_merchant(
-            comment_data.metadata.owner_ref, plan_ref=None, validate_plan=False
-        )
+    # ensure the owner exists
+    table = RESOURCE_TYPE_TO_TABLE[comment_data.metadata.owner_type]
+    if not await table.exists().where(table.pk == comment_data.metadata.owner_ref):
+        raise NoSuchRecord(table)
 
+    # find & validated related subjects
     subjects = await find_subjects(
-        RESOURCE_TYPE_TO_TABLE[ResourceType(comment_data.subject_type)],
+        RESOURCE_TYPE_TO_TABLE[comment_data.subject_type],
         comment_data.subjects,
     )
     validate_subject_owners(
@@ -128,24 +224,4 @@ async def create_comment(
     )
     await comment.save()
 
-    return CommentResponse(
-        comment_ref=comment.pk,
-        created_at=comment.created_at,
-        created_by=comment.created_by,
-        is_edited=comment.is_edited,
-        is_deleted=comment.is_deleted,
-        subjects=[
-            CommentSubject(
-                display_text="string",
-                subject_ref=cast(Plan, subject).pk,  # cast only for mypy's benefit
-                icon_slug=None,
-            )
-            for subject in subjects
-        ],
-        metadata=CommentMetadata(
-            owner_ref=comment.owner,
-            owner_type=comment.owner_type,
-            text=comment.text,
-        ),
-        responses=[],
-    )
+    return await create_comment_response(comment, subjects=subjects)

@@ -103,3 +103,21 @@ class CommentResponse(BaseModel):
     responses: list["CommentResponse"]
 
     _ = validator("created_by", allow_reuse=True)(string_must_not_be_blank)
+
+
+class SubjectComments(BaseModel):
+    """
+    A group of comments with a common subject type.
+    """
+
+    subject_type: ResourceType
+    comments: list[CommentResponse]
+
+
+class ListCommentsResponse(BaseModel):
+    """
+    Response model for a list of entity and lower comments.
+    """
+
+    entity_comments: SubjectComments | None
+    lower_comments: list[SubjectComments]

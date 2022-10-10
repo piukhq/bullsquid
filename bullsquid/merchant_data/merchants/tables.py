@@ -1,15 +1,14 @@
 """Merchant table definitions."""
-from piccolo.columns import UUID, ForeignKey, Text
-from piccolo.table import Table
+from piccolo.columns import ForeignKey, Text
 
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.tables import TableWithPK
 
 
-class Merchant(Table):
+class Merchant(TableWithPK):
     """Represents a merchant such as Iceland or Wasabi."""
 
-    pk = UUID(primary_key=True)
     name = Text(required=True, unique=True)
     icon_url = Text(null=True, default=None)
     location_label = Text(required=True)

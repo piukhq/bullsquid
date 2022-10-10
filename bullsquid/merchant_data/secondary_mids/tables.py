@@ -1,6 +1,5 @@
 """Secondary MID table definitions."""
-from piccolo.columns import M2M, UUID, ForeignKey, LazyTableReference, Text, Timestamptz
-from piccolo.table import Table
+from piccolo.columns import M2M, ForeignKey, LazyTableReference, Text, Timestamptz
 
 from bullsquid.merchant_data.enums import (
     PaymentEnrolmentStatus,
@@ -9,12 +8,12 @@ from bullsquid.merchant_data.enums import (
 )
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.tables import TableWithPK
 
 
-class SecondaryMID(Table):
+class SecondaryMID(TableWithPK):
     """Represents a secondary MID value."""
 
-    pk = UUID(primary_key=True)
     secondary_mid = Text(unique=True, required=True)
     payment_scheme = ForeignKey(PaymentScheme, required=True)
     payment_scheme_store_name = Text(null=True, default=None)

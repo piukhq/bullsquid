@@ -1,16 +1,15 @@
 """Merchant identifier table definitions."""
-from piccolo.columns import UUID, ForeignKey, Text, Timestamptz
-from piccolo.table import Table
+from piccolo.columns import ForeignKey, Text, Timestamptz
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.tables import TableWithPK
 
 
-class Identifier(Table):
+class Identifier(TableWithPK):
     """Represents a payment scheme's internal merchant identifier (PSIMI)."""
 
-    pk = UUID(primary_key=True)
     value = Text(required=True, unique=True)
     payment_scheme = ForeignKey(PaymentScheme, required=True)
     payment_scheme_merchant_name = Text(required=True)

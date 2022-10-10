@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from ward import test
 
 from bullsquid.merchant_data.comments.tables import Comment
+from bullsquid.merchant_data.enums import ResourceType
 from tests.fixtures import database, test_client
 from tests.helpers import assert_is_not_found_error, assert_is_value_error
 from tests.merchant_data.factories import (
@@ -38,10 +39,206 @@ def comment_json(
         ],
         "metadata": {
             "owner_ref": str(comment.owner),
-            "owner_type": comment.owner_type,
+            "owner_type": ResourceType(comment.owner_type).value,
             "text": comment.text,
         },
         "responses": [],
+    }
+
+
+@test("can list a single comment by subject ref")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    comment = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[plan.pk],
+        subject_type=ResourceType.PLAN,
+    )
+
+    resp = test_client.get("/api/v1/directory_comments", params={"ref": str(plan.pk)})
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+    assert resp.json() == {
+        "entity_comments": {
+            "subject_type": "plan",
+            "comments": [
+                comment_json(
+                    await Comment.objects().get(Comment.pk == comment.pk),
+                    subject_ref=plan.pk,
+                )
+            ],
+        },
+        "lower_comments": [],
+    }
+
+
+@test("can list a single comment by owner ref")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[merchant.pk],
+        subject_type=ResourceType.MERCHANT,
+    )
+
+    resp = test_client.get("/api/v1/directory_comments", params={"ref": str(plan.pk)})
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+    assert resp.json() == {
+        "entity_comments": None,
+        "lower_comments": [
+            {
+                "subject_type": "merchant",
+                "comments": [
+                    comment_json(
+                        await Comment.objects().get(Comment.pk == comment.pk),
+                        subject_ref=merchant.pk,
+                    )
+                ],
+            }
+        ],
+    }
+
+
+@test("can list lower comments with multiple subject types")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    primary_mid = await primary_mid_factory(merchant=merchant)
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    pm_comment = await comment_factory(
+        owner=merchant.pk,
+        owner_type=ResourceType.MERCHANT,
+        subjects=[primary_mid.pk],
+        subject_type=ResourceType.PRIMARY_MID,
+    )
+    sm_comment = await comment_factory(
+        owner=merchant.pk,
+        owner_type=ResourceType.MERCHANT,
+        subjects=[secondary_mid.pk],
+        subject_type=ResourceType.SECONDARY_MID,
+    )
+
+    resp = test_client.get(
+        "/api/v1/directory_comments", params={"ref": str(merchant.pk)}
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+    assert resp.json() == {
+        "entity_comments": None,
+        "lower_comments": [
+            {
+                "subject_type": "mid",
+                "comments": [
+                    comment_json(
+                        await Comment.objects().get(Comment.pk == pm_comment.pk),
+                        subject_ref=primary_mid.pk,
+                    )
+                ],
+            },
+            {
+                "subject_type": "secondary_mid",
+                "comments": [
+                    comment_json(
+                        await Comment.objects().get(Comment.pk == sm_comment.pk),
+                        subject_ref=secondary_mid.pk,
+                    )
+                ],
+            },
+        ],
+    }
+
+
+@test("can filter lower comments by subject type")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    primary_mid = await primary_mid_factory(merchant=merchant)
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    await comment_factory(
+        owner=merchant.pk,
+        owner_type=ResourceType.MERCHANT,
+        subjects=[primary_mid.pk],
+        subject_type=ResourceType.PRIMARY_MID,
+    )
+    comment = await comment_factory(
+        owner=merchant.pk,
+        owner_type=ResourceType.MERCHANT,
+        subjects=[secondary_mid.pk],
+        subject_type=ResourceType.SECONDARY_MID,
+    )
+
+    resp = test_client.get(
+        "/api/v1/directory_comments",
+        params={"ref": str(merchant.pk), "subject_type": "secondary_mid"},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+    assert resp.json() == {
+        "entity_comments": None,
+        "lower_comments": [
+            {
+                "subject_type": "secondary_mid",
+                "comments": [
+                    comment_json(
+                        await Comment.objects().get(Comment.pk == comment.pk),
+                        subject_ref=secondary_mid.pk,
+                    )
+                ],
+            },
+        ],
+    }
+
+
+@test("listing comments with replies returns the replies")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    comment = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[plan.pk],
+        subject_type=ResourceType.PLAN,
+    )
+    reply = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[plan.pk],
+        subject_type=ResourceType.PLAN,
+        parent=comment,
+    )
+
+    resp = test_client.get("/api/v1/directory_comments", params={"ref": str(plan.pk)})
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    responses = resp.json()["entity_comments"]["comments"][0]["responses"]
+    assert responses == [
+        comment_json(
+            await Comment.objects().get(Comment.pk == reply.pk), subject_ref=plan.pk
+        )
+    ]
+
+
+@test("listing comments with an invalid ref returns no results")
+async def _(_: None = database, test_client: TestClient = test_client) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[merchant.pk],
+        subject_type=ResourceType.MERCHANT,
+    )
+
+    resp = test_client.get("/api/v1/directory_comments", params={"ref": str(uuid4())})
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json() == {
+        "entity_comments": None,
+        "lower_comments": [],
     }
 
 

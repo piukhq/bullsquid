@@ -10,11 +10,15 @@ from ward import test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
+from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mid_location_links.tables import (
+    SecondaryMIDLocationLink,
+)
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.tasks import OffboardAndDeletePlan
 from tests.fixtures import database, test_client
@@ -22,10 +26,12 @@ from tests.helpers import assert_is_not_found_error, assert_is_uniqueness_error
 from tests.merchant_data.factories import (
     default_payment_schemes,
     identifier_factory,
+    location_factory,
     merchant_factory,
     plan_factory,
     primary_mid_factory,
     secondary_mid_factory,
+    secondary_mid_location_link_factory,
 )
 
 
@@ -309,6 +315,10 @@ async def _(
     identifier = await identifier_factory(
         merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
     )
+    location = await location_factory(merchant=merchant)
+    secondary_mid_location_link = await secondary_mid_location_link_factory(
+        secondary_mid=secondary_mid, location=location
+    )
 
     resp = test_client.delete(f"/api/v1/plans/{plan.pk}")
 
@@ -334,12 +344,19 @@ async def _(
         .where(Identifier.pk == identifier.pk)
         .first()
     )
+    location = (
+        await Location.select(Location.status).where(Location.pk == location.pk).first()
+    )
 
     assert plan["status"] == ResourceStatus.DELETED
     assert merchant["status"] == ResourceStatus.DELETED
     assert primary_mid["status"] == ResourceStatus.DELETED
     assert secondary_mid["status"] == ResourceStatus.DELETED
     assert identifier["status"] == ResourceStatus.DELETED
+    assert location["status"] == ResourceStatus.DELETED
+    assert not await SecondaryMIDLocationLink.exists().where(
+        SecondaryMIDLocationLink.pk == secondary_mid_location_link.pk
+    )
 
 
 @test("a plan with onboarded resources is set to pending deletion")

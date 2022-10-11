@@ -3,6 +3,8 @@
 from typing import Any, Mapping
 from uuid import UUID
 
+from piccolo.columns import Column
+
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
@@ -12,6 +14,9 @@ from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mid_location_links.tables import (
+    SecondaryMIDLocationLink,
+)
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 
@@ -102,9 +107,11 @@ async def update_merchant_status(
     async with Merchant._meta.db.transaction():  # pylint: disable=protected-access
         await Merchant.update({Merchant.status: status}).where(Merchant.pk == pk)
         if cascade:
-            await PrimaryMID.update({PrimaryMID.status: status}).where(
-                PrimaryMID.merchant == pk
-            )
+            fields: dict[Column | str, Any] = {PrimaryMID.status: status}
+            if status == ResourceStatus.DELETED:
+                fields[PrimaryMID.location] = None
+
+            await PrimaryMID.update(fields).where(PrimaryMID.merchant == pk)
             await SecondaryMID.update({SecondaryMID.status: status}).where(
                 SecondaryMID.merchant == pk
             )
@@ -114,3 +121,13 @@ async def update_merchant_status(
             await Location.update({Location.status: status}).where(
                 Location.merchant == pk
             )
+            if status == ResourceStatus.DELETED:
+                link_refs = (
+                    await SecondaryMIDLocationLink.select(SecondaryMIDLocationLink.pk)
+                    .where(SecondaryMIDLocationLink.secondary_mid.merchant == pk)
+                    .output(as_list=True)
+                )
+                if link_refs:
+                    await SecondaryMIDLocationLink.delete().where(
+                        SecondaryMIDLocationLink.pk.is_in(link_refs)
+                    )

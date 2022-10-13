@@ -58,9 +58,7 @@ async def upsert_user_lookup(
     user: str = Header(),
     n: int = Query(default=5),
     p: int = Query(default=1),
-    _credentials: JWTCredentials = Depends(
-        require_access_level(AccessLevel.READ_WRITE)
-    ),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> JSONResponse:
     """Upsert a user lookup for the given user header."""
     results, created = await db.upsert_user_lookup(

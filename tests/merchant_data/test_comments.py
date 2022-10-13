@@ -5,9 +5,6 @@ from fastapi.testclient import TestClient
 from ward import test
 
 from bullsquid.merchant_data.comments.tables import Comment
-from bullsquid.merchant_data.enums import ResourceType
-from bullsquid.merchant_data.merchants.tables import Merchant
-from bullsquid.merchant_data.plans.tables import Plan
 from tests.fixtures import database, test_client
 from tests.helpers import assert_is_not_found_error, assert_is_value_error
 from tests.merchant_data.factories import (
@@ -24,10 +21,7 @@ from tests.merchant_data.factories import (
 def comment_json(
     comment: Comment,
     *,
-    plan: Plan | None,
-    merchant: Merchant | None,
-    subject_type: ResourceType,
-    entity_ref: UUID,
+    subject_ref: UUID,
 ) -> dict:
     return {
         "comment_ref": str(comment.pk),
@@ -38,15 +32,12 @@ def comment_json(
         "subjects": [
             {
                 "display_text": "string",
-                "plan_ref": str(plan.pk) if plan else None,
-                "merchant_ref": str(merchant.pk) if merchant else None,
-                "subject_type": subject_type.value,
-                "entity_ref": str(entity_ref),
+                "subject_ref": str(subject_ref),
                 "icon_slug": None,
             }
         ],
         "metadata": {
-            "comment_owner": str(comment.owner),
+            "owner_ref": str(comment.owner),
             "owner_type": comment.owner_type,
             "text": comment.text,
         },
@@ -63,7 +54,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(plan.pk),
+                "owner_ref": str(plan.pk),
                 "owner_type": "plan",
                 "text": comment.text,
             },
@@ -79,10 +70,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     assert resp.json() == comment_json(
         comment,
-        plan=plan,
-        merchant=None,
-        subject_type=ResourceType.PLAN,
-        entity_ref=plan.pk,
+        subject_ref=plan.pk,
     )
 
 
@@ -96,7 +84,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(plan.pk),
+                "owner_ref": str(plan.pk),
                 "owner_type": "plan",
                 "text": comment.text,
             },
@@ -112,10 +100,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     assert resp.json() == comment_json(
         comment,
-        plan=plan,
-        merchant=merchant,
-        subject_type=ResourceType.MERCHANT,
-        entity_ref=merchant.pk,
+        subject_ref=merchant.pk,
     )
 
 
@@ -130,7 +115,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(merchant.pk),
+                "owner_ref": str(merchant.pk),
                 "owner_type": "merchant",
                 "text": comment.text,
             },
@@ -146,10 +131,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     assert resp.json() == comment_json(
         comment,
-        plan=plan,
-        merchant=merchant,
-        subject_type=ResourceType.LOCATION,
-        entity_ref=location.pk,
+        subject_ref=location.pk,
     )
 
 
@@ -164,7 +146,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(merchant.pk),
+                "owner_ref": str(merchant.pk),
                 "owner_type": "merchant",
                 "text": comment.text,
             },
@@ -180,10 +162,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     assert resp.json() == comment_json(
         comment,
-        plan=plan,
-        merchant=merchant,
-        subject_type=ResourceType.PRIMARY_MID,
-        entity_ref=primary_mid.pk,
+        subject_ref=primary_mid.pk,
     )
 
 
@@ -198,7 +177,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(merchant.pk),
+                "owner_ref": str(merchant.pk),
                 "owner_type": "merchant",
                 "text": comment.text,
             },
@@ -214,10 +193,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     assert resp.json() == comment_json(
         comment,
-        plan=plan,
-        merchant=merchant,
-        subject_type=ResourceType.SECONDARY_MID,
-        entity_ref=secondary_mid.pk,
+        subject_ref=secondary_mid.pk,
     )
 
 
@@ -232,7 +208,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(merchant.pk),
+                "owner_ref": str(merchant.pk),
                 "owner_type": "merchant",
                 "text": comment.text,
             },
@@ -248,10 +224,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     assert resp.json() == comment_json(
         comment,
-        plan=plan,
-        merchant=merchant,
-        subject_type=ResourceType.PSIMI,
-        entity_ref=psimi.pk,
+        subject_ref=psimi.pk,
     )
 
 
@@ -265,7 +238,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(uuid4()),
+                "owner_ref": str(uuid4()),
                 "owner_type": "plan",
                 "text": comment.text,
             },
@@ -288,7 +261,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(uuid4()),
+                "owner_ref": str(uuid4()),
                 "owner_type": "merchant",
                 "text": comment.text,
             },
@@ -313,7 +286,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(primary_mid.pk),
+                "owner_ref": str(primary_mid.pk),
                 "owner_type": "mid",
                 "text": comment.text,
             },
@@ -335,7 +308,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         f"/api/v1/directory_comments/{parent_comment.pk}",
         json={
             "metadata": {
-                "comment_owner": str(plan.pk),
+                "owner_ref": str(plan.pk),
                 "owner_type": "plan",
                 "text": comment.text,
             },
@@ -351,10 +324,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
 
     assert resp.json() == comment_json(
         comment,
-        plan=plan,
-        merchant=None,
-        subject_type=ResourceType.PLAN,
-        entity_ref=plan.pk,
+        subject_ref=plan.pk,
     )
 
 
@@ -368,7 +338,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         f"/api/v1/directory_comments/{uuid4()}",
         json={
             "metadata": {
-                "comment_owner": str(plan.pk),
+                "owner_ref": str(plan.pk),
                 "owner_type": "plan",
                 "text": comment.text,
             },
@@ -390,7 +360,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(plan.pk),
+                "owner_ref": str(plan.pk),
                 "owner_type": "plan",
                 "text": comment.text,
             },
@@ -417,7 +387,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(plan.pk),
+                "owner_ref": str(plan.pk),
                 "owner_type": "plan",
                 "text": comment.text,
             },
@@ -444,7 +414,7 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
         "/api/v1/directory_comments",
         json={
             "metadata": {
-                "comment_owner": str(plan.pk),
+                "owner_ref": str(plan.pk),
                 "owner_type": "plan",
                 "text": comment.text,
             },

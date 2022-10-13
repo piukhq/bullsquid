@@ -100,15 +100,12 @@ async def create_comment(
     if parent and not await Comment.exists().where(Comment.pk == parent):
         raise NoSuchRecord(Comment)
 
-    plan: UUID
     if comment_data.metadata.owner_type == ResourceType.PLAN:
-        plan = (await get_plan(comment_data.metadata.comment_owner)).pk
+        await get_plan(comment_data.metadata.owner_ref)
     elif comment_data.metadata.owner_type == ResourceType.MERCHANT:
-        plan = (
-            await get_merchant(
-                comment_data.metadata.comment_owner, plan_ref=None, validate_plan=False
-            )
-        ).plan
+        await get_merchant(
+            comment_data.metadata.owner_ref, plan_ref=None, validate_plan=False
+        )
 
     subjects = await find_subjects(
         RESOURCE_TYPE_TO_TABLE[ResourceType(comment_data.subject_type)],
@@ -117,12 +114,12 @@ async def create_comment(
     validate_subject_owners(
         subjects,
         subject_type=comment_data.subject_type,
-        owner=comment_data.metadata.comment_owner,
+        owner=comment_data.metadata.owner_ref,
     )
 
     comment = Comment(
         text=comment_data.metadata.text,
-        owner=comment_data.metadata.comment_owner,
+        owner=comment_data.metadata.owner_ref,
         owner_type=comment_data.metadata.owner_type,
         subjects=comment_data.subjects,
         subject_type=comment_data.subject_type,
@@ -140,16 +137,13 @@ async def create_comment(
         subjects=[
             CommentSubject(
                 display_text="string",
-                plan_ref=plan,
-                merchant_ref=get_subject_merchant_ref(subject),
-                subject_type=comment.subject_type,
-                entity_ref=cast(Plan, subject).pk,  # cast only for mypy's benefit
+                subject_ref=cast(Plan, subject).pk,  # cast only for mypy's benefit
                 icon_slug=None,
             )
             for subject in subjects
         ],
         metadata=CommentMetadata(
-            comment_owner=comment.owner,
+            owner_ref=comment.owner,
             owner_type=comment.owner_type,
             text=comment.text,
         ),

@@ -17,7 +17,7 @@ class CommentMetadata(BaseModel):
     Request & response model for comment metadata.
     """
 
-    comment_owner: UUID4
+    owner_ref: UUID4
     owner_type: ResourceType
     text: str
 
@@ -81,10 +81,7 @@ class CommentSubject(BaseModel):
     """
 
     display_text: str
-    plan_ref: UUID4
-    merchant_ref: UUID4 | None
-    subject_type: ResourceType
-    entity_ref: UUID4
+    subject_ref: UUID4
     icon_slug: str | None
 
     _ = validator("display_text", allow_reuse=True)(string_must_not_be_blank)

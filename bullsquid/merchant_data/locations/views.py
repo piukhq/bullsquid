@@ -1,12 +1,14 @@
 """Endpoints that operate on locations"""
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
+from bullsquid.api.auth import JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.merchant_data.auth import AccessLevel, require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.locations import db
 from bullsquid.merchant_data.locations.models import (
@@ -120,6 +122,7 @@ async def list_locations(
     exclude_secondary_mid: UUID | None = Query(default=None),
     n: int = Query(default=10),
     p: int = Query(default=1),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[LocationOverviewResponse]:
     """List locations on a merchant."""
     try:
@@ -151,6 +154,7 @@ async def get_location(
     plan_ref: UUID,
     merchant_ref: UUID,
     location_ref: UUID,
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> LocationDetailResponse:
     """Get location details."""
     try:
@@ -165,7 +169,12 @@ async def get_location(
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_location(
-    location_data: LocationDetailMetadata, plan_ref: UUID, merchant_ref: UUID
+    location_data: LocationDetailMetadata,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> LocationOverviewResponse:
     """Create a location for the given merchant."""
     if not await field_is_unique(Location, "location_id", location_data.location_id):
@@ -215,7 +224,12 @@ async def create_location(
     response_model=list[LocationDeletionResponse],
 )
 async def delete_locations(
-    plan_ref: UUID, merchant_ref: UUID, deletion: LocationDeletionRequest
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    deletion: LocationDeletionRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE_DELETE)
+    ),
 ) -> list[LocationDeletionResponse]:
     """Remove a number of locations from a merchant."""
 
@@ -255,6 +269,9 @@ async def link_location_to_primary_mid(
     merchant_ref: UUID,
     location_ref: UUID,
     link_request: PrimaryMIDLinkRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> list[PrimaryMIDLinkResponse]:
     """
     Link a primary MID to a location.
@@ -292,6 +309,9 @@ async def link_location_to_secondary_mid(
     merchant_ref: UUID,
     location_ref: UUID,
     link_request: SecondaryMIDLinkRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
 ) -> JSONResponse:
     """
     Link a secondary MID to a location.
@@ -331,6 +351,7 @@ async def list_available_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
     location_ref: UUID,
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[AvailablePrimaryMID]:
     """returns the list of MIDs that are available for association with a location"""
     try:
@@ -369,6 +390,7 @@ async def list_location_primary_mids(
     location_ref: UUID,
     n: int = Query(default=10),
     p: int = Query(default=1),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[PrimaryMIDLinkResponse]:
     """List MIDs associated with location."""
     try:
@@ -402,6 +424,7 @@ async def list_secondary_mid_location_links(
     location_ref: UUID,
     n: int = Query(default=10),
     p: int = Query(default=1),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[SecondaryMIDLinkResponse]:
     """List Secondary MIDs associated with location."""
     try:

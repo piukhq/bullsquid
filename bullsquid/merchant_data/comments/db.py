@@ -124,7 +124,11 @@ async def list_comments_by_owner(
 
     # we exclude plan comments because they will already show up in the
     # query-by-subject part of the process.
-    where = (Comment.owner == ref) & (Comment.subject_type != ResourceType.PLAN)
+    where = (
+        (Comment.owner == ref)
+        & (Comment.parent.is_null())
+        & (Comment.subject_type != ResourceType.PLAN)
+    )
     if filter_subject_type is not None:
         where &= Comment.subject_type == ResourceType(filter_subject_type.value)
 
@@ -164,7 +168,9 @@ async def list_comments_by_subject(
     Returns a list of CommentResponse instances.
     """
     comments = await paginate(
-        Comment.objects().where(Comment.subjects.any(ref)), n=n, p=p
+        Comment.objects().where(Comment.subjects.any(ref), Comment.parent.is_null()),
+        n=n,
+        p=p,
     )
 
     return (

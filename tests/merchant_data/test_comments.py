@@ -239,6 +239,43 @@ async def test_list_with_replies(
     ]
 
 
+async def test_list_only_returns_top_level_comments(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[merchant.pk],
+        subject_type=ResourceType.MERCHANT,
+    )
+    reply = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[merchant.pk],
+        subject_type=ResourceType.MERCHANT,
+        parent=comment,
+    )
+
+    resp = test_client.get(
+        "/api/v1/directory_comments", params={"ref": str(merchant.pk)}
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    assert len(resp.json()["entity_comments"]["comments"]) == 1
+    responses = resp.json()["entity_comments"]["comments"][0]["responses"]
+    assert responses == [
+        comment_json(
+            await Comment.objects().get(Comment.pk == reply.pk), subject_ref=merchant.pk
+        )
+    ]
+
+
 async def test_list_invalid_ref(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],

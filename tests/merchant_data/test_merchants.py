@@ -2,10 +2,10 @@
 
 from uuid import uuid4
 
+import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from qbert.tables import Job
-from ward import raises, test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
@@ -19,23 +19,13 @@ from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from bullsquid.tasks import OffboardAndDeleteMerchant
-from tests.fixtures import database, test_client
+from bullsquid.merchant_data.tasks import OffboardAndDeleteMerchant
 from tests.helpers import (
+    Factory,
     assert_is_missing_field_error,
     assert_is_not_found_error,
     assert_is_uniqueness_error,
     assert_is_value_error,
-)
-from tests.merchant_data.factories import (
-    default_payment_schemes,
-    identifier_factory,
-    location_factory,
-    merchant_factory,
-    plan_factory,
-    primary_mid_factory,
-    secondary_mid_factory,
-    secondary_mid_location_link_factory,
 )
 
 
@@ -83,12 +73,12 @@ def merchant_detail_json(merchant: Merchant, plan: Plan) -> dict:
     }
 
 
-@test("can list merchants")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_list(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
-    payment_schemes = await default_payment_schemes()
     plan = await plan_factory()
     merchants = [
         await merchant_factory(plan=plan),
@@ -99,23 +89,21 @@ async def _(
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
-        merchant_overview_json(merchant, payment_schemes) for merchant in merchants
+        merchant_overview_json(merchant, default_payment_schemes)
+        for merchant in merchants
     ]
 
 
-@test("listing merchants on a non-existent plan returns a 404")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
-) -> None:
+@pytest.mark.usefixtures("database")
+async def test_list_nonexistent_plan(test_client: TestClient) -> None:
     resp = test_client.get(f"/api/v1/plans/{uuid4()}/merchants")
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
-@test("can get merchant details")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_details(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -124,33 +112,31 @@ async def _(
     assert resp.json() == merchant_detail_json(merchant, plan)
 
 
-@test("getting merchant details from a non-existent plan returns a 404")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_details_with_nonexistent_plan(
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     merchant = await merchant_factory()
     resp = test_client.get(f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}")
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
-@test("getting details from a non-existent merchant returns a 404")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_details_with_nonexistent_merchant(
+    plan_factory: Factory[Plan],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}")
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
-@test("can create a merchant")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
-    payment_schemes = await default_payment_schemes()
     merchant = await merchant_factory(persist=False)
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants",
@@ -162,13 +148,13 @@ async def _(
     )
     assert resp.status_code == status.HTTP_201_CREATED
     merchant = await get_merchant(resp.json()["merchant_ref"], plan_ref=plan.pk)
-    assert resp.json() == merchant_overview_json(merchant, payment_schemes)
+    assert resp.json() == merchant_overview_json(merchant, default_payment_schemes)
 
 
-@test("unable to create a merchant with a duplicate name")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_duplicate_name(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     existing_merchant = await merchant_factory(plan=plan)
@@ -184,10 +170,9 @@ async def _(
     assert_is_uniqueness_error(resp, loc=["body", "name"])
 
 
-@test("unable to create a merchant on a non-existent plan")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_nonexistent_plan(
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     new_merchant = await merchant_factory(persist=False)
     resp = test_client.post(
@@ -201,10 +186,10 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
-@test("unable to create a merchant with a blank name instead of null")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_blank_name(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(persist=False)
@@ -219,10 +204,10 @@ async def _(
     assert_is_value_error(resp, loc=["body", "name"])
 
 
-@test("unable to create a merchant with a blank location label instead of null")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_blank_location_label(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(persist=False)
@@ -237,10 +222,10 @@ async def _(
     assert_is_value_error(resp, loc=["body", "location_label"])
 
 
-@test("can update an existing merchant with new details")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_update(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -264,10 +249,10 @@ async def _(
     assert merchant.location_label == new_details.location_label
 
 
-@test("updating a merchant requires a name")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_update_without_name(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -278,10 +263,10 @@ async def _(
     assert_is_missing_field_error(resp, loc=["body", "name"])
 
 
-@test("updating a merchant requires a location label")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_update_without_location_label(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -292,10 +277,9 @@ async def _(
     assert_is_missing_field_error(resp, loc=["body", "location_label"])
 
 
-@test("updating a non-existent merchant returns a ref error")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_update_nonexistent_merchant(
+    plan_factory: Factory[Plan],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     resp = test_client.put(
@@ -308,10 +292,9 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
-@test("updating a merchant on a non-existent plan returns a ref error")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_update_with_nonexistent_plan(
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     merchant = await merchant_factory()
     resp = test_client.put(
@@ -324,10 +307,10 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
-@test("updating a merchant with an existing name returns a uniqueness error")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_update_with_duplicate_name(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchants = [
@@ -344,14 +327,14 @@ async def _(
     assert_is_uniqueness_error(resp, loc=["body", "name"])
 
 
-@test("deleted merchants are not listed")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_list_deleted_merchants(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
-    payment_schemes = await default_payment_schemes()
 
     # create a deleted merchant that shouldn't be in the response
     await merchant_factory(status=ResourceStatus.DELETED)
@@ -359,13 +342,18 @@ async def _(
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants")
 
     assert resp.status_code == status.HTTP_200_OK
-    assert resp.json() == [merchant_overview_json(merchant, payment_schemes)]
+    assert resp.json() == [merchant_overview_json(merchant, default_payment_schemes)]
 
 
-@test("a merchant with no onboarded resources is immediately deleted")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_delete_with_no_onboarded_resources(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    secondary_mid_factory: Factory[SecondaryMID],
+    identifier_factory: Factory[Identifier],
+    location_factory: Factory[Location],
+    secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -420,10 +408,13 @@ async def _(
     )
 
 
-@test("a merchant with onboarded resources is set to pending deletion")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_delete_with_onboarded_resources(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    secondary_mid_factory: Factory[SecondaryMID],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -447,28 +438,26 @@ async def _(
     assert merchant["status"] == ResourceStatus.PENDING_DELETION
 
 
-@test("deleting a non-existent merchant returns a ref error")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_delete_noexistent_merchant(
+    plan_factory: Factory[Plan],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     resp = test_client.delete(f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}")
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
-@test("deleting a merchant on a non-existent plan returns a ref error")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_delete_with_noexistent_plan(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     merchant = await merchant_factory()
     resp = test_client.delete(f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}")
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
-@test("get_merchant fails if validate_plan is true and plan_ref is null")
-async def _() -> None:
-    with raises(ValueError) as ex:
+async def test_plan_validation() -> None:
+    with pytest.raises(ValueError) as ex:
         await get_merchant(uuid4(), plan_ref=None)
-    assert ex.raised.args[0] == "validate_plan cannot be true if plan_ref is null"
+    assert ex.value.args[0] == "validate_plan cannot be true if plan_ref is null"

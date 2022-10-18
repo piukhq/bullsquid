@@ -24,7 +24,9 @@ def main() -> None:
     # importing these here allows --help and --version to finish a little quicker
     import asyncio  # pylint: disable=import-outside-toplevel
 
-    from bullsquid.tasks import run_worker  # pylint: disable=import-outside-toplevel
+    from bullsquid.merchant_data.tasks import (  # pylint: disable=import-outside-toplevel
+        run_worker,
+    )
 
     try:
         asyncio.run(run_worker())

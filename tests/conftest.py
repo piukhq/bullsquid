@@ -1,18 +1,24 @@
-"""Ward fixture functions."""
+import os
+
+os.environ["PICCOLO_CONF"] = "piccolo_conf_test"
+os.environ["debug"] = "true"
+os.environ.pop("txm_base_url", None)
+os.environ.pop("txm_api_key", None)
+
 from typing import Generator
 
+import pytest
 from aioresponses import aioresponses
 from asyncpg import DuplicateTableError
 from fastapi.testclient import TestClient
 from piccolo.conf.apps import Finder
 from piccolo.table import create_tables, drop_tables
 from piccolo.utils.warnings import colored_warning
-from ward import fixture
 
 from bullsquid.api.app import create_app
 
 
-@fixture()
+@pytest.fixture()
 def database() -> Generator[None, None, None]:
     """
     Creates all database tables at the start of the test session.
@@ -36,14 +42,14 @@ def database() -> Generator[None, None, None]:
     drop_tables(*tables)
 
 
-@fixture
+@pytest.fixture
 def test_client() -> TestClient:
     """Creates a FastAPI test client for the app."""
     app = create_app()
     return TestClient(app)
 
 
-@fixture
+@pytest.fixture
 def mock_responses() -> Generator[aioresponses, None, None]:
     """
     Mock responses for all external API requests.

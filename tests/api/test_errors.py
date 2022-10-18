@@ -3,7 +3,6 @@ import json
 from unittest.mock import patch
 
 from fastapi import status
-from ward import test
 
 from bullsquid.api.errors import (
     APIMultiError,
@@ -13,8 +12,7 @@ from bullsquid.api.errors import (
 )
 
 
-@test("error response with default args is formatted correctly")
-def _() -> None:
+def test_error_response_default_args() -> None:
     with patch("bullsquid.api.errors.logger"):
         resp = error_response(Exception("Test exception"))
 
@@ -29,8 +27,7 @@ def _() -> None:
     }
 
 
-@test("error response with custom args is formatted correctly")
-def _() -> None:
+def test_error_response_custom_args() -> None:
     with patch("bullsquid.api.errors.logger"):
         resp = error_response(
             Exception("Test exception"),
@@ -49,8 +46,7 @@ def _() -> None:
     }
 
 
-@test("ResourceNotFoundError is formatted correctly")
-def _() -> None:
+def test_resource_not_found_error() -> None:
     ex = ResourceNotFoundError(loc=["test", "loc"], resource_name="Test resource")
     expected = [
         {
@@ -62,8 +58,7 @@ def _() -> None:
     assert ex.detail == expected
 
 
-@test("UniqueError is formatted correctly")
-def _() -> None:
+def test_unique_error() -> None:
     ex = UniqueError(loc=["test", "loc"])
     expected = [
         {
@@ -75,8 +70,7 @@ def _() -> None:
     assert ex.detail == expected
 
 
-@test("APIMultiError is formatted correctly")
-def _() -> None:
+def test_api_multi_error() -> None:
     ex = APIMultiError(
         [
             ResourceNotFoundError(loc=["test", "loc"], resource_name="Test resource"),

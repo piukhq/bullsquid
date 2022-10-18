@@ -3,7 +3,7 @@
 import os
 from unittest.mock import patch
 
-from ward import raises, test
+import pytest
 
 from bullsquid.settings import Settings
 
@@ -14,19 +14,17 @@ __root__
 """.strip()
 
 
-@test("TXM base URL is required if TXM API key is set")
-def _() -> None:
+def test_txm_base_url_is_required() -> None:
     with patch.dict(os.environ, {"txm_api_key": "foo"}):
-        with raises(ValueError) as ex:
+        with pytest.raises(ValueError) as ex:
             Settings()
 
-        assert str(ex.raised) == TXM_SETTING_MSG
+        assert str(ex.value) == TXM_SETTING_MSG
 
 
-@test("TXM API key is required if TXM base url is set")
-def _() -> None:
+def test_txm_api_key_is_required() -> None:
     with patch.dict(os.environ, {"txm_base_url": "https://testbink.com"}):
-        with raises(ValueError) as ex:
+        with pytest.raises(ValueError) as ex:
             Settings()
 
-        assert str(ex.raised) == TXM_SETTING_MSG
+        assert str(ex.value) == TXM_SETTING_MSG

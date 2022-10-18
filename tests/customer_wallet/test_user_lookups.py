@@ -1,25 +1,29 @@
 """Tests for customer wallet API endpoints."""
 import secrets
+from datetime import datetime
 from typing import Any
 
 from fastapi import status
 from fastapi.testclient import TestClient
 from requests import Response
-from ward import test
 
 from bullsquid.customer_wallet.user_lookups.tables import UserLookup
-from tests.customer_wallet.factories import user_lookup_factory
-from tests.fixtures import database, test_client
+from tests.customer_wallet.conftest import Factory
+
+
+def user_json(user_lookup: UserLookup) -> dict[str, Any]:
+    """Return the JSON representation of the `user` section of a user lookup request/response."""
+    return {
+        "user_id": user_lookup.user_id,
+        "channel": user_lookup.channel,
+        "display_text": user_lookup.display_text,
+    }
 
 
 def user_lookup_req_json(user_lookup: UserLookup) -> dict[str, Any]:
     """Return the JSON representation of a user lookup request."""
     return {
-        "user": {
-            "user_id": user_lookup.user_id,
-            "channel": user_lookup.channel,
-            "display_text": user_lookup.display_text,
-        },
+        "user": user_json(user_lookup),
         "lookup": {
             "type": user_lookup.lookup_type,
             "criteria": user_lookup.criteria,
@@ -34,19 +38,18 @@ def user_lookup_resp_json(user_lookup: UserLookup) -> dict[str, Any]:
     return json
 
 
-@test("can list user lookups with default pagination")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+def assert_lookup_was_upserted(user_lookup: UserLookup, json: dict) -> None:
+    assert json["user"] == user_json(user_lookup)
+    assert json["lookup"]["type"] == user_lookup.lookup_type
+    assert datetime.fromisoformat(json["lookup"]["datetime"]) >= user_lookup.updated_at
+
+
+async def test_list_user_lookups(
+    user_lookup_factory: Factory[UserLookup],
+    test_client: TestClient,
 ) -> None:
     auth_id = "test-authed-user-1"
     lookups = [await user_lookup_factory(auth_id=auth_id) for _ in range(5)]
-    lookups = [
-        await UserLookup.objects()
-        .get(UserLookup.id == lookup.id)
-        .output(load_json=True)
-        for lookup in lookups
-    ]
     resp = test_client.get(
         "/api/v1/customer_wallet/user_lookups",
         headers={"user": auth_id},
@@ -57,19 +60,12 @@ async def _(
     assert resp.json() == expected
 
 
-@test("can list user lookups with custom pagination")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_list_user_lookups_custom_pagination(
+    user_lookup_factory: Factory[UserLookup],
+    test_client: TestClient,
 ) -> None:
     auth_id = "test-authed-user-1"
     lookups = [await user_lookup_factory(auth_id=auth_id) for _ in range(5)]
-    lookups = [
-        await UserLookup.objects()
-        .get(UserLookup.id == lookup.id)
-        .output(load_json=True)
-        for lookup in lookups
-    ]
     resp = test_client.get(
         "/api/v1/customer_wallet/user_lookups",
         params={"n": 2, "p": 2},
@@ -83,10 +79,9 @@ async def _(
     assert resp.json() == expected
 
 
-@test("can upsert customer lookups with default pagination")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_upsert_user_lookup(
+    user_lookup_factory: Factory[UserLookup],
+    test_client: TestClient,
 ) -> None:
     auth_id = "test-authed-user-1"
     lookups = []
@@ -101,13 +96,7 @@ async def _(
             headers={"user": auth_id},
             json=user_lookup_req_json(lookup),
         )
-
-        lookups.append(
-            await UserLookup.objects()
-            .where(UserLookup.auth_id == auth_id, UserLookup.user_id == user_id)
-            .first()
-            .output(load_json=True)
-        )
+        lookups.append(lookup)
 
     assert lookup is not None
     assert resp is not None
@@ -116,13 +105,13 @@ async def _(
 
     # the most recent five should have been returned last.
     lookups = list(reversed(lookups))[:5]
-    assert resp.json() == [user_lookup_resp_json(lookup) for lookup in lookups]
+    for json, lookup in zip(resp.json(), lookups):
+        assert_lookup_was_upserted(lookup, json)
 
 
-@test("can upsert customer lookups with custom pagination")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_upsert_user_lookup_custom_pagination(
+    user_lookup_factory: Factory[UserLookup],
+    test_client: TestClient,
 ) -> None:
     auth_id = "test-authed-user-1"
     lookups = []
@@ -138,13 +127,7 @@ async def _(
             headers={"user": auth_id},
             json=user_lookup_req_json(lookup),
         )
-
-        lookups.append(
-            await UserLookup.objects()
-            .where(UserLookup.auth_id == auth_id, UserLookup.user_id == user_id)
-            .first()
-            .output(load_json=True)
-        )
+        lookups.append(lookup)
 
     assert lookup is not None
     assert resp is not None
@@ -153,13 +136,13 @@ async def _(
 
     # the most recent 3 from page 2 should have been returned last.
     lookups = list(reversed(lookups))[3:6]
-    assert resp.json() == [user_lookup_resp_json(lookup) for lookup in lookups]
+    for lookup, json in zip(lookups, resp.json()):
+        assert_lookup_was_upserted(lookup, json)
 
 
-@test("lookups returned from the PUT endpoint are separated by the user header")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_upsert_user_lookup_user_header(
+    user_lookup_factory: Factory[UserLookup],
+    test_client: TestClient,
 ) -> None:
     lookup_1 = await user_lookup_factory(persist=False, auth_id="test-authed-user-1")
     lookup_2 = await user_lookup_factory(persist=False, auth_id="test-authed-user-2")
@@ -183,10 +166,9 @@ async def _(
     assert resp.json()[0]["user"]["user_id"] == lookup_2.user_id
 
 
-@test("upserting the same lookup twice returns a 201 followed by a 200")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_upsert_duplicate_lookup(
+    user_lookup_factory: Factory[UserLookup],
+    test_client: TestClient,
 ) -> None:
     lookup = await user_lookup_factory(persist=False)
 

@@ -3,15 +3,13 @@ from asyncio import Future
 from typing import Generator
 from unittest.mock import patch
 
+import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from piccolo.apps.migrations.commands.check import MigrationStatus
-from ward import fixture, test
-
-from tests.fixtures import test_client
 
 
-@fixture
+@pytest.fixture
 def latest_migrations() -> Generator[None, None, None]:
     """Mocks the Piccolo migrations check manager to pretend all migrations have run."""
     result: Future[list[MigrationStatus]] = Future()
@@ -22,7 +20,7 @@ def latest_migrations() -> Generator[None, None, None]:
         yield
 
 
-@fixture
+@pytest.fixture
 def unused_migrations() -> Generator[None, None, None]:
     """Mocks the Piccolo migrations check manager to pretend one migration hasn't run yet."""
     result: Future[list[MigrationStatus]] = Future()
@@ -39,31 +37,29 @@ def unused_migrations() -> Generator[None, None, None]:
         yield
 
 
-@test("liveness probe should return 204 no content")
-def _(client: TestClient = test_client) -> None:
+def test_liveness_probe(test_client: TestClient) -> None:
     """Test successful liveness probe."""
-    resp = client.get("/livez")
+    resp = test_client.get("/livez")
     assert resp.status_code == status.HTTP_204_NO_CONTENT
 
 
-@test("readiness probe succeeds when all migrations have run")
-def _(client: TestClient = test_client, _: None = latest_migrations) -> None:
+@pytest.mark.usefixtures("latest_migrations")
+def test_readiness_probe_complete_migrations(test_client: TestClient) -> None:
     """Test successful readiness probe."""
-    resp = client.get("/readyz")
+    resp = test_client.get("/readyz")
     assert resp.status_code == status.HTTP_200_OK
 
 
-@test("readiness probe fails if migrations are not complete")
-def _(client: TestClient = test_client, _: None = unused_migrations) -> None:
+@pytest.mark.usefixtures("unused_migrations")
+def test_readiness_probe_incomplete_migrations(test_client: TestClient) -> None:
     """Test readiness probe with a migration that hasn't run yet."""
-    resp = client.get("/readyz")
+    resp = test_client.get("/readyz")
     assert resp.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 
 
-@test("readiness probe fails when database engine is missing")
-def _(client: TestClient = test_client) -> None:
+def test_readiness_probe_no_engine(test_client: TestClient) -> None:
     """Test readiness probe with no result from engine_finder()."""
     with patch("bullsquid.status.views.engine_finder") as engine_finder:
         engine_finder.return_value = None
-        resp = client.get("/readyz")
+        resp = test_client.get("/readyz")
         assert resp.status_code == status.HTTP_503_SERVICE_UNAVAILABLE

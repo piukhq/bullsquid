@@ -1,21 +1,20 @@
 """Tests for the transaction matching service interface."""
-from importlib import reload
 from unittest.mock import MagicMock, patch
 
 from aioresponses import aioresponses
 from fastapi import status
-from ward import test
 
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
-from bullsquid.service.txm import TXMServiceInterface, create_txm_service_interface
-from tests.fixtures import database, mock_responses
-from tests.merchant_data.factories import primary_mid_factory
+from bullsquid.merchant_data.service.txm import (
+    TXMServiceInterface,
+    create_txm_service_interface,
+)
+from tests.helpers import Factory
 
 
-@test("the onboard_mids method sends a request to the correct url")
-async def _(
-    _: None = database,
-    mock_responses: aioresponses = mock_responses,
+async def test_onboard_mids(
+    primary_mid_factory: Factory[PrimaryMID],
+    mock_responses: aioresponses,
 ) -> None:
     primary_mid = await primary_mid_factory()
     mock_responses.post(
@@ -28,10 +27,9 @@ async def _(
     assert resp == {"test": "success"}
 
 
-@test("the offboard_mids method sends a request to the correct url")
-async def _(
-    _: None = database,
-    mock_responses: aioresponses = mock_responses,
+async def test_offboard_mids(
+    primary_mid_factory: Factory[PrimaryMID],
+    mock_responses: aioresponses,
 ) -> None:
     primary_mid = await primary_mid_factory()
     mock_responses.post(
@@ -44,15 +42,16 @@ async def _(
     assert resp == {"test": "success"}
 
 
-@test("importing the txm service with a TXM base URL sets up a real interface")
-def _() -> None:
-    with patch("bullsquid.service.txm.settings.txm.base_url", "https://testbink.com"):
+def test_real_interface() -> None:
+    with patch(
+        "bullsquid.merchant_data.service.txm.settings.txm.base_url",
+        "https://testbink.com",
+    ):
         txm = create_txm_service_interface()
         assert isinstance(txm, TXMServiceInterface)
 
 
-@test("importing the txm service without a TXM base URL sets up a mock interface")
-def _() -> None:
-    with patch("bullsquid.service.txm.settings.txm.base_url", None):
+def test_mock_interface() -> None:
+    with patch("bullsquid.merchant_data.service.txm.settings.txm.base_url", None):
         txm = create_txm_service_interface()
         assert isinstance(txm, MagicMock)

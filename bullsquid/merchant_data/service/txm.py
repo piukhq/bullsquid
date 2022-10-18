@@ -37,10 +37,11 @@ class TXMServiceInterface(ServiceInterface):
 
 def create_txm_service_interface() -> TXMServiceInterface | MagicMock:
     """Return a TXM service interface, mocked if no base URL is set."""
-    if not settings.txm.base_url:
-        return create_autospec(TXMServiceInterface)
-
-    return TXMServiceInterface(settings.txm.base_url)
+    return (
+        TXMServiceInterface(settings.txm.base_url)
+        if settings.txm.base_url
+        else create_autospec(TXMServiceInterface)
+    )
 
 
 txm = create_txm_service_interface()

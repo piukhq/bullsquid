@@ -1,4 +1,4 @@
-from ward import raises, test
+import pytest
 
 from bullsquid.api.auth import AccessLevel, role_to_access_level
 
@@ -7,32 +7,27 @@ def t(role: str) -> str:
     return role_to_access_level(role, app_name="test")
 
 
-@test("can convert role strings to access levels")
-def _() -> None:
+def test_convert_role_string_to_access_level() -> None:
     assert t("test:ro") == AccessLevel.READ_ONLY
     assert t("test:rw") == AccessLevel.READ_WRITE
     assert t("test:rwd") == AccessLevel.READ_WRITE_DELETE
 
 
-@test("invalid role string raises an error")
-def _() -> None:
-    with raises(ValueError):
+def test_invalid_role_string() -> None:
+    with pytest.raises(ValueError):
         t("test:badrole")
 
 
-@test("incorrect app name prefix raises an error")
-def _() -> None:
-    with raises(ValueError):
+def test_incorrect_app_name() -> None:
+    with pytest.raises(ValueError):
         t("badprefix:ro")
 
 
-@test("incorrect role string and app name prefix raises an error")
-def _() -> None:
-    with raises(ValueError):
+def test_incorrect_role_string_and_app_name() -> None:
+    with pytest.raises(ValueError):
         t("badprefix:badrole")
 
 
-@test("prefixed role string without the prefix raises an error")
-def _() -> None:
-    with raises(ValueError):
+def test_role_string_without_prefix() -> None:
+    with pytest.raises(ValueError):
         t("ro")

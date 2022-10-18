@@ -4,24 +4,18 @@ from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from ward import test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
+from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
-from tests.fixtures import database, test_client
 from tests.helpers import (
+    Factory,
     assert_is_missing_field_error,
     assert_is_not_found_error,
     assert_is_null_error,
     assert_is_uniqueness_error,
-)
-from tests.merchant_data.factories import (
-    default_payment_schemes,
-    identifier_factory,
-    merchant_factory,
-    plan_factory,
 )
 
 
@@ -45,10 +39,11 @@ async def identifier_to_json(identifier: Identifier) -> dict:
     }
 
 
-@test("can list identifiers")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_list(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -64,10 +59,11 @@ async def _(
     assert resp.json() == [await identifier_to_json(identifier)]
 
 
-@test("deleted identifiers are not listed")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_list_deleted_identifiers(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -86,10 +82,11 @@ async def _(
     assert resp.json() == [await identifier_to_json(identifier)]
 
 
-@test("can list identifiers from a specific plan")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_list_from_plan(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchants = [await merchant_factory(plan=plan) for _ in range(3)]
@@ -109,10 +106,9 @@ async def _(
     ]
 
 
-@test("can't list identifiers on a plan that doesn't exist")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_list_from_nonexistent_plan(
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     merchant = await merchant_factory()
     resp = test_client.get(
@@ -122,10 +118,9 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
-@test("can't list identifiers on a merchant that doesn't exist")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_list_from_nonexistent_merchant(
+    plan_factory: Factory[Plan],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     resp = test_client.get(
@@ -135,10 +130,11 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
-@test("can get identifier details")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_details(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -154,10 +150,10 @@ async def _(
     assert resp.json() == await identifier_to_json(expected)
 
 
-@test("can't get identifier details from a non-existent identifier")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_details_nonexistent_identifier(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -167,10 +163,11 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "identifier_ref"])
 
 
-@test("can't get identifier details from a non-existent merchant")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_details_nonexistent_merchant(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -181,10 +178,10 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
-@test("can't get identifier details from a non-existent plan")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_details_nonexistent_plan(
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     merchant = await merchant_factory()
     identifier = await identifier_factory(merchant=merchant)
@@ -194,13 +191,14 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
-@test("can create an identifier on a merchant without onboarding")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_without_onboarding(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
-    payment_schemes = await default_payment_schemes()
     merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
@@ -210,7 +208,7 @@ async def _(
             "identifier_metadata": {
                 "value": identifier.value,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
-                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_code": default_payment_schemes[0].code,
             },
         },
     )
@@ -228,13 +226,14 @@ async def _(
     # )
 
 
-@test("can create and onboard an identifier on a merchant")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_and_onboard(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
-    payment_schemes = await default_payment_schemes()
     merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
@@ -243,7 +242,7 @@ async def _(
             "onboard": True,
             "identifier_metadata": {
                 "value": identifier.value,
-                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_code": default_payment_schemes[0].code,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
         },
@@ -262,12 +261,12 @@ async def _(
     # )
 
 
-@test("can't create an identifier on a plan that does not exist")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_on_nonexistent_plan(
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
-    payment_schemes = await default_payment_schemes()
     merchant = await merchant_factory()
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
@@ -276,7 +275,7 @@ async def _(
             "onboard": False,
             "identifier_metadata": {
                 "value": identifier.value,
-                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_code": default_payment_schemes[0].code,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
         },
@@ -285,12 +284,12 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
-@test("can't create an identifier on a merchant that does not exist")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_on_nonexistent_merchant(
+    plan_factory: Factory[Plan],
+    identifier_factory: Factory[Identifier],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
-    payment_schemes = await default_payment_schemes()
     plan = await plan_factory()
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
@@ -299,7 +298,7 @@ async def _(
             "onboard": False,
             "identifier_metadata": {
                 "value": identifier.value,
-                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_code": default_payment_schemes[0].code,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
         },
@@ -308,14 +307,15 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
 
 
-@test("can't create an identifier with a value that already exists")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_existing_value(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     existing_identifier = await identifier_factory()
-    payment_schemes = await default_payment_schemes()
     merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
@@ -324,7 +324,7 @@ async def _(
             "onboard": False,
             "identifier_metadata": {
                 "value": existing_identifier.value,
-                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_code": default_payment_schemes[0].code,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
         },
@@ -333,10 +333,11 @@ async def _(
     assert_is_uniqueness_error(resp, loc=["body", "identifier_metadata", "value"])
 
 
-@test("can't create an identifier with a missing payment scheme code")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_missing_payment_scheme_code(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -357,10 +358,11 @@ async def _(
     )
 
 
-@test("can't create an identifier with a null payment scheme code")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_null_payment_scheme_code(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -382,13 +384,14 @@ async def _(
     )
 
 
-@test("can't create an identifier with a missing value")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_without_value(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
-    payment_schemes = await default_payment_schemes()
     merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
@@ -396,7 +399,7 @@ async def _(
         json={
             "onboard": False,
             "identifier_metadata": {
-                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_code": default_payment_schemes[0].code,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
         },
@@ -405,13 +408,14 @@ async def _(
     assert_is_missing_field_error(resp, loc=["body", "identifier_metadata", "value"])
 
 
-@test("can't create an identifier with a null value")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_null_value(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
-    payment_schemes = await default_payment_schemes()
     merchant = await merchant_factory(plan=plan)
     identifier = await identifier_factory(persist=False)
     resp = test_client.post(
@@ -419,7 +423,7 @@ async def _(
         json={
             "onboard": False,
             "identifier_metadata": {
-                "payment_scheme_code": payment_schemes[0].code,
+                "payment_scheme_code": default_payment_schemes[0].code,
                 "value": None,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
@@ -429,10 +433,11 @@ async def _(
     assert_is_null_error(resp, loc=["body", "identifier_metadata", "value"])
 
 
-@test("can delete an identifier")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_delete(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -455,10 +460,11 @@ async def _(
     ]
 
 
-@test("an identifier that is not onboarded is deleted and no qbert job is created")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_delete_not_onboarded_identifier(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -487,10 +493,11 @@ async def _(
     # )
 
 
-@test("an identifier that is offboarded is deleted and no qbert job is created")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_delete_offboarded_identifier(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -519,12 +526,11 @@ async def _(
     # )
 
 
-@test(
-    "an identifier that is onboarded goes to pending deletion and a qbert job is created"
-)
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_delete_onboarded_identifier(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -553,10 +559,10 @@ async def _(
     # )
 
 
-@test("deleting an identifier that doesn't exist returns a useful error")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_delete_nonexistent_identifier(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -568,10 +574,10 @@ async def _(
     assert_is_not_found_error(resp, loc=["body", "identifier_refs"])
 
 
-@test("sending a delete identifiers request with an empty body does nothing")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_delete_no_refs(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)

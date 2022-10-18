@@ -4,10 +4,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 
-from bullsquid import tasks
 from bullsquid.api.auth import AccessLevel, JWTCredentials
 from bullsquid.api.errors import DataError, ResourceNotFoundError, UniqueError
 from bullsquid.db import InvalidData, NoSuchRecord, field_is_unique
+from bullsquid.merchant_data import tasks
 from bullsquid.merchant_data.auth import require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.locations.db import get_location_instance

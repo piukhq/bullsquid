@@ -1,18 +1,7 @@
 #!/bin/sh
 . scripts/_common
 
-export PICCOLO_CONF=piccolo_conf_test
-export debug=true
-unset txm_base_url
-unset txm_api_key
-
 info 'running tests'
-coverage run -m ward --progress-style bar "$@"
-
-info 'generating coverage xml'
-coverage xml
-
-info 'reporting coverage'
-coverage report --skip-covered --skip-empty --show-missing
+pytest --cov --cov-report xml --cov-report term-missing "$@"
 
 success 'all done'

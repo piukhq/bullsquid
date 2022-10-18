@@ -2,21 +2,16 @@ from uuid import UUID, uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from ward import test
 
 from bullsquid.merchant_data.comments.tables import Comment
 from bullsquid.merchant_data.enums import ResourceType
-from tests.fixtures import database, test_client
-from tests.helpers import assert_is_not_found_error, assert_is_value_error
-from tests.merchant_data.factories import (
-    comment_factory,
-    identifier_factory,
-    location_factory,
-    merchant_factory,
-    plan_factory,
-    primary_mid_factory,
-    secondary_mid_factory,
-)
+from bullsquid.merchant_data.identifiers.tables import Identifier
+from bullsquid.merchant_data.locations.tables import Location
+from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from tests.helpers import Factory, assert_is_not_found_error, assert_is_value_error
 
 
 def comment_json(
@@ -46,8 +41,11 @@ def comment_json(
     }
 
 
-@test("can list a single comment by subject ref")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_list_by_subject_ref(
+    plan_factory: Factory[Plan],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     comment = await comment_factory(
         owner=plan.pk,
@@ -73,8 +71,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     }
 
 
-@test("can list a single comment by owner ref")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_list_by_owner_ref(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     comment = await comment_factory(
@@ -103,8 +105,14 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     }
 
 
-@test("can list lower comments with multiple subject types")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_list_lower_comments_multiple_subject_types(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    secondary_mid_factory: Factory[SecondaryMID],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(merchant=merchant)
@@ -152,8 +160,14 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     }
 
 
-@test("can filter lower comments by subject type")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_filter_lower_comments_by_subject_type(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    secondary_mid_factory: Factory[SecondaryMID],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(merchant=merchant)
@@ -193,8 +207,11 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     }
 
 
-@test("listing comments with replies returns the replies")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_list_with_replies(
+    plan_factory: Factory[Plan],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     comment = await comment_factory(
         owner=plan.pk,
@@ -222,8 +239,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     ]
 
 
-@test("listing comments with an invalid ref returns no results")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_list_invalid_ref(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     await comment_factory(
@@ -242,8 +263,11 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     }
 
 
-@test("can create a top-level comment on a plan")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_on_plan(
+    plan_factory: Factory[Plan],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     comment = await comment_factory(persist=False)
 
@@ -271,8 +295,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
 
-@test("can create a top-level comment on a merchant")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_on_merchant(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     comment = await comment_factory(persist=False)
@@ -301,8 +329,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
 
-@test("can create a top-level comment on a location")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_on_location(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
@@ -332,8 +365,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
 
-@test("can create a top-level comment on a primary mid")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_on_primary_mid(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(merchant=merchant)
@@ -363,8 +401,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
 
-@test("can create a top-level comment on a secondary mid")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_on_secondary_mid(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    secondary_mid_factory: Factory[SecondaryMID],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
@@ -394,8 +437,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
 
-@test("can create a top-level comment on a PSIMI")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_on_psimi(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    identifier_factory: Factory[Identifier],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     psimi = await identifier_factory(merchant=merchant)
@@ -425,8 +473,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
 
-@test("creating a comment with a non-existent plan owner returns a ref error")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_on_nonexistent_plan(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     comment = await comment_factory(persist=False)
@@ -447,8 +499,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert_is_not_found_error(resp, loc=["body", "plan_ref"])
 
 
-@test("creating a comment with a non-existent merchant owner returns a ref error")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_on_nonexistent_merchant(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
@@ -470,10 +527,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert_is_not_found_error(resp, loc=["body", "merchant_ref"])
 
 
-@test(
-    "creating a comment with an owner type that isn't plan or merchant returns a value error"
-)
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_incorrect_owner_type(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(merchant=merchant)
@@ -495,8 +555,11 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert_is_value_error(resp, loc=["body", "metadata", "owner_type"])
 
 
-@test("can create a comment reply on a plan")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_reply_on_plan(
+    plan_factory: Factory[Plan],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     comment = await comment_factory(persist=False)
     parent_comment = await comment_factory()
@@ -525,11 +588,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     )
 
 
-@test("can't reply to a comment that does not exist")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_reply_to_nonexistent_comment(
+    plan_factory: Factory[Plan],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     comment = await comment_factory(persist=False)
-    parent_comment = await comment_factory()
 
     resp = test_client.post(
         f"/api/v1/directory_comments/{uuid4()}",
@@ -547,8 +612,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert_is_not_found_error(resp, loc=["path", "comment_ref"])
 
 
-@test("can't comment on a subject that doesn't exist")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_with_nonexistent_subject(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     comment = await comment_factory(persist=False)
@@ -573,8 +642,12 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert not await Comment.exists().where(Comment.owner == plan.pk)
 
 
-@test("can't comment on a subject from another owner")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_with_wrong_owner(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     merchant2 = await merchant_factory()
@@ -600,8 +673,13 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert not await Comment.exists().where(Comment.owner == plan.pk)
 
 
-@test("can't comment on a subject with the wrong owner type")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_create_with_incorrect_owner_type(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)

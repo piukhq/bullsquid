@@ -13,7 +13,7 @@ from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.db import plan_has_onboarded_resources
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
-from bullsquid.service.txm import txm
+from bullsquid.merchant_data.service.txm import txm
 from bullsquid.settings import settings
 
 

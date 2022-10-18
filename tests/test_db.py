@@ -1,22 +1,22 @@
 """Test for the top level database module."""
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Type
 
+import pytest
 from piccolo.columns import Text
 from piccolo.table import Table, create_tables, drop_tables
-from ward import fixture, raises, test
 
 from bullsquid.db import paginate
 
 
-class TestTable(Table):
-    """Test table model."""
-
-    name = Text()
-
-
-@fixture
-async def test_table() -> AsyncGenerator[None, None]:
+@pytest.fixture
+async def test_table() -> AsyncGenerator[Type[Table], None]:
     """Creates TestTable and inserts some records."""
+
+    class TestTable(Table):
+        """Test table model."""
+
+        name = Text()
+
     create_tables(TestTable)
     await TestTable.insert(
         TestTable(name="test-1"),
@@ -25,7 +25,7 @@ async def test_table() -> AsyncGenerator[None, None]:
         TestTable(name="test-4"),
         TestTable(name="test-5"),
     )
-    yield
+    yield TestTable
     drop_tables(TestTable)
 
 
@@ -34,9 +34,8 @@ def names(results: list[dict[str, Any]]) -> list[str]:
     return [result["name"] for result in results]
 
 
-@test("paginate correctly paginates a simple query")
-async def _(_db: None = test_table) -> None:
-    query = TestTable.select()
+async def test_correct_pagination(test_table: Table) -> None:
+    query = test_table.select()
 
     results = await paginate(query, n=2, p=1)
     assert names(results) == ["test-1", "test-2"]
@@ -48,41 +47,37 @@ async def _(_db: None = test_table) -> None:
     assert names(results) == ["test-4", "test-5"]
 
 
-@test("paginate raises an error if n is zero")
-async def _(_db: None = test_table) -> None:
-    query = TestTable.select()
+async def test_paginate_n_zero(test_table: Table) -> None:
+    query = test_table.select()
 
-    with raises(ValueError) as ex:
+    with pytest.raises(ValueError) as ex:
         await paginate(query, n=0, p=1)
 
-    assert str(ex.raised) == "n must be >= 1"
+    assert str(ex.value) == "n must be >= 1"
 
 
-@test("paginate raises an error if n is negative")
-async def _(_db: None = test_table) -> None:
-    query = TestTable.select()
+async def test_paginate_n_negative(test_table: Table) -> None:
+    query = test_table.select()
 
-    with raises(ValueError) as ex:
+    with pytest.raises(ValueError) as ex:
         await paginate(query, n=-3, p=1)
 
-    assert str(ex.raised) == "n must be >= 1"
+    assert str(ex.value) == "n must be >= 1"
 
 
-@test("paginate raises an error if p is zero")
-async def _(_db: None = test_table) -> None:
-    query = TestTable.select()
+async def test_paginate_p_zero(test_table: Table) -> None:
+    query = test_table.select()
 
-    with raises(ValueError) as ex:
+    with pytest.raises(ValueError) as ex:
         await paginate(query, n=5, p=0)
 
-    assert str(ex.raised) == "p must be >= 1"
+    assert str(ex.value) == "p must be >= 1"
 
 
-@test("paginate raises an error if p is negative")
-async def _(_db: None = test_table) -> None:
-    query = TestTable.select()
+async def test_paginate_p_negative(test_table: Table) -> None:
+    query = test_table.select()
 
-    with raises(ValueError) as ex:
+    with pytest.raises(ValueError) as ex:
         await paginate(query, n=5, p=-3)
 
-    assert str(ex.raised) == "p must be >= 1"
+    assert str(ex.value) == "p must be >= 1"

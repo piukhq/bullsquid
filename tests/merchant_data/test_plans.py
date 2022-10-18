@@ -3,10 +3,10 @@
 import random
 from uuid import uuid4
 
+import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from qbert.tables import Job
-from ward import test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.tables import Identifier
@@ -20,19 +20,8 @@ from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from bullsquid.tasks import OffboardAndDeletePlan
-from tests.fixtures import database, test_client
-from tests.helpers import assert_is_not_found_error, assert_is_uniqueness_error
-from tests.merchant_data.factories import (
-    default_payment_schemes,
-    identifier_factory,
-    location_factory,
-    merchant_factory,
-    plan_factory,
-    primary_mid_factory,
-    secondary_mid_factory,
-    secondary_mid_location_link_factory,
-)
+from bullsquid.merchant_data.tasks import OffboardAndDeletePlan
+from tests.helpers import Factory, assert_is_not_found_error, assert_is_uniqueness_error
 
 
 async def plan_to_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict:
@@ -62,55 +51,59 @@ async def plan_to_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict
     }
 
 
-@test("can list plans with no merchants")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_list_no_merchants(
+    plan_factory: Factory[Plan],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
-    payment_schemes = await default_payment_schemes()
     plans = [await plan_factory() for _ in range(3)]
     resp = test_client.get("/api/v1/plans")
     assert resp.status_code == status.HTTP_200_OK
-    assert resp.json() == [await plan_to_json(plan, payment_schemes) for plan in plans]
+    assert resp.json() == [
+        await plan_to_json(plan, default_payment_schemes) for plan in plans
+    ]
 
 
-@test("can list plans with merchants")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
+async def test_list_with_merchants(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
     plans = [await plan_factory() for _ in range(3)]
-    payment_schemes = await default_payment_schemes()
     for plan in plans:
         for _ in range(random.randint(1, 3)):
             await merchant_factory(plan=plan)
 
     resp = test_client.get("/api/v1/plans")
     assert resp.status_code == status.HTTP_200_OK
-    assert resp.json() == [await plan_to_json(plan, payment_schemes) for plan in plans]
+    assert resp.json() == [
+        await plan_to_json(plan, default_payment_schemes) for plan in plans
+    ]
 
 
-@test("can get a plan's details")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_details(
+    plan_factory: Factory[Plan],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
-    ps = await default_payment_schemes()
     resp = test_client.get(f"/api/v1/plans/{plan.pk}")
     assert resp.status_code == status.HTTP_200_OK, resp.text
-    assert resp.json() == await plan_to_json(plan, ps)
+    assert resp.json() == await plan_to_json(plan, default_payment_schemes)
 
 
-@test("can't get details of a non-existent plan")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+@pytest.mark.usefixtures("database")
+async def test_details_nonexistent_plan(test_client: TestClient) -> None:
     resp = test_client.get(f"/api/v1/plans/{uuid4()}")
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
-@test("can create a plan")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create(
+    plan_factory: Factory[Plan],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
-    payment_schemes = await default_payment_schemes()
     plan = await plan_factory(persist=False)
     resp = test_client.post(
         "/api/v1/plans",
@@ -123,15 +116,14 @@ async def _(
     )
     assert resp.status_code == status.HTTP_201_CREATED
     plan = await get_plan(resp.json()["plan_ref"])
-    assert resp.json() == await plan_to_json(plan, payment_schemes)
+    assert resp.json() == await plan_to_json(plan, default_payment_schemes)
 
 
-@test("can create a plan with a blank slug")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_blank_slug(
+    plan_factory: Factory[Plan],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
-    payment_schemes = await default_payment_schemes()
     plan = await plan_factory(persist=False, slug="")
     resp = test_client.post(
         "/api/v1/plans",
@@ -144,14 +136,13 @@ async def _(
     )
     assert resp.status_code == status.HTTP_201_CREATED
     plan = await get_plan(resp.json()["plan_ref"])
-    assert resp.json() == await plan_to_json(plan, payment_schemes)
+    assert resp.json() == await plan_to_json(plan, default_payment_schemes)
     assert resp.json()["plan_metadata"]["slug"] is None
 
 
-@test("unable to create a plan with a duplicate name")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_duplicate_name(
+    plan_factory: Factory[Plan],
+    test_client: TestClient,
 ) -> None:
     existing_plan = await plan_factory()
     new_plan = await plan_factory(persist=False)
@@ -167,10 +158,9 @@ async def _(
     assert_is_uniqueness_error(resp, loc=["body", "name"])
 
 
-@test("unable to create a plan with a duplicate slug")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_duplicate_slug(
+    plan_factory: Factory[Plan],
+    test_client: TestClient,
 ) -> None:
     existing_plan = await plan_factory()
     new_plan = await plan_factory(persist=False)
@@ -186,10 +176,9 @@ async def _(
     assert_is_uniqueness_error(resp, loc=["body", "slug"])
 
 
-@test("unable to create a plan with a duplicate plan ID")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_create_with_duplication_plan_id(
+    plan_factory: Factory[Plan],
+    test_client: TestClient,
 ) -> None:
     existing_plan = await plan_factory()
     new_plan = await plan_factory(persist=False)
@@ -205,12 +194,11 @@ async def _(
     assert_is_uniqueness_error(resp, loc=["body", "plan_id"])
 
 
-@test("can update an existing plan with new details")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_update(
+    plan_factory: Factory[Plan],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
 ) -> None:
-    payment_schemes = await default_payment_schemes()
     plan = await plan_factory()
     new_details = await plan_factory(persist=False)
     resp = test_client.put(
@@ -224,18 +212,15 @@ async def _(
     )
     assert resp.status_code == status.HTTP_200_OK
     plan = await get_plan(plan.pk)
-    assert resp.json() == await plan_to_json(plan, payment_schemes)
+    assert resp.json() == await plan_to_json(plan, default_payment_schemes)
     assert plan.name == new_details.name
     assert plan.plan_id == new_details.plan_id
     assert plan.slug == new_details.slug
     assert plan.icon_url == new_details.icon_url
 
 
-@test("updating a non-existent plan returns a ref error")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
-) -> None:
+@pytest.mark.usefixtures("database")
+async def test_update_nonexistent_plan(test_client: TestClient) -> None:
     resp = test_client.put(
         f"/api/v1/plans/{uuid4()}",
         json={
@@ -245,10 +230,9 @@ async def _(
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
-@test("updating a plan with an existing name returns a uniqueness error")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_update_with_duplicate_name(
+    plan_factory: Factory[Plan],
+    test_client: TestClient,
 ) -> None:
     plans = [await plan_factory() for _ in range(3)]
     resp = test_client.put(
@@ -260,10 +244,9 @@ async def _(
     assert_is_uniqueness_error(resp, loc=["body", "name"])
 
 
-@test("updating a plan with an existing slug returns a uniqueness error")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_update_with_duplicate_slug(
+    plan_factory: Factory[Plan],
+    test_client: TestClient,
 ) -> None:
     plans = [await plan_factory() for _ in range(3)]
     resp = test_client.put(
@@ -276,10 +259,9 @@ async def _(
     assert_is_uniqueness_error(resp, loc=["body", "slug"])
 
 
-@test("updating a plan with an existing plan ID returns a uniqueness error")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_update_with_duplicate_plan_id(
+    plan_factory: Factory[Plan],
+    test_client: TestClient,
 ) -> None:
     plans = [await plan_factory() for _ in range(3)]
     resp = test_client.put(
@@ -292,17 +274,24 @@ async def _(
     assert_is_uniqueness_error(resp, loc=["body", "plan_id"])
 
 
-@test("a plan with no dependent resources is immediately deleted")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_delete_no_dependents(
+    plan_factory: Factory[Plan],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     resp = test_client.delete(f"/api/v1/plans/{plan.pk}")
     assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
 
 
-@test("a plan with no onboarded resources is immediately deleted")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_delete_no_onboarded_resources(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    secondary_mid_factory: Factory[SecondaryMID],
+    identifier_factory: Factory[Identifier],
+    location_factory: Factory[Location],
+    secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -359,10 +348,13 @@ async def _(
     )
 
 
-@test("a plan with onboarded resources is set to pending deletion")
-async def _(
-    _: None = database,
-    test_client: TestClient = test_client,
+async def test_delete_with_onboarded_resources(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    secondary_mid_factory: Factory[SecondaryMID],
+    identifier_factory: Factory[Identifier],
+    test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
@@ -384,10 +376,7 @@ async def _(
     assert plan["status"] == ResourceStatus.PENDING_DELETION
 
 
-@test("deleting a non-existent plan returns a ref error")
-async def _(
-    _db: None = database,
-    test_client: TestClient = test_client,
-) -> None:
+@pytest.mark.usefixtures("database")
+async def test_delete_nonexistent_plan(test_client: TestClient) -> None:
     resp = test_client.delete(f"/api/v1/plans/{uuid4()}")
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])

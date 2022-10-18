@@ -2,21 +2,25 @@ from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from ward import test
 
-from tests.fixtures import database, test_client
-from tests.helpers import assert_is_not_found_error
-from tests.merchant_data.factories import (
-    location_factory,
-    merchant_factory,
-    plan_factory,
-    secondary_mid_factory,
-    secondary_mid_location_link_factory,
+from bullsquid.merchant_data.locations.tables import Location
+from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.secondary_mid_location_links.tables import (
+    SecondaryMIDLocationLink,
 )
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from tests.helpers import Factory, assert_is_not_found_error
 
 
-@test("can delete a secondary MID location link")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_delete(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    secondary_mid_factory: Factory[SecondaryMID],
+    secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
@@ -32,8 +36,14 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert resp.status_code == status.HTTP_204_NO_CONTENT, resp.text
 
 
-@test("can't delete a secondary MID location link that doesn't exist")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_delete_nonexistent_link(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    secondary_mid_factory: Factory[SecondaryMID],
+    secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
@@ -49,8 +59,14 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert_is_not_found_error(resp, loc=["path", "link_ref"])
 
 
-@test("can't delete a secondary MID location link from a different merchant")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_delete_with_wrong_merchant(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    secondary_mid_factory: Factory[SecondaryMID],
+    secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
@@ -68,8 +84,14 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert_is_not_found_error(resp, loc=["path", "link_ref"])
 
 
-@test("can't delete a secondary MID location link on a plan that doesn't exist")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_delete_with_nonexistent_plan(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    secondary_mid_factory: Factory[SecondaryMID],
+    secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
@@ -85,8 +107,14 @@ async def _(_: None = database, test_client: TestClient = test_client) -> None:
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
-@test("can't delete a secondary MID location link on a merchant that doesn't exist")
-async def _(_: None = database, test_client: TestClient = test_client) -> None:
+async def test_delete_with_nonexistent_merchant(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    secondary_mid_factory: Factory[SecondaryMID],
+    secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
+    test_client: TestClient,
+) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)

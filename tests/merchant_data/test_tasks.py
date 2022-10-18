@@ -2,15 +2,16 @@
 
 from unittest.mock import patch
 
+import pytest
 from qbert.enums import JobStatus
 from qbert.tables import Job
-from ward import raises, test
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
-from bullsquid.tasks import (
+from bullsquid.merchant_data.tasks import (
     OffboardAndDeleteMerchant,
     OffboardAndDeletePlan,
     OffboardAndDeletePrimaryMIDs,
@@ -19,29 +20,21 @@ from bullsquid.tasks import (
     queue,
     run_worker,
 )
-from tests.fixtures import database
-from tests.merchant_data.factories import (
-    location_factory,
-    merchant_factory,
-    plan_factory,
-    primary_mid_factory,
-)
+from tests.helpers import Factory
 
 
-@test("run_worker executes jobs")
-async def _(_: None = database) -> None:
+async def test_run_worker_jobs(primary_mid_factory: Factory[PrimaryMID]) -> None:
     primary_mid = await primary_mid_factory()
     await queue.push(OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
     assert await Job.count().where(Job.message_type == OnboardPrimaryMIDs.__name__) == 1
 
-    with patch("bullsquid.tasks.logger"):
+    with patch("bullsquid.merchant_data.tasks.logger"):
         await run_worker(burst=True)
 
     assert await Job.count().where(Job.message_type == OnboardPrimaryMIDs.__name__) == 0
 
 
-@test("run_worker handles exceptions without crashing")
-async def _(_: None = database) -> None:
+async def test_run_worker_exceptions(primary_mid_factory: Factory[PrimaryMID]) -> None:
     primary_mid = await primary_mid_factory()
     await queue.push(OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
     assert (
@@ -54,8 +47,8 @@ async def _(_: None = database) -> None:
     )
 
     with (
-        patch("bullsquid.tasks.logger"),
-        patch("bullsquid.tasks.txm.onboard_mids", side_effect=Exception),
+        patch("bullsquid.merchant_data.tasks.logger"),
+        patch("bullsquid.merchant_data.tasks.txm.onboard_mids", side_effect=Exception),
     ):
         await run_worker(burst=True)
 
@@ -69,8 +62,7 @@ async def _(_: None = database) -> None:
     )
 
 
-@test("run_worker sleeps when the queue is empty")
-async def _(_: None = database) -> None:
+async def test_run_worker_sleep(primary_mid_factory: Factory[PrimaryMID]) -> None:
     primary_mid = await primary_mid_factory()
     await queue.push(OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
 
@@ -81,19 +73,18 @@ async def _(_: None = database) -> None:
         """
 
     with (
-        patch("bullsquid.tasks.logger"),
-        patch("bullsquid.tasks.asyncio.sleep", side_effect=MockedSleep),
-        raises(MockedSleep),
+        patch("bullsquid.merchant_data.tasks.logger"),
+        patch("bullsquid.merchant_data.tasks.asyncio.sleep", side_effect=MockedSleep),
+        pytest.raises(MockedSleep),
     ):
         await run_worker()
 
 
-@test("the task worker can onboard primary MIDs")
-async def _(_: None = database) -> None:
+async def test_onboard_primary_mids(primary_mid_factory: Factory[PrimaryMID]) -> None:
     primary_mid = await primary_mid_factory(txm_status=TXMStatus.NOT_ONBOARDED)
 
     await queue.push(OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
-    with patch("bullsquid.tasks.logger"):
+    with patch("bullsquid.merchant_data.tasks.logger"):
         await run_worker(burst=True)
 
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
@@ -101,12 +92,11 @@ async def _(_: None = database) -> None:
     assert primary_mid.status == ResourceStatus.ACTIVE
 
 
-@test("the task worker can offboard primary MIDs")
-async def _(_: None = database) -> None:
+async def test_offboard_primary_mids(primary_mid_factory: Factory[PrimaryMID]) -> None:
     primary_mid = await primary_mid_factory(txm_status=TXMStatus.ONBOARDED)
 
     await queue.push(OffboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
-    with patch("bullsquid.tasks.logger"):
+    with patch("bullsquid.merchant_data.tasks.logger"):
         await run_worker(burst=True)
 
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
@@ -114,12 +104,13 @@ async def _(_: None = database) -> None:
     assert primary_mid.status == ResourceStatus.ACTIVE
 
 
-@test("the task worker can offboard and delete primary MIDs")
-async def _(_: None = database) -> None:
+async def test_offboard_delete_primary_mids(
+    primary_mid_factory: Factory[PrimaryMID],
+) -> None:
     primary_mid = await primary_mid_factory(txm_status=TXMStatus.ONBOARDED)
 
     await queue.push(OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]))
-    with patch("bullsquid.tasks.logger"):
+    with patch("bullsquid.merchant_data.tasks.logger"):
         await run_worker(burst=True)
 
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
@@ -127,10 +118,11 @@ async def _(_: None = database) -> None:
     assert primary_mid.status == ResourceStatus.DELETED
 
 
-@test(
-    "offboarding & deleting a primary MID that is linked to a location nullifies the link"
-)
-async def _(_: None = database) -> None:
+async def test_offboard_delete_primary_mid_null_link(
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    primary_mid_factory: Factory[PrimaryMID],
+) -> None:
     merchant = await merchant_factory()
     location = await location_factory(merchant=merchant)
     primary_mid = await primary_mid_factory(
@@ -138,22 +130,24 @@ async def _(_: None = database) -> None:
     )
 
     await queue.push(OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]))
-    with patch("bullsquid.tasks.logger"):
+    with patch("bullsquid.merchant_data.tasks.logger"):
         await run_worker(burst=True)
 
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.location is None
 
 
-@test("the task worker can offboard and delete a merchant")
-async def _(_: None = database) -> None:
+async def test_offboard_delete_merchant(
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+) -> None:
     merchant = await merchant_factory(status=ResourceStatus.PENDING_DELETION)
     primary_mid = await primary_mid_factory(
         merchant=merchant, txm_status=TXMStatus.ONBOARDED
     )
 
     await queue.push(OffboardAndDeleteMerchant(merchant_ref=merchant.pk))
-    with patch("bullsquid.tasks.logger"):
+    with patch("bullsquid.merchant_data.tasks.logger"):
         # run this twice; once for OffboardAndDeleteMerchant and once more for
         # OffboardAndDeletePrimaryMIDs.
         # TODO: fix burst mode
@@ -167,8 +161,11 @@ async def _(_: None = database) -> None:
     assert merchant.status == ResourceStatus.DELETED
 
 
-@test("the task worker can offboard and delete a plan")
-async def _(_: None = database) -> None:
+async def test_offboard_delete_plan(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+) -> None:
     plan = await plan_factory(status=ResourceStatus.PENDING_DELETION)
     merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(
@@ -176,7 +173,7 @@ async def _(_: None = database) -> None:
     )
 
     await queue.push(OffboardAndDeletePlan(plan_ref=plan.pk))
-    with patch("bullsquid.tasks.logger"):
+    with patch("bullsquid.merchant_data.tasks.logger"):
         # run this three times
         # 1. OffboardAndDeletePlan
         # 2. OffboardAndDeleteMerchant

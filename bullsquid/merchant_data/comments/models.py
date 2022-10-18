@@ -121,3 +121,13 @@ class ListCommentsResponse(BaseModel):
 
     entity_comments: SubjectComments | None
     lower_comments: list[SubjectComments]
+
+
+class EditCommentRequest(BaseModel):
+    """
+    Response model for editing the text in a comment
+    """
+
+    text: str
+
+    _ = validator("text", allow_reuse=True)(string_must_not_be_blank)

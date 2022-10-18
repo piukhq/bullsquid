@@ -14,6 +14,7 @@ from bullsquid.merchant_data.comments import db
 from bullsquid.merchant_data.comments.models import (
     CommentResponse,
     CreateCommentRequest,
+    EditCommentRequest,
     ListCommentsResponse,
 )
 from bullsquid.merchant_data.comments.tables import Comment
@@ -83,5 +84,30 @@ async def create_comment_reply(
     except NoSuchRecord as ex:
         loc = ["path"] if ex.table == Comment else ["body"]
         raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
+
+    return comment
+
+
+@router.patch(
+    "/{comment_ref}",
+    response_model=CommentResponse,
+)
+async def edit_comment(
+    comment_data: EditCommentRequest,
+    comment_ref: UUID,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> CommentResponse:
+    """
+    Create response for editing a comment
+    """
+    try:
+        comment = await db.edit_comment(
+            comment_ref,
+            comment_data,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return comment

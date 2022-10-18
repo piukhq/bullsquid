@@ -13,6 +13,7 @@ from bullsquid.merchant_data.comments.models import (
     CommentResponse,
     CommentSubject,
     CreateCommentRequest,
+    EditCommentRequest,
     SubjectComments,
 )
 from bullsquid.merchant_data.comments.tables import Comment
@@ -230,4 +231,24 @@ async def create_comment(
     )
     await comment.save()
 
+    return await create_comment_response(comment, subjects=subjects)
+
+
+async def edit_comment(
+    comment_ref: UUID,
+    fields: EditCommentRequest,
+) -> CommentResponse:
+    """Edit existing comment with new text"""
+    comment = await Comment.objects().get(Comment.pk == comment_ref)
+
+    if not comment:
+        raise NoSuchRecord(Comment)
+
+    subjects = await find_subjects(
+        RESOURCE_TYPE_TO_TABLE[comment.subject_type],
+        comment.subjects,
+    )
+
+    comment.text = fields.text
+    await comment.save()
     return await create_comment_response(comment, subjects=subjects)

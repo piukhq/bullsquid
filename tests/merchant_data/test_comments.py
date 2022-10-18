@@ -1,8 +1,9 @@
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
 
+from bullsquid.merchant_data.comments.models import CommentResponse, EditCommentRequest
 from bullsquid.merchant_data.comments.tables import Comment
 from bullsquid.merchant_data.enums import ResourceType
 from bullsquid.merchant_data.identifiers.tables import Identifier
@@ -12,7 +13,12 @@ from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.merchant_data.tables import TableWithPK
-from tests.helpers import Factory, assert_is_not_found_error, assert_is_value_error
+from tests.helpers import (
+    Factory,
+    assert_is_missing_field_error,
+    assert_is_not_found_error,
+    assert_is_value_error,
+)
 
 
 def comment_json(
@@ -738,3 +744,53 @@ async def test_create_with_incorrect_owner_type(
 
     assert_is_value_error(resp, loc=["body", "__root__"])
     assert not await Comment.exists().where(Comment.owner == plan.pk)
+
+
+async def test_update_comment(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner_type=ResourceType.PLAN,
+        owner=plan.pk,
+        subject_type=ResourceType.MERCHANT,
+        subjects=[merchant.pk],
+    )
+    resp = test_client.patch(
+        f"/api/v1/directory_comments/{comment.pk}",
+        json={
+            "text": "test text",
+        },
+    )
+
+    comment = await Comment.objects().get(Comment.pk == comment.pk)
+    assert resp.status_code == status.HTTP_200_OK
+    assert comment.text == "test text"
+
+
+async def test_comment_with_missing_text(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner_type=ResourceType.PLAN,
+        owner=plan.pk,
+        subject_type=ResourceType.MERCHANT,
+        subjects=[merchant.pk],
+    )
+    resp = test_client.patch(
+        f"/api/v1/directory_comments/{comment.pk}",
+        json={
+            "text": "",
+        },
+    )
+
+    assert_is_value_error(resp, loc=["body", "text"])

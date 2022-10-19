@@ -14,3 +14,7 @@ class Merchant(TableWithPK):
     location_label = Text(required=True)
     status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE)
     plan = ForeignKey(Plan, required=True, null=False)
+
+    @property
+    def display_text(self) -> str:
+        return self.name

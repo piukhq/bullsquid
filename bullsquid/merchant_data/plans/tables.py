@@ -13,3 +13,7 @@ class Plan(TableWithPK):
     slug = Text(null=True, default=None, unique=True)
     plan_id = Integer(null=True, default=None, unique=True)
     status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE)
+
+    @property
+    def display_text(self) -> str:
+        return self.name

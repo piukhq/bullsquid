@@ -17,3 +17,7 @@ class Identifier(TableWithPK):
     txm_status = Text(choices=TXMStatus, default=TXMStatus.NOT_ONBOARDED)
     status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE)
     merchant = ForeignKey(Merchant, required=True)
+
+    @property
+    def display_text(self) -> str:
+        return self.value

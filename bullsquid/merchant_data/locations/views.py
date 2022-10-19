@@ -359,17 +359,17 @@ async def list_available_mids(
             plan_ref, merchant_ref=merchant_ref, location_ref=location_ref
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
     return [
         AvailablePrimaryMID(
             location_link=LocationLinkResponse(
                 location_ref=mid["location.pk"],
-                location_title=Location.make_title(
-                    mid["location.name"],  # type: ignore
-                    mid["location.address_line_1"],
-                    mid["location.town_city"],
-                    mid["location.postcode"],
-                ),
+                location_title=Location(
+                    name=mid["location.name"],
+                    address_line_1=mid["location.address_line_1"],
+                    town_city=mid["location.town_city"],
+                    postcode=mid["location.postcode"],
+                ).display_text,
             )
             if mid["location.pk"]
             else None,

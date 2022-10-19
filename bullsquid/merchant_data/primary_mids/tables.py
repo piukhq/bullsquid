@@ -26,3 +26,7 @@ class PrimaryMID(TableWithPK):
     status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE, index=True)
     merchant = ForeignKey(Merchant, required=True)
     location = ForeignKey(Location)
+
+    @property
+    def display_text(self) -> str:
+        return self.mid

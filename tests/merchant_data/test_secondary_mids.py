@@ -825,7 +825,7 @@ async def test_associate_location(
         {
             "link_ref": str(link["pk"]),
             "location_ref": str(location.pk),
-            "location_title": location.title,
+            "location_title": location.display_text,
         }
     ]
 
@@ -960,7 +960,7 @@ async def test_associated_locations(
         {
             "link_ref": str(link.pk),
             "location_ref": str(location.pk),
-            "location_title": location.title,
+            "location_title": location.display_text,
         }
     ]
 

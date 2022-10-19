@@ -733,7 +733,7 @@ async def test_associate_location(
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == {
         "location_ref": str(location.pk),
-        "location_title": location.title,
+        "location_title": location.display_text,
     }
 
 

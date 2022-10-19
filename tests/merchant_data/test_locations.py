@@ -84,12 +84,12 @@ async def location_to_json_detail(
 
 def test_title_name_only() -> None:
     location = Location(name="test location")
-    assert location.title == "test location"
+    assert location.display_text == "test location"
 
 
 def test_title_mixed_fields() -> None:
     location = Location(name="test location", town_city="test town")
-    assert location.title == "test location, test town"
+    assert location.display_text == "test location, test town"
 
 
 def test_title_all_fields() -> None:
@@ -99,7 +99,7 @@ def test_title_all_fields() -> None:
         town_city="test town",
         postcode="T35T L0C",
     )
-    assert location.title == "test location, 1 test street, test town, T35T L0C"
+    assert location.display_text == "test location, 1 test street, test town, T35T L0C"
 
 
 async def test_list(
@@ -1027,7 +1027,7 @@ async def test_available_mids(
             },
             "location_link": {
                 "location_ref": str(location_2.pk),
-                "location_title": location_2.title,
+                "location_title": location_2.display_text,
             },
         }
     ]

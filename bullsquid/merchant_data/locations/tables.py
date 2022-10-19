@@ -34,20 +34,7 @@ class Location(TableWithPK):
         LazyTableReference("SecondaryMIDLocationLink", "merchant_data")
     )
 
-    @staticmethod
-    def make_title(
-        name: str,
-        address_line_1: str | None,
-        town_city: str | None,
-        postcode: str | None,
-    ) -> str:
-        """Makes a location "title" from the given fields."""
-        parts = [part for part in (name, address_line_1, town_city, postcode) if part]
-        return ", ".join(parts)
-
     @property
-    def title(self) -> str:
-        """Calls Location.make_title with this location's fields."""
-        return Location.make_title(
-            self.name, self.address_line_1, self.town_city, self.postcode
-        )
+    def display_text(self) -> str:
+        fields = [self.name, self.address_line_1, self.town_city, self.postcode]
+        return ", ".join(field for field in fields if field)

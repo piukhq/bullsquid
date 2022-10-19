@@ -5,8 +5,10 @@
     },
     "editor.formatOnSave": true,
     "python.testing.pytestArgs": [
+        "-p",
+        "no:icdiff",
         "tests"
     ],
-    "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false
 }

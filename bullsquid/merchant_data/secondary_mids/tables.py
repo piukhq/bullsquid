@@ -26,3 +26,7 @@ class SecondaryMID(TableWithPK):
     merchant = ForeignKey(Merchant, required=True)
 
     locations = M2M(LazyTableReference("SecondaryMIDLocationLink", "merchant_data"))
+
+    @property
+    def display_text(self) -> str:
+        return self.secondary_mid

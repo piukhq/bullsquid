@@ -211,7 +211,7 @@ async def link_primary_mid_to_location(
 
     return LocationLinkResponse(
         location_ref=location.pk,
-        location_title=location.title,
+        location_title=location.display_text,
     )
 
 

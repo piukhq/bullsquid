@@ -1,4 +1,4 @@
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
@@ -11,13 +11,14 @@ from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from bullsquid.merchant_data.tables import TableWithPK
 from tests.helpers import Factory, assert_is_not_found_error, assert_is_value_error
 
 
 def comment_json(
     comment: Comment,
     *,
-    subject_ref: UUID,
+    subject: TableWithPK,
 ) -> dict:
     return {
         "comment_ref": str(comment.pk),
@@ -27,8 +28,8 @@ def comment_json(
         "is_deleted": comment.is_deleted,
         "subjects": [
             {
-                "display_text": "string",
-                "subject_ref": str(subject_ref),
+                "display_text": subject.display_text,
+                "subject_ref": str(subject.pk),
                 "icon_slug": None,
             }
         ],
@@ -63,7 +64,7 @@ async def test_list_by_subject_ref(
             "comments": [
                 comment_json(
                     await Comment.objects().get(Comment.pk == comment.pk),
-                    subject_ref=plan.pk,
+                    subject=plan,
                 )
             ],
         },
@@ -97,7 +98,7 @@ async def test_list_by_owner_ref(
                 "comments": [
                     comment_json(
                         await Comment.objects().get(Comment.pk == comment.pk),
-                        subject_ref=merchant.pk,
+                        subject=merchant,
                     )
                 ],
             }
@@ -143,7 +144,7 @@ async def test_list_lower_comments_multiple_subject_types(
                 "comments": [
                     comment_json(
                         await Comment.objects().get(Comment.pk == pm_comment.pk),
-                        subject_ref=primary_mid.pk,
+                        subject=primary_mid,
                     )
                 ],
             },
@@ -152,7 +153,7 @@ async def test_list_lower_comments_multiple_subject_types(
                 "comments": [
                     comment_json(
                         await Comment.objects().get(Comment.pk == sm_comment.pk),
-                        subject_ref=secondary_mid.pk,
+                        subject=secondary_mid,
                     )
                 ],
             },
@@ -199,7 +200,7 @@ async def test_filter_lower_comments_by_subject_type(
                 "comments": [
                     comment_json(
                         await Comment.objects().get(Comment.pk == comment.pk),
-                        subject_ref=secondary_mid.pk,
+                        subject=secondary_mid,
                     )
                 ],
             },
@@ -233,9 +234,7 @@ async def test_list_with_replies(
 
     responses = resp.json()["entity_comments"]["comments"][0]["responses"]
     assert responses == [
-        comment_json(
-            await Comment.objects().get(Comment.pk == reply.pk), subject_ref=plan.pk
-        )
+        comment_json(await Comment.objects().get(Comment.pk == reply.pk), subject=plan)
     ]
 
 
@@ -271,7 +270,7 @@ async def test_list_only_returns_top_level_comments(
     responses = resp.json()["entity_comments"]["comments"][0]["responses"]
     assert responses == [
         comment_json(
-            await Comment.objects().get(Comment.pk == reply.pk), subject_ref=merchant.pk
+            await Comment.objects().get(Comment.pk == reply.pk), subject=merchant
         )
     ]
 
@@ -328,7 +327,7 @@ async def test_create_on_plan(
 
     assert resp.json() == comment_json(
         comment,
-        subject_ref=plan.pk,
+        subject=plan,
     )
 
 
@@ -362,7 +361,7 @@ async def test_create_on_merchant(
 
     assert resp.json() == comment_json(
         comment,
-        subject_ref=merchant.pk,
+        subject=merchant,
     )
 
 
@@ -398,7 +397,7 @@ async def test_create_on_location(
 
     assert resp.json() == comment_json(
         comment,
-        subject_ref=location.pk,
+        subject=location,
     )
 
 
@@ -434,7 +433,7 @@ async def test_create_on_primary_mid(
 
     assert resp.json() == comment_json(
         comment,
-        subject_ref=primary_mid.pk,
+        subject=primary_mid,
     )
 
 
@@ -470,7 +469,7 @@ async def test_create_on_secondary_mid(
 
     assert resp.json() == comment_json(
         comment,
-        subject_ref=secondary_mid.pk,
+        subject=secondary_mid,
     )
 
 
@@ -506,7 +505,7 @@ async def test_create_on_psimi(
 
     assert resp.json() == comment_json(
         comment,
-        subject_ref=psimi.pk,
+        subject=psimi,
     )
 
 
@@ -621,7 +620,7 @@ async def test_create_reply_on_plan(
 
     assert resp.json() == comment_json(
         comment,
-        subject_ref=plan.pk,
+        subject=plan,
     )
 
 

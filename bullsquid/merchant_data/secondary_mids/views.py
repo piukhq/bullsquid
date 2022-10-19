@@ -239,7 +239,7 @@ async def link_secondary_mid_to_location(
             LocationLinkResponse(
                 link_ref=link.pk,
                 location_ref=link.location.pk,
-                location_title=link.location.title,
+                location_title=link.location.display_text,
             )
             for link in links
         ]
@@ -279,12 +279,12 @@ async def list_location_secondary_mids(
         AssociatedLocationResponse(
             link_ref=link["pk"],
             location_ref=link["location"],
-            location_title=Location.make_title(
-                link["location.name"],
-                link["location.address_line_1"],
-                link["location.town_city"],
-                link["location.postcode"],
-            ),
+            location_title=Location(
+                name=link["location.name"],
+                address_line_1=link["location.address_line_1"],
+                town_city=link["location.town_city"],
+                postcode=link["location.postcode"],
+            ).display_text,
         )
         for link in links
     ]

@@ -99,7 +99,7 @@ async def create_comment_response(
         is_deleted=comment.is_deleted,
         subjects=[
             CommentSubject(
-                display_text="string",
+                display_text=subject.display_text,
                 subject_ref=subject.pk,
                 icon_slug=None,
             )

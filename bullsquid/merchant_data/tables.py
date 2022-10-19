@@ -11,3 +11,10 @@ class TableWithPK(Table):
     """
 
     pk = UUID(primary_key=True)
+
+    @property
+    def display_text(self) -> str:
+        """
+        The pretty printable text for this table.
+        """
+        raise NotImplementedError

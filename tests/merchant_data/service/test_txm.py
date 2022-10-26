@@ -18,7 +18,7 @@ async def test_onboard_mids(
 ) -> None:
     primary_mid = await primary_mid_factory()
     mock_responses.post(
-        "https://testbink.com/txm/mids",
+        "https://testbink.com/txm/identifiers",
         status=status.HTTP_200_OK,
         payload={"test": "success"},
     )
@@ -33,7 +33,7 @@ async def test_offboard_mids(
 ) -> None:
     primary_mid = await primary_mid_factory()
     mock_responses.post(
-        "https://testbink.com/txm/mids/deletion",
+        "https://testbink.com/txm/identifiers/deletion",
         status=status.HTTP_200_OK,
         payload={"test": "success"},
     )

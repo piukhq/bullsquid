@@ -792,5 +792,4 @@ async def test_comment_with_missing_text(
             "text": "",
         },
     )
-
     assert_is_value_error(resp, loc=["body", "text"])

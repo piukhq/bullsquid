@@ -16,23 +16,27 @@ class TXMServiceInterface(ServiceInterface):
 
     async def onboard_mids(self, mid_refs: list[UUID]) -> dict:
         """Onboard MIDs into Harmonia."""
-        mids = await PrimaryMID.select(
-            PrimaryMID.mid,
+        identifiers = await PrimaryMID.select(
+            PrimaryMID.mid.as_alias("identifier"),
             PrimaryMID.merchant.plan.slug.as_alias("loyalty_plan"),  # type: ignore
             PrimaryMID.payment_scheme.slug.as_alias("payment_scheme"),
             PrimaryMID.location.location_id.as_alias("location_id"),
         ).where(PrimaryMID.pk.is_in(mid_refs))
+        for identifier in identifiers:
+            identifier["identifier_type"] = "PRIMARY"
 
-        return await self.post("/txm/mids/", {"mids": mids})
+        return await self.post("/txm/identifiers/", {"identifiers": identifiers})
 
     async def offboard_mids(self, mid_refs: list[UUID]) -> dict:
         """Offboard MIDs from Harmonia."""
-        mids = await PrimaryMID.select(
+        identifiers = await PrimaryMID.select(
             PrimaryMID.mid,
             PrimaryMID.payment_scheme.slug.as_alias("payment_scheme"),
         ).where(PrimaryMID.pk.is_in(mid_refs))
 
-        return await self.post("/txm/mids/deletion", {"mids": mids, "locations": []})
+        return await self.post(
+            "/txm/identifiers/deletion", {"identifiers": identifiers, "locations": []}
+        )
 
 
 def create_txm_service_interface() -> TXMServiceInterface | MagicMock:

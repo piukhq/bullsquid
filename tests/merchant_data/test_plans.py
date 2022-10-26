@@ -24,7 +24,7 @@ from bullsquid.merchant_data.tasks import OffboardAndDeletePlan
 from tests.helpers import Factory, assert_is_not_found_error, assert_is_uniqueness_error
 
 
-async def plan_to_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict:
+async def plan_overview_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict:
     """Convert a plan to its expected JSON representation."""
     merchant_count = await Merchant.count().where(Merchant.plan == plan)
     return {
@@ -51,6 +51,40 @@ async def plan_to_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict
     }
 
 
+async def plan_detail_json(plan: Plan) -> dict:
+    merchants = await Merchant.objects().where(Merchant.plan == plan)
+    return {
+        "plan_ref": str(plan.pk),
+        "plan_status": ResourceStatus(plan.status).value,
+        "plan_metadata": {
+            "name": plan.name,
+            "plan_id": plan.plan_id,
+            "slug": plan.slug,
+            "icon_url": plan.icon_url,
+        },
+        "merchants": [
+            {
+                "merchant_ref": str(merchant.pk),
+                "merchant_status": ResourceStatus(merchant.status).value,
+                "merchant_metadata": {
+                    "name": merchant.name,
+                    "icon_url": merchant.icon_url,
+                    "location_label": merchant.location_label,
+                },
+                "merchant_counts": {
+                    "locations": 0,
+                    "payment_schemes": [
+                        {"scheme_code": 1, "label": "VISA", "count": 0},
+                        {"scheme_code": 2, "label": "MASTERCARD", "count": 0},
+                        {"scheme_code": 3, "label": "AMEX", "count": 0},
+                    ],
+                },
+            }
+            for merchant in merchants
+        ],
+    }
+
+
 async def test_list_no_merchants(
     plan_factory: Factory[Plan],
     default_payment_schemes: list[PaymentScheme],
@@ -60,7 +94,7 @@ async def test_list_no_merchants(
     resp = test_client.get("/api/v1/plans")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
-        await plan_to_json(plan, default_payment_schemes) for plan in plans
+        await plan_overview_json(plan, default_payment_schemes) for plan in plans
     ]
 
 
@@ -78,19 +112,21 @@ async def test_list_with_merchants(
     resp = test_client.get("/api/v1/plans")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
-        await plan_to_json(plan, default_payment_schemes) for plan in plans
+        await plan_overview_json(plan, default_payment_schemes) for plan in plans
     ]
 
 
 async def test_details(
     plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
     default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
+    await merchant_factory(plan=plan)
     resp = test_client.get(f"/api/v1/plans/{plan.pk}")
     assert resp.status_code == status.HTTP_200_OK, resp.text
-    assert resp.json() == await plan_to_json(plan, default_payment_schemes)
+    assert resp.json() == await plan_detail_json(plan)
 
 
 @pytest.mark.usefixtures("database")
@@ -116,7 +152,7 @@ async def test_create(
     )
     assert resp.status_code == status.HTTP_201_CREATED
     plan = await get_plan(resp.json()["plan_ref"])
-    assert resp.json() == await plan_to_json(plan, default_payment_schemes)
+    assert resp.json() == await plan_overview_json(plan, default_payment_schemes)
 
 
 async def test_create_with_blank_slug(
@@ -136,7 +172,7 @@ async def test_create_with_blank_slug(
     )
     assert resp.status_code == status.HTTP_201_CREATED
     plan = await get_plan(resp.json()["plan_ref"])
-    assert resp.json() == await plan_to_json(plan, default_payment_schemes)
+    assert resp.json() == await plan_overview_json(plan, default_payment_schemes)
     assert resp.json()["plan_metadata"]["slug"] is None
 
 
@@ -212,7 +248,7 @@ async def test_update(
     )
     assert resp.status_code == status.HTTP_200_OK
     plan = await get_plan(plan.pk)
-    assert resp.json() == await plan_to_json(plan, default_payment_schemes)
+    assert resp.json() == await plan_overview_json(plan, default_payment_schemes)
     assert plan.name == new_details.name
     assert plan.plan_id == new_details.plan_id
     assert plan.slug == new_details.slug

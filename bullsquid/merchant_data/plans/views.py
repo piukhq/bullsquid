@@ -10,7 +10,8 @@ from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data import tasks
 from bullsquid.merchant_data.auth import AccessLevel, require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
-from bullsquid.merchant_data.merchants.db import count_merchants
+from bullsquid.merchant_data.merchants.db import count_merchants, list_merchants
+from bullsquid.merchant_data.merchants.views import create_merchant_overview_response
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans import db
@@ -18,20 +19,21 @@ from bullsquid.merchant_data.plans.models import (
     CreatePlanRequest,
     PlanCountsResponse,
     PlanDeletionResponse,
+    PlanDetailResponse,
     PlanMetadataResponse,
+    PlanOverviewResponse,
     PlanPaymentSchemeCountResponse,
-    PlanResponse,
 )
 from bullsquid.merchant_data.plans.tables import Plan
 
 router = APIRouter(prefix="/plans")
 
 
-async def create_plan_response(
+async def create_plan_overview_response(
     plan: Plan, payment_schemes: list[PaymentScheme]
-) -> PlanResponse:
-    """Creates a PlanResponse instance from the given plan object."""
-    return PlanResponse(
+) -> PlanOverviewResponse:
+    """Creates a PlanOverviewResponse instance from the given plan object."""
+    return PlanOverviewResponse(
         plan_ref=plan.pk,
         plan_status=plan.status,
         plan_metadata=PlanMetadataResponse(
@@ -55,27 +57,47 @@ async def create_plan_response(
     )
 
 
-@router.get("", response_model=list[PlanResponse])
+async def create_plan_detail_response(plan: Plan) -> PlanDetailResponse:
+    """Creates a PlanDetailResponse instance from the given plan object."""
+    # TODO: a way to disable pagination rather than this hack?
+    merchants = await list_merchants(plan.pk, n=2**32, p=1)
+    payment_schemes = await list_payment_schemes()
+    return PlanDetailResponse(
+        plan_ref=plan.pk,
+        plan_status=plan.status,
+        plan_metadata=PlanMetadataResponse(
+            name=plan.name, plan_id=plan.plan_id, slug=plan.slug, icon_url=plan.icon_url
+        ),
+        merchants=[
+            await create_merchant_overview_response(merchant, payment_schemes)
+            for merchant in merchants
+        ],
+    )
+
+
+@router.get("", response_model=list[PlanOverviewResponse])
 async def list_plans(
     n: int = Query(default=10),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
-) -> list[PlanResponse]:
+) -> list[PlanOverviewResponse]:
     """List all plans."""
     payment_schemes = await list_payment_schemes()
     return [
-        await create_plan_response(plan, payment_schemes)
+        await create_plan_overview_response(plan, payment_schemes)
         for plan in await db.list_plans(n=n, p=p)
     ]
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, response_model=PlanResponse)
+@router.post(
+    "", status_code=status.HTTP_201_CREATED, response_model=PlanOverviewResponse
+)
 async def create_plan(
     plan_data: CreatePlanRequest,
     _credentials: JWTCredentials = Depends(
         require_access_level(AccessLevel.READ_WRITE)
     ),
-) -> PlanResponse:
+) -> PlanOverviewResponse:
     """Create a new plan."""
     plan_fields = plan_data.dict()
     if errors := [
@@ -86,31 +108,30 @@ async def create_plan(
         raise APIMultiError(errors)
 
     plan = await db.create_plan(plan_fields)
-    return await create_plan_response(plan, await list_payment_schemes())
+    return await create_plan_overview_response(plan, await list_payment_schemes())
 
 
-@router.get("/{plan_ref}", response_model=PlanResponse)
+@router.get("/{plan_ref}", response_model=PlanDetailResponse)
 async def get_plan_details(
     plan_ref: UUID,
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
-) -> PlanResponse:
+) -> PlanDetailResponse:
     """Get plan details by ref."""
     try:
         plan = await db.get_plan(plan_ref)
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
-    payment_schemes = await list_payment_schemes()
-    return await create_plan_response(plan, payment_schemes)
+    return await create_plan_detail_response(plan)
 
 
-@router.put("/{plan_ref}", response_model=PlanResponse)
+@router.put("/{plan_ref}", response_model=PlanOverviewResponse)
 async def update_plan(
     plan_ref: UUID,
     plan_data: CreatePlanRequest,
     _credentials: JWTCredentials = Depends(
         require_access_level(AccessLevel.READ_WRITE)
     ),
-) -> PlanResponse:
+) -> PlanOverviewResponse:
     """Update a plan's details."""
     plan_fields = plan_data.dict()
     if errors := [
@@ -125,7 +146,7 @@ async def update_plan(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
-    return await create_plan_response(plan, await list_payment_schemes())
+    return await create_plan_overview_response(plan, await list_payment_schemes())
 
 
 @router.delete(

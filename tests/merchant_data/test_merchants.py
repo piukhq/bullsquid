@@ -59,6 +59,7 @@ def merchant_detail_json(merchant: Merchant, plan: Plan) -> dict:
     """Convert a merchant to its expected detail JSON representation."""
     return {
         "merchant_ref": str(merchant.pk),
+        "merchant_status": ResourceStatus(merchant.status).value,
         "plan_metadata": {
             "name": plan.name,
             "plan_id": plan.plan_id,

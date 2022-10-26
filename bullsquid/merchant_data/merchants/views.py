@@ -13,12 +13,9 @@ from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants import db
 from bullsquid.merchant_data.merchants.models import (
     CreateMerchantRequest,
-    MerchantCountsResponse,
     MerchantDeletionResponse,
     MerchantDetailResponse,
     MerchantMetadataResponse,
-    MerchantOverviewResponse,
-    MerchantPaymentSchemeCountResponse,
 )
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
@@ -26,6 +23,11 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.models import PlanMetadataResponse
 from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.shared.models import (
+    MerchantCountsResponse,
+    MerchantOverviewResponse,
+    MerchantPaymentSchemeCountResponse,
+)
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants")
 
@@ -67,6 +69,7 @@ async def create_merchant_detail_response(
     """Creates a MerchantDetailResponse instance from the given merchant object."""
     return MerchantDetailResponse(
         merchant_ref=merchant.pk,
+        merchant_status=merchant.status,
         plan_metadata=PlanMetadataResponse(
             name=plan.name,
             plan_id=plan.plan_id,

@@ -250,5 +250,6 @@ async def edit_comment(
     )
 
     comment.text = fields.text
+    comment.is_edited = True
     await comment.save()
     return await create_comment_response(comment, subjects=subjects)

@@ -770,6 +770,7 @@ async def test_update_comment(
     comment = await Comment.objects().get(Comment.pk == comment.pk)
     assert resp.status_code == status.HTTP_200_OK
     assert comment.text == "test text"
+    assert comment.is_edited == True
 
 
 async def test_comment_with_missing_text(
@@ -793,3 +794,22 @@ async def test_comment_with_missing_text(
         },
     )
     assert_is_value_error(resp, loc=["body", "text"])
+
+
+async def test_edit_nonexistent_comment(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(persist=False)
+    resp = test_client.patch(
+        f"/api/v1/directory_comments/{uuid4()}",
+        json={
+            "text": "test text",
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "comment_ref"])

@@ -106,7 +106,6 @@ async def list_locations(
         Location.postcode,
     ).where(
         Location.merchant == merchant,
-        Location.status != ResourceStatus.DELETED,
     )
 
     if exclude_secondary_mid:
@@ -151,7 +150,6 @@ async def list_available_primary_mids(
     ).where(
         PrimaryMID.merchant == merchant_ref,
         (PrimaryMID.location != location_ref) | (PrimaryMID.location.is_null()),
-        PrimaryMID.status != ResourceStatus.DELETED,
     )
 
 
@@ -183,7 +181,6 @@ async def get_location(
         .where(
             Location.pk == location_ref,
             Location.merchant == merchant,
-            Location.status != ResourceStatus.DELETED,
         )
         .first()
     )
@@ -207,7 +204,6 @@ async def get_location_instance(
         .where(
             Location.pk == location_ref,
             Location.merchant == merchant,
-            Location.status != ResourceStatus.DELETED,
         )
         .first()
     )
@@ -232,7 +228,6 @@ async def confirm_locations_exist(
     count = await Location.count().where(
         Location.pk.is_in(location_refs),
         Location.merchant == merchant,
-        Location.status != ResourceStatus.DELETED,
     )
     if count != len(location_refs):
         raise NoSuchRecord(Location)

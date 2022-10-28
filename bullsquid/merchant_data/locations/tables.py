@@ -8,12 +8,11 @@ from piccolo.columns import (
     Timestamptz,
 )
 
-from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
-from bullsquid.merchant_data.tables import TableWithPK
+from bullsquid.merchant_data.tables import SoftDeletable, TableWithPK
 
 
-class Location(TableWithPK):
+class Location(SoftDeletable, TableWithPK):
     """Represents a location that can have multiple MIDs."""
 
     location_id = Text(required=True, unique=True)
@@ -27,7 +26,6 @@ class Location(TableWithPK):
     postcode = Text(null=True, default=None)
     merchant_internal_id = Text(null=True, default=None)
     date_added = Timestamptz()
-    status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE)
     merchant = ForeignKey(Merchant, required=True)
 
     secondary_mids = M2M(

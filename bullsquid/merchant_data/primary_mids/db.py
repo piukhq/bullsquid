@@ -46,9 +46,7 @@ async def get_primary_mid_instance(
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
     mid = await PrimaryMID.objects(PrimaryMID.payment_scheme).get(
-        (PrimaryMID.pk == pk)
-        & (PrimaryMID.merchant == merchant)
-        & (PrimaryMID.status != ResourceStatus.DELETED)
+        (PrimaryMID.pk == pk) & (PrimaryMID.merchant == merchant)
     )
 
     if not mid:
@@ -75,7 +73,6 @@ async def list_primary_mids(
             PrimaryMID.txm_status,
         ).where(
             PrimaryMID.merchant == merchant,
-            PrimaryMID.status != ResourceStatus.DELETED,
         ),
         n=n,
         p=p,
@@ -93,9 +90,7 @@ async def filter_onboarded_mid_refs(
     # remove duplicates to ensure count mismatches are not caused by duplicate MIDs
     mid_refs = list(set(mid_refs))
 
-    count = await PrimaryMID.count().where(
-        PrimaryMID.pk.is_in(mid_refs), PrimaryMID.status != ResourceStatus.DELETED
-    )
+    count = await PrimaryMID.count().where(PrimaryMID.pk.is_in(mid_refs))
     if count != len(mid_refs):
         raise NoSuchRecord(PrimaryMID)
 

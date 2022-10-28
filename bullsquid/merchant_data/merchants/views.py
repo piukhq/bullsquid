@@ -10,6 +10,7 @@ from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data import tasks
 from bullsquid.merchant_data.auth import AccessLevel, require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants import db
 from bullsquid.merchant_data.merchants.models import (
     CreateMerchantRequest,
@@ -23,6 +24,7 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.models import PlanMetadataResponse
 from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.shared.models import (
     MerchantCountsResponse,
     MerchantOverviewResponse,
@@ -50,12 +52,15 @@ async def create_merchant_overview_response(
         merchant_status=merchant.status,
         merchant_metadata=create_merchant_metadata_response(merchant),
         merchant_counts=MerchantCountsResponse(
-            locations=0,
+            locations=await Location.count().where(Location.merchant == merchant),
             payment_schemes=[
                 MerchantPaymentSchemeCountResponse(
                     label=payment_scheme.label,
                     scheme_code=payment_scheme.code,
-                    count=0,
+                    count=await PrimaryMID.count().where(
+                        PrimaryMID.merchant == merchant,
+                        PrimaryMID.payment_scheme == payment_scheme,
+                    ),
                 )
                 for payment_scheme in payment_schemes
             ],

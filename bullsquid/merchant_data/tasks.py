@@ -107,7 +107,7 @@ async def _run_job(message: BaseModel) -> None:
             ).where(PrimaryMID.pk.is_in(message.mid_refs))
 
             await delete_fully_offboarded_merchants(
-                await PrimaryMID.select(PrimaryMID.merchant)
+                await PrimaryMID.all_select(PrimaryMID.merchant)
                 .where(PrimaryMID.pk.is_in(message.mid_refs))
                 .output(as_list=True)
             )

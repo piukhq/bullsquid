@@ -113,7 +113,7 @@ async def test_offboard_delete_primary_mids(
     with patch("bullsquid.merchant_data.tasks.logger"):
         await run_worker(burst=True)
 
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.txm_status == TXMStatus.OFFBOARDED
     assert primary_mid.status == ResourceStatus.DELETED
 
@@ -133,7 +133,7 @@ async def test_offboard_delete_primary_mid_null_link(
     with patch("bullsquid.merchant_data.tasks.logger"):
         await run_worker(burst=True)
 
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.location is None
 
 
@@ -154,8 +154,8 @@ async def test_offboard_delete_merchant(
         await run_worker(burst=True)
         await run_worker(burst=True)
 
-    merchant = await Merchant.objects().get(Merchant.pk == merchant.pk)
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    merchant = await Merchant.all_objects().get(Merchant.pk == merchant.pk)
+    primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.txm_status == TXMStatus.OFFBOARDED
     assert primary_mid.status == ResourceStatus.DELETED
     assert merchant.status == ResourceStatus.DELETED
@@ -182,9 +182,9 @@ async def test_offboard_delete_plan(
         for _i in range(3):
             await run_worker(burst=True)
 
-    plan = await Plan.objects().get(Plan.pk == plan.pk)
-    merchant = await Merchant.objects().get(Merchant.pk == merchant.pk)
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    plan = await Plan.all_objects().get(Plan.pk == plan.pk)
+    merchant = await Merchant.all_objects().get(Merchant.pk == merchant.pk)
+    primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.txm_status == TXMStatus.OFFBOARDED
     assert primary_mid.status == ResourceStatus.DELETED
     assert merchant.status == ResourceStatus.DELETED

@@ -683,7 +683,7 @@ async def test_delete_not_onboarded(
     )
 
     mid_status = (
-        await SecondaryMID.select(SecondaryMID.status)
+        await SecondaryMID.all_select(SecondaryMID.status)
         .where(SecondaryMID.pk == mid.pk)
         .first()
     )["status"]
@@ -716,7 +716,7 @@ async def test_delete_offboarded(
     )
 
     mid_status = (
-        await SecondaryMID.select(SecondaryMID.status)
+        await SecondaryMID.all_select(SecondaryMID.status)
         .where(SecondaryMID.pk == mid.pk)
         .first()
     )["status"]

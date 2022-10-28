@@ -5,7 +5,6 @@ Database layer for functions that operate on secondary MID location links.
 from uuid import UUID
 
 from bullsquid.db import NoSuchRecord
-from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.locations.db import get_location_instance
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant
@@ -34,7 +33,6 @@ async def create_location_primary_mid_links(
     where = (
         PrimaryMID.pk.is_in(primary_mid_refs),
         PrimaryMID.merchant == merchant_ref,
-        PrimaryMID.status != ResourceStatus.DELETED,
     )
     primary_mids = await PrimaryMID.objects().where(*where)
 
@@ -56,21 +54,19 @@ async def create_secondary_mid_location_links(
     """
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    secondary_mid_refs = list(set(r[0] for r in refs))
+    secondary_mid_refs = list({r[0] for r in refs})
     secondary_mids = await SecondaryMID.objects().where(
         SecondaryMID.pk.is_in(secondary_mid_refs),
         SecondaryMID.merchant == merchant,
-        SecondaryMID.status != ResourceStatus.DELETED,
     )
 
     if len(secondary_mid_refs) != len(secondary_mids):
         raise NoSuchRecord(SecondaryMID)
 
-    location_refs = list(set(r[1] for r in refs))
+    location_refs = list({r[1] for r in refs})
     locations = await Location.objects().where(
         Location.pk.is_in(location_refs),
         Location.merchant == merchant,
-        Location.status != ResourceStatus.DELETED,
     )
 
     if len(location_refs) != len(locations):

@@ -19,11 +19,7 @@ from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 async def get_plan(pk: UUID) -> Plan:
     """Return a plan by its primary key. Raises NoSuchRecord if `pk` is not found."""
-    plan = (
-        await Plan.objects()
-        .where(Plan.pk == pk, Plan.status != ResourceStatus.DELETED)
-        .first()
-    )
+    plan = await Plan.objects().where(Plan.pk == pk).first()
     if not plan:
         raise NoSuchRecord(Plan)
     return plan
@@ -31,11 +27,7 @@ async def get_plan(pk: UUID) -> Plan:
 
 async def list_plans(*, n: int, p: int) -> list[Plan]:
     """Return a list of all plans."""
-    return await paginate(
-        Plan.objects().where(Plan.status != ResourceStatus.DELETED),
-        n=n,
-        p=p,
-    )
+    return await paginate(Plan.objects(), n=n, p=p)
 
 
 async def create_plan(fields: Mapping[str, Any]) -> Plan:

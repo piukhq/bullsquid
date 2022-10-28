@@ -52,7 +52,9 @@ async def create_merchant_overview_response(
         merchant_status=merchant.status,
         merchant_metadata=create_merchant_metadata_response(merchant),
         merchant_counts=MerchantCountsResponse(
-            locations=await Location.count().where(Location.merchant == merchant),
+            locations=await Location.count().where(
+                Location.merchant == merchant, Location.status != ResourceStatus.DELETED
+            ),
             payment_schemes=[
                 MerchantPaymentSchemeCountResponse(
                     label=payment_scheme.label,
@@ -60,6 +62,7 @@ async def create_merchant_overview_response(
                     count=await PrimaryMID.count().where(
                         PrimaryMID.merchant == merchant,
                         PrimaryMID.payment_scheme == payment_scheme,
+                        PrimaryMID.status != ResourceStatus.DELETED,
                     ),
                 )
                 for payment_scheme in payment_schemes

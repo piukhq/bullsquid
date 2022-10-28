@@ -24,12 +24,19 @@ from bullsquid.merchant_data.tasks import OffboardAndDeletePlan
 from tests.helpers import Factory, assert_is_not_found_error, assert_is_uniqueness_error
 
 
-async def plan_overview_json(plan: Plan, payment_schemes: list[PaymentScheme]) -> dict:
+async def plan_overview_json(
+    plan: Plan,
+    payment_schemes: list[PaymentScheme],
+    merchants: int = 0,
+    locations: int = 0,
+    visa_mids: int = 0,
+    mastercard_mids: int = 0,
+    amex_mids: int = 0,
+) -> dict:
     """Convert a plan to its expected JSON representation."""
-    merchant_count = await Merchant.count().where(Merchant.plan == plan)
     return {
         "plan_ref": str(plan.pk),
-        "plan_status": plan.status,
+        "plan_status": ResourceStatus(plan.status).value,
         "plan_metadata": {
             "name": plan.name,
             "plan_id": plan.plan_id,
@@ -37,13 +44,17 @@ async def plan_overview_json(plan: Plan, payment_schemes: list[PaymentScheme]) -
             "icon_url": plan.icon_url,
         },
         "plan_counts": {
-            "merchants": merchant_count,
-            "locations": 0,
+            "merchants": merchants,
+            "locations": locations,
             "payment_schemes": [
                 {
                     "label": payment_scheme.label,
                     "scheme_code": payment_scheme.code,
-                    "count": 0,
+                    "count": {
+                        "visa": visa_mids,
+                        "mastercard": mastercard_mids,
+                        "amex": amex_mids,
+                    }[payment_scheme.slug],
                 }
                 for payment_scheme in payment_schemes
             ],
@@ -51,7 +62,14 @@ async def plan_overview_json(plan: Plan, payment_schemes: list[PaymentScheme]) -
     }
 
 
-async def plan_detail_json(plan: Plan) -> dict:
+async def plan_detail_json(
+    plan: Plan,
+    *,
+    locations: int = 0,
+    visa_mids: int = 0,
+    mastercard_mids: int = 0,
+    amex_mids: int = 0,
+) -> dict:
     merchants = await Merchant.objects().where(Merchant.plan == plan)
     return {
         "plan_ref": str(plan.pk),
@@ -72,11 +90,15 @@ async def plan_detail_json(plan: Plan) -> dict:
                     "location_label": merchant.location_label,
                 },
                 "merchant_counts": {
-                    "locations": 0,
+                    "locations": locations,
                     "payment_schemes": [
-                        {"scheme_code": 1, "label": "VISA", "count": 0},
-                        {"scheme_code": 2, "label": "MASTERCARD", "count": 0},
-                        {"scheme_code": 3, "label": "AMEX", "count": 0},
+                        {"scheme_code": 1, "label": "VISA", "count": visa_mids},
+                        {
+                            "scheme_code": 2,
+                            "label": "MASTERCARD",
+                            "count": mastercard_mids,
+                        },
+                        {"scheme_code": 3, "label": "AMEX", "count": amex_mids},
                     ],
                 },
             }
@@ -101,18 +123,53 @@ async def test_list_no_merchants(
 async def test_list_with_merchants(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    primary_mid_factory: Factory[PrimaryMID],
     default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plans = [await plan_factory() for _ in range(3)]
+    counts = {
+        plan.pk: {
+            "merchants": 0,
+            "locations": 0,
+            "visa": 0,
+            "amex": 0,
+            "mastercard": 0,
+        }
+        for plan in plans
+    }
     for plan in plans:
+        c = counts[plan.pk]
         for _ in range(random.randint(1, 3)):
-            await merchant_factory(plan=plan)
+            merchant = await merchant_factory(plan=plan)
+            c["merchants"] += 1
+
+            # add some other resources to check the counts are working
+            for _ in range(random.randint(1, 3)):
+                await location_factory(merchant=merchant)
+                c["locations"] += 1
+
+            for payment_scheme in default_payment_schemes:
+                for _ in range(random.randint(1, 3)):
+                    await primary_mid_factory(
+                        merchant=merchant, payment_scheme=payment_scheme
+                    )
+                    c[payment_scheme.slug] += 1
 
     resp = test_client.get("/api/v1/plans")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
-        await plan_overview_json(plan, default_payment_schemes) for plan in plans
+        await plan_overview_json(
+            plan,
+            default_payment_schemes,
+            merchants=counts[plan.pk]["merchants"],
+            locations=counts[plan.pk]["locations"],
+            visa_mids=counts[plan.pk]["visa"],
+            mastercard_mids=counts[plan.pk]["mastercard"],
+            amex_mids=counts[plan.pk]["amex"],
+        )
+        for plan in plans
     ]
 
 

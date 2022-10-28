@@ -478,7 +478,7 @@ async def test_delete_not_onboarded_identifier(
     )
 
     identifier_status = (
-        await Identifier.select(Identifier.status)
+        await Identifier.all_select(Identifier.status)
         .where(Identifier.pk == identifier.pk)
         .first()
     )["status"]
@@ -511,7 +511,7 @@ async def test_delete_offboarded_identifier(
     )
 
     identifier_status = (
-        await Identifier.select(Identifier.status)
+        await Identifier.all_select(Identifier.status)
         .where(Identifier.pk == identifier.pk)
         .first()
     )["status"]

@@ -581,7 +581,7 @@ async def test_delete_not_onboarded(
     )
 
     mid_status = (
-        await PrimaryMID.select(PrimaryMID.status)
+        await PrimaryMID.all_select(PrimaryMID.status)
         .where(PrimaryMID.pk == primary_mid.pk)
         .first()
     )["status"]
@@ -612,7 +612,7 @@ async def test_delete_offboarded(
     )
 
     mid_status = (
-        await PrimaryMID.select(PrimaryMID.status)
+        await PrimaryMID.all_select(PrimaryMID.status)
         .where(PrimaryMID.pk == primary_mid.pk)
         .first()
     )["status"]
@@ -678,7 +678,7 @@ async def test_delete_with_linked_location(
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
 
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.location is None
 
 

@@ -378,25 +378,29 @@ async def test_delete_with_no_onboarded_resources(
     assert resp.json() == {"merchant_status": "deleted"}
 
     merchant = (
-        await Merchant.select(Merchant.status).where(Merchant.pk == merchant.pk).first()
+        await Merchant.all_select(Merchant.status)
+        .where(Merchant.pk == merchant.pk)
+        .first()
     )
     primary_mid = (
-        await PrimaryMID.select(PrimaryMID.status)
+        await PrimaryMID.all_select(PrimaryMID.status)
         .where(PrimaryMID.pk == primary_mid.pk)
         .first()
     )
     secondary_mid = (
-        await SecondaryMID.select(SecondaryMID.status)
+        await SecondaryMID.all_select(SecondaryMID.status)
         .where(SecondaryMID.pk == secondary_mid.pk)
         .first()
     )
     identifier = (
-        await Identifier.select(Identifier.status)
+        await Identifier.all_select(Identifier.status)
         .where(Identifier.pk == identifier.pk)
         .first()
     )
     location = (
-        await Location.select(Location.status).where(Location.pk == location.pk).first()
+        await Location.all_select(Location.status)
+        .where(Location.pk == location.pk)
+        .first()
     )
 
     assert merchant["status"] == ResourceStatus.DELETED

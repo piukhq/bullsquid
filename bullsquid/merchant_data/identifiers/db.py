@@ -39,7 +39,6 @@ async def list_identifiers(
             Identifier.status,
         ).where(
             Identifier.merchant == merchant,
-            Identifier.status != ResourceStatus.DELETED,
         ),
         n=n,
         p=p,
@@ -64,7 +63,6 @@ async def get_identifier(
         .where(
             Identifier.pk == pk,
             Identifier.merchant == merchant,
-            Identifier.status != ResourceStatus.DELETED,
         )
         .first()
     )
@@ -86,10 +84,7 @@ async def filter_onboarded_identifiers(
     # remove duplicates to ensure count mismatches are not caused by duplicate identifiers
     identifier_refs = list(set(identifier_refs))
 
-    count = await Identifier.count().where(
-        Identifier.pk.is_in(identifier_refs),
-        Identifier.status != ResourceStatus.DELETED,
-    )
+    count = await Identifier.count().where(Identifier.pk.is_in(identifier_refs))
     if count != len(identifier_refs):
         raise NoSuchRecord(Identifier)
 

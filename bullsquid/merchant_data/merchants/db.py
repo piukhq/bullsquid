@@ -25,15 +25,15 @@ async def get_merchant(
 ) -> Merchant:
     """Return a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
 
-    where = (Merchant.pk == pk) & (Merchant.status != ResourceStatus.DELETED)
+    query = Merchant.objects().where(Merchant.pk == pk)
     if validate_plan:
         if plan_ref is None:
             raise ValueError("validate_plan cannot be true if plan_ref is null")
 
         plan = await get_plan(plan_ref)
-        where &= Merchant.plan == plan
+        query = query.where(Merchant.plan == plan)
 
-    merchant = await Merchant.objects().where(where).first()
+    merchant = await query.first()
 
     if not merchant:
         raise NoSuchRecord(Merchant)
@@ -45,9 +45,7 @@ async def list_merchants(plan_ref: UUID, *, n: int, p: int) -> list[Merchant]:
     """Return a list of all merchants."""
     plan = await get_plan(plan_ref)
     return await paginate(
-        Merchant.objects().where(
-            Merchant.plan == plan.pk, Merchant.status != ResourceStatus.DELETED
-        ),
+        Merchant.objects().where(Merchant.plan == plan.pk),
         n=n,
         p=p,
     )
@@ -56,9 +54,7 @@ async def list_merchants(plan_ref: UUID, *, n: int, p: int) -> list[Merchant]:
 async def count_merchants(plan_ref: UUID) -> int:
     """Return a count of merchants in a plan."""
     plan = await get_plan(plan_ref)
-    return await Merchant.count().where(
-        Merchant.plan == plan.pk, Merchant.status != ResourceStatus.DELETED
-    )
+    return await Merchant.count().where(Merchant.plan == plan.pk)
 
 
 async def create_merchant(fields: Mapping[str, Any], *, plan: Plan) -> Merchant:

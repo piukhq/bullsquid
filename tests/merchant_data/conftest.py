@@ -78,6 +78,7 @@ def primary_mid_factory(
                 "status": ResourceStatus.ACTIVE,
                 "txm_status": TXMStatus.NOT_ONBOARDED,
                 "payment_scheme": random.choice(default_payment_schemes),
+                "location": None,
                 **defaults,  # type: ignore
             },
             persist=persist,

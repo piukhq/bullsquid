@@ -1,5 +1,7 @@
 """Test merchant data API endpoints that operate on merchants."""
 
+
+import itertools
 from uuid import uuid4
 
 import pytest
@@ -30,24 +32,34 @@ from tests.helpers import (
 
 
 def merchant_overview_json(
-    merchant: Merchant, payment_schemes: list[PaymentScheme]
+    merchant: Merchant,
+    payment_schemes: list[PaymentScheme],
+    *,
+    locations: int = 0,
+    visa_mids: int = 0,
+    mastercard_mids: int = 0,
+    amex_mids: int = 0,
 ) -> dict:
     """Convert a merchant to its expected list JSON representation."""
     return {
         "merchant_ref": str(merchant.pk),
-        "merchant_status": merchant.status,
+        "merchant_status": ResourceStatus(merchant.status).value,
         "merchant_metadata": {
             "name": merchant.name,
             "icon_url": merchant.icon_url,
             "location_label": merchant.location_label,
         },
         "merchant_counts": {
-            "locations": 0,
+            "locations": locations,
             "payment_schemes": [
                 {
                     "label": payment_scheme.label,
                     "scheme_code": payment_scheme.code,
-                    "count": 0,
+                    "count": {
+                        "visa": visa_mids,
+                        "mastercard": mastercard_mids,
+                        "amex": amex_mids,
+                    }[payment_scheme.slug],
                 }
                 for payment_scheme in payment_schemes
             ],
@@ -77,6 +89,8 @@ def merchant_detail_json(merchant: Merchant, plan: Plan) -> dict:
 async def test_list(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    primary_mid_factory: Factory[PrimaryMID],
     default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
@@ -87,10 +101,21 @@ async def test_list(
         await merchant_factory(plan=plan),
     ]
 
+    for merchant, _ in itertools.product(merchants, range(3)):
+        await location_factory(merchant=merchant)
+        await primary_mid_factory(
+            merchant=merchant, payment_scheme=default_payment_schemes[0]
+        )
+
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
-        merchant_overview_json(merchant, default_payment_schemes)
+        merchant_overview_json(
+            merchant,
+            default_payment_schemes,
+            locations=3,
+            visa_mids=3,
+        )
         for merchant in merchants
     ]
 

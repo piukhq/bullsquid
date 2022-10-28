@@ -51,12 +51,6 @@ async def list_merchants(plan_ref: UUID, *, n: int, p: int) -> list[Merchant]:
     )
 
 
-async def count_merchants(plan_ref: UUID) -> int:
-    """Return a count of merchants in a plan."""
-    plan = await get_plan(plan_ref)
-    return await Merchant.count().where(Merchant.plan == plan.pk)
-
-
 async def create_merchant(fields: Mapping[str, Any], *, plan: Plan) -> Merchant:
     """Create a new merchant with the given fields."""
     merchant = Merchant(**fields, plan=plan)

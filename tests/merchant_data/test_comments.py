@@ -813,3 +813,44 @@ async def test_edit_nonexistent_comment(
     )
 
     assert_is_not_found_error(resp, loc=["path", "comment_ref"])
+
+
+async def test_can_delete_comment(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner_type=ResourceType.PLAN,
+        owner=plan.pk,
+        subject_type=ResourceType.MERCHANT,
+        subjects=[merchant.pk],
+    )
+    resp = test_client.delete(f"/api/v1/directory_comments/{comment.pk}")
+
+    comment = await Comment.objects().get(Comment.pk == comment.pk)
+    assert comment.is_deleted == True
+    assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+
+async def test_cant_delete_nonexistent_comment(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner_type=ResourceType.PLAN,
+        owner=plan.pk,
+        subject_type=ResourceType.MERCHANT,
+        subjects=[merchant.pk],
+    )
+    resp = test_client.delete(f"/api/v1/directory_comments/{uuid4()}")
+
+    comment = await Comment.objects().get(Comment.pk == comment.pk)
+    assert_is_not_found_error(resp, loc=["path", "comment_ref"])

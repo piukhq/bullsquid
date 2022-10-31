@@ -253,3 +253,16 @@ async def edit_comment(
     comment.is_edited = True
     await comment.save()
     return await create_comment_response(comment, subjects=subjects)
+
+
+async def delete_comment(
+    comment_ref: UUID,
+) -> None:
+    """Delete a comment."""
+    comment = await Comment.objects().get(Comment.pk == comment_ref)
+
+    if not comment:
+        raise NoSuchRecord(Comment)
+
+    comment.is_deleted = True
+    await comment.save()

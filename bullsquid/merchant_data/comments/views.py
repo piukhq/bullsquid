@@ -34,11 +34,11 @@ async def list_comments(
     """
     List comments by owner or subject ref.
     """
+
     entity_comments = await db.list_comments_by_subject(ref, n=n, p=p)
     lower_comments = await db.list_comments_by_owner(
         ref, filter_subject_type=subject_type, n=n, p=p
     )
-
     return ListCommentsResponse(
         entity_comments=entity_comments,
         lower_comments=lower_comments,
@@ -111,3 +111,20 @@ async def edit_comment(
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return comment
+
+
+@router.delete(
+    "/{comment_ref}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_comment(
+    comment_ref: UUID,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE_DELETE)
+    ),
+) -> None:
+    """Delete a comment."""
+    try:
+        await db.delete_comment(comment_ref)
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex

@@ -142,6 +142,8 @@ def comment_factory(database: None) -> Factory[Comment]:
     async def factory(*, persist: bool = True, **defaults: Any) -> Comment:
         defaults = {
             "parent": None,  # FIXME: modelbuilder crashes on 'self' foreign keys
+            "is_edited": False,
+            "is_deleted": False,
             **defaults,
         }
         return await ModelBuilder.build(Comment, defaults=defaults, persist=persist)  # type: ignore

@@ -13,7 +13,7 @@ class IdentifierMetadata(BaseModel):
 
     value: str
     payment_scheme_merchant_name: str
-    payment_scheme_code: int
+    payment_scheme_slug: str
 
     _ = validator("value", "payment_scheme_merchant_name", allow_reuse=True)(
         string_must_not_be_blank

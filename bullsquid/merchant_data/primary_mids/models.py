@@ -20,14 +20,14 @@ from bullsquid.merchant_data.validators import (
 class PrimaryMIDMetadata(BaseModel):
     """Primary MID metadata model."""
 
-    payment_scheme_code: int
+    payment_scheme_slug: str
     mid: str
     visa_bin: str | None
     payment_enrolment_status: PaymentEnrolmentStatus = PaymentEnrolmentStatus.UNKNOWN
 
-    _ = validator("mid", "payment_enrolment_status", allow_reuse=True)(
-        string_must_not_be_blank
-    )
+    _ = validator(
+        "payment_scheme_slug", "mid", "payment_enrolment_status", allow_reuse=True
+    )(string_must_not_be_blank)
     _ = validator("visa_bin", allow_reuse=True)(nullify_blank_strings)
 
 

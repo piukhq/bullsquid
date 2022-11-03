@@ -25,16 +25,10 @@ from tests.helpers import (
 
 async def secondary_mid_to_json(mid: SecondaryMID) -> dict:
     """Converts a secondary MID to its expected JSON representation."""
-    payment_scheme_code = (
-        await PaymentScheme.select(PaymentScheme.code)
-        .where(PaymentScheme.slug == mid.payment_scheme)
-        .first()
-    )["code"]
-
     return {
         "secondary_mid_ref": str(mid.pk),
         "secondary_mid_metadata": {
-            "payment_scheme_code": payment_scheme_code,
+            "payment_scheme_slug": mid.payment_scheme,
             "secondary_mid": mid.secondary_mid,
             "payment_scheme_store_name": mid.payment_scheme_store_name,
             "payment_enrolment_status": mid.payment_enrolment_status,
@@ -317,7 +311,7 @@ async def test_create_without_onboarding(
         json={
             "onboard": False,
             "secondary_mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "secondary_mid": mid.secondary_mid,
                 "payment_scheme_store_name": mid.payment_scheme_store_name,
                 "payment_enrolment_status": mid.payment_enrolment_status,
@@ -353,7 +347,7 @@ async def test_create_and_onboard(
         json={
             "onboard": True,
             "secondary_mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "secondary_mid": mid.secondary_mid,
                 "payment_scheme_store_name": mid.payment_scheme_store_name,
                 "payment_enrolment_status": mid.payment_enrolment_status,
@@ -389,7 +383,7 @@ async def test_create_without_payment_scheme_store_name(
         json={
             "onboard": False,
             "secondary_mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "secondary_mid": mid.secondary_mid,
                 "payment_enrolment_status": mid.payment_enrolment_status,
             },
@@ -418,7 +412,7 @@ async def test_create_with_nonexistent_plan(
         json={
             "onboard": False,
             "secondary_mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "secondary_mid": mid.secondary_mid,
                 "payment_scheme_store_name": mid.payment_scheme_store_name,
                 "payment_enrolment_status": mid.payment_enrolment_status,
@@ -443,7 +437,7 @@ async def test_create_with_nonexistent_merchant(
         json={
             "onboard": False,
             "secondary_mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "secondary_mid": mid.secondary_mid,
                 "payment_scheme_store_name": mid.payment_scheme_store_name,
                 "payment_enrolment_status": mid.payment_enrolment_status,
@@ -470,7 +464,7 @@ async def test_create_duplication_value(
         json={
             "onboard": False,
             "secondary_mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "secondary_mid": existing_mid.secondary_mid,
                 "payment_scheme_store_name": new_mid.payment_scheme_store_name,
                 "payment_enrolment_status": new_mid.payment_enrolment_status,
@@ -483,7 +477,7 @@ async def test_create_duplication_value(
     )
 
 
-async def test_create_without_payment_scheme_code(
+async def test_create_without_payment_scheme_slug(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     secondary_mid_factory: Factory[SecondaryMID],
@@ -505,11 +499,11 @@ async def test_create_without_payment_scheme_code(
     )
 
     assert_is_missing_field_error(
-        resp, loc=["body", "secondary_mid_metadata", "payment_scheme_code"]
+        resp, loc=["body", "secondary_mid_metadata", "payment_scheme_slug"]
     )
 
 
-async def test_create_with_null_payment_scheme_code(
+async def test_create_with_null_payment_scheme_slug(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     secondary_mid_factory: Factory[SecondaryMID],
@@ -523,7 +517,7 @@ async def test_create_with_null_payment_scheme_code(
         json={
             "onboard": False,
             "secondary_mid_metadata": {
-                "payment_scheme_code": None,
+                "payment_scheme_slug": None,
                 "secondary_mid": new_mid.secondary_mid,
                 "payment_scheme_store_name": new_mid.payment_scheme_store_name,
                 "payment_enrolment_status": new_mid.payment_enrolment_status,
@@ -532,11 +526,11 @@ async def test_create_with_null_payment_scheme_code(
     )
 
     assert_is_null_error(
-        resp, loc=["body", "secondary_mid_metadata", "payment_scheme_code"]
+        resp, loc=["body", "secondary_mid_metadata", "payment_scheme_slug"]
     )
 
 
-async def test_create_with_invalid_payment_scheme_code(
+async def test_create_with_invalid_payment_scheme_slug(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     secondary_mid_factory: Factory[SecondaryMID],
@@ -550,7 +544,7 @@ async def test_create_with_invalid_payment_scheme_code(
         json={
             "onboard": False,
             "secondary_mid_metadata": {
-                "payment_scheme_code": 9,
+                "payment_scheme_slug": "bad",
                 "secondary_mid": new_mid.secondary_mid,
                 "payment_scheme_store_name": new_mid.payment_scheme_store_name,
                 "payment_enrolment_status": new_mid.payment_enrolment_status,
@@ -559,7 +553,7 @@ async def test_create_with_invalid_payment_scheme_code(
     )
 
     assert_is_not_found_error(
-        resp, loc=["body", "secondary_mid_metadata", "payment_scheme_code"]
+        resp, loc=["body", "secondary_mid_metadata", "payment_scheme_slug"]
     )
 
 
@@ -578,7 +572,7 @@ async def test_create_without_value(
         json={
             "onboard": False,
             "secondary_mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "payment_scheme_store_name": new_mid.payment_scheme_store_name,
                 "payment_enrolment_status": new_mid.payment_enrolment_status,
             },
@@ -605,7 +599,7 @@ async def test_create_with_null_value(
         json={
             "onboard": False,
             "secondary_mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "secondary_mid": None,
                 "payment_scheme_store_name": new_mid.payment_scheme_store_name,
                 "payment_enrolment_status": new_mid.payment_enrolment_status,

@@ -10,12 +10,9 @@ async def list_payment_schemes() -> list[PaymentScheme]:
     return await PaymentScheme.objects()
 
 
-async def get_payment_scheme_by_code(code: int) -> PaymentScheme:
-    """Return the payment scheme with the given code."""
-    payment_scheme = (
-        await PaymentScheme.objects().where(PaymentScheme.code == code).first()
-    )
+async def get_payment_scheme(slug: str) -> PaymentScheme:
+    """Get a payment scheme object by its slug."""
+    payment_scheme = await PaymentScheme.objects().get(PaymentScheme.slug == slug)
     if not payment_scheme:
         raise NoSuchRecord(PaymentScheme)
-
     return payment_scheme

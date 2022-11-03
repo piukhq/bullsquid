@@ -57,8 +57,7 @@ async def create_merchant_overview_response(
             ),
             payment_schemes=[
                 MerchantPaymentSchemeCountResponse(
-                    label=payment_scheme.label,
-                    scheme_code=payment_scheme.code,
+                    scheme_slug=payment_scheme.slug,
                     count=await PrimaryMID.count().where(
                         PrimaryMID.merchant == merchant,
                         PrimaryMID.payment_scheme == payment_scheme,

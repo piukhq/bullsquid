@@ -8,13 +8,13 @@ from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.identifiers.models import IdentifierMetadata
 from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.merchants.db import get_merchant
-from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
+from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme
 
 IdentifierResult = TypedDict(
     "IdentifierResult",
     {
         "pk": UUID,
-        "payment_scheme.code": int,
+        "payment_scheme.slug": str,
         "value": str,
         "payment_scheme_merchant_name": str,
         "date_added": datetime,
@@ -32,7 +32,7 @@ async def list_identifiers(
     return await paginate(
         Identifier.select(
             Identifier.pk,
-            Identifier.payment_scheme.code,
+            Identifier.payment_scheme.slug,
             Identifier.value,
             Identifier.payment_scheme_merchant_name,
             Identifier.date_added,
@@ -54,7 +54,7 @@ async def get_identifier(
     identifier = (
         await Identifier.select(
             Identifier.pk,
-            Identifier.payment_scheme.code,
+            Identifier.payment_scheme.slug,
             Identifier.value,
             Identifier.payment_scheme_merchant_name,
             Identifier.date_added,
@@ -113,9 +113,7 @@ async def create_identifier(
 ) -> IdentifierResult:
     """Create an identifier for the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
-    payment_scheme = await get_payment_scheme_by_code(
-        identifier_data.payment_scheme_code
-    )
+    payment_scheme = await get_payment_scheme(identifier_data.payment_scheme_slug)
     identifier = Identifier(
         value=identifier_data.value,
         payment_scheme=payment_scheme,
@@ -126,7 +124,7 @@ async def create_identifier(
 
     return {
         "pk": identifier.pk,
-        "payment_scheme.code": payment_scheme.code,
+        "payment_scheme.slug": payment_scheme.slug,
         "value": identifier.value,
         "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
         "date_added": identifier.date_added,

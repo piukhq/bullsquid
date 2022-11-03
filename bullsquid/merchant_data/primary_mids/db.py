@@ -13,7 +13,7 @@ from bullsquid.merchant_data.enums import (
     TXMStatus,
 )
 from bullsquid.merchant_data.merchants.db import get_merchant
-from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
+from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.primary_mids.models import (
     PrimaryMIDMetadata,
@@ -25,7 +25,7 @@ PrimaryMIDResult = TypedDict(
     "PrimaryMIDResult",
     {
         "pk": UUID,
-        "payment_scheme.code": int,
+        "payment_scheme.slug": str,
         "mid": str,
         "visa_bin": str,
         "payment_enrolment_status": PaymentEnrolmentStatus,
@@ -64,7 +64,7 @@ async def list_primary_mids(
     return await paginate(
         PrimaryMID.select(
             PrimaryMID.pk,
-            PrimaryMID.payment_scheme.code,
+            PrimaryMID.payment_scheme.slug,
             PrimaryMID.mid,
             PrimaryMID.visa_bin,
             PrimaryMID.payment_enrolment_status,
@@ -120,7 +120,7 @@ async def create_primary_mid(
     """Create a primary MID for the given merchant."""
 
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
-    payment_scheme = await get_payment_scheme_by_code(mid_data.payment_scheme_code)
+    payment_scheme = await get_payment_scheme(mid_data.payment_scheme_slug)
     mid = PrimaryMID(
         mid=mid_data.mid,
         visa_bin=mid_data.visa_bin,
@@ -136,7 +136,7 @@ async def create_primary_mid(
 
     return {
         "pk": mid.pk,
-        "payment_scheme.code": payment_scheme.code,
+        "payment_scheme.slug": payment_scheme.slug,
         "mid": mid.mid,
         "visa_bin": mid.visa_bin,
         "payment_enrolment_status": PaymentEnrolmentStatus(
@@ -165,7 +165,7 @@ async def update_primary_mid(
 
     return {
         "pk": mid.pk,
-        "payment_scheme.code": mid.payment_scheme.code,
+        "payment_scheme.slug": mid.payment_scheme.slug,
         "mid": mid.mid,
         "visa_bin": mid.visa_bin,
         "payment_enrolment_status": PaymentEnrolmentStatus(

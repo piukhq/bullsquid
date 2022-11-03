@@ -39,7 +39,7 @@ def create_secondary_mid_response(
     return SecondaryMIDResponse(
         secondary_mid_ref=secondary_mid["pk"],
         secondary_mid_metadata=SecondaryMIDMetadata(
-            payment_scheme_code=secondary_mid["payment_scheme.code"],
+            payment_scheme_slug=secondary_mid["payment_scheme.slug"],
             secondary_mid=secondary_mid["secondary_mid"],
             payment_scheme_store_name=secondary_mid["payment_scheme_store_name"],
             payment_enrolment_status=secondary_mid["payment_enrolment_status"],

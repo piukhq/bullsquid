@@ -86,6 +86,8 @@ good-names = [
 ]
 
 [tool.pyright]
+venvPath = "."
+venv = ".venv"
 reportGeneralTypeIssues = false
 reportPrivateImportUsage = false
 

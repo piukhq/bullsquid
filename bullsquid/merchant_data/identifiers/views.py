@@ -30,7 +30,7 @@ def create_identifier_response(identifier: db.IdentifierResult) -> IdentifierRes
         identifier_metadata=IdentifierMetadata(
             value=identifier["value"],
             payment_scheme_merchant_name=identifier["payment_scheme_merchant_name"],
-            payment_scheme_code=identifier["payment_scheme.code"],
+            payment_scheme_slug=identifier["payment_scheme.slug"],
         ),
         identifier_status=identifier["status"],
         date_added=identifier["date_added"],

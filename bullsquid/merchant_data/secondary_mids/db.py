@@ -11,7 +11,7 @@ from bullsquid.merchant_data.enums import (
 )
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant, paginate
-from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme_by_code
+from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme
 from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
 )
@@ -22,7 +22,7 @@ SecondaryMIDResult = TypedDict(
     "SecondaryMIDResult",
     {
         "pk": UUID,
-        "payment_scheme.code": int,
+        "payment_scheme.slug": str,
         "secondary_mid": str,
         "payment_scheme_store_name": str,
         "payment_enrolment_status": PaymentEnrolmentStatus,
@@ -53,7 +53,7 @@ async def list_secondary_mids(
 
     query = SecondaryMID.select(
         SecondaryMID.pk,
-        SecondaryMID.payment_scheme.code,
+        SecondaryMID.payment_scheme.slug,
         SecondaryMID.secondary_mid,
         SecondaryMID.payment_scheme_store_name,
         SecondaryMID.payment_enrolment_status,
@@ -99,7 +99,7 @@ async def get_secondary_mid(
     secondary_mid = (
         await SecondaryMID.select(
             SecondaryMID.pk,
-            SecondaryMID.payment_scheme.code,
+            SecondaryMID.payment_scheme.slug,
             SecondaryMID.secondary_mid,
             SecondaryMID.payment_scheme_store_name,
             SecondaryMID.payment_enrolment_status,
@@ -162,9 +162,7 @@ async def create_secondary_mid(
 ) -> SecondaryMIDResult:
     """Create a secondary MID for the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
-    payment_scheme = await get_payment_scheme_by_code(
-        secondary_mid_data.payment_scheme_code
-    )
+    payment_scheme = await get_payment_scheme(secondary_mid_data.payment_scheme_slug)
     secondary_mid = SecondaryMID(
         secondary_mid=secondary_mid_data.secondary_mid,
         payment_scheme=payment_scheme,
@@ -176,7 +174,7 @@ async def create_secondary_mid(
 
     return {
         "pk": secondary_mid.pk,
-        "payment_scheme.code": payment_scheme.code,
+        "payment_scheme.slug": payment_scheme.slug,
         "secondary_mid": secondary_mid.secondary_mid,
         "payment_scheme_store_name": secondary_mid.payment_scheme_store_name,
         "payment_enrolment_status": PaymentEnrolmentStatus(

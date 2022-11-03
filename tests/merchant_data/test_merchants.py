@@ -53,8 +53,7 @@ def merchant_overview_json(
             "locations": locations,
             "payment_schemes": [
                 {
-                    "label": payment_scheme.label,
-                    "scheme_code": payment_scheme.code,
+                    "scheme_slug": payment_scheme.slug,
                     "count": {
                         "visa": visa_mids,
                         "mastercard": mastercard_mids,

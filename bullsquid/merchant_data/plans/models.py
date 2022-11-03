@@ -31,11 +31,10 @@ class CreatePlanRequest(BaseModel):
 class PlanPaymentSchemeCountResponse(BaseModel):
     """Counts of MIDs by payment scheme on a plan."""
 
-    label: str
-    scheme_code: int
+    scheme_slug: str
     count: int
 
-    _ = validator("label", allow_reuse=True)(string_must_not_be_blank)
+    _ = validator("scheme_slug", allow_reuse=True)(string_must_not_be_blank)
 
 
 class PlanCountsResponse(BaseModel):

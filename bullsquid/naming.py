@@ -41,7 +41,7 @@ def get_ref_name(table: Type[Table], *, plural: bool = False) -> str:
         'mid_ref'
 
         >>> get_ref_name(PaymentScheme)
-        'payment_scheme_code'
+        'payment_scheme_slug'
 
         >>> get_ref_name(SecondaryMID, plural=True)
         'secondary_mid_refs'
@@ -50,7 +50,7 @@ def get_ref_name(table: Type[Table], *, plural: bool = False) -> str:
         case PrimaryMID.__qualname__:
             name = "mid_ref"
         case PaymentScheme.__qualname__:
-            name = "payment_scheme_code"
+            name = "payment_scheme_slug"
         case SecondaryMIDLocationLink.__qualname__:
             name = "link_ref"
         case _:

@@ -32,16 +32,10 @@ from tests.helpers import (
 
 async def primary_mid_to_json(primary_mid: PrimaryMID) -> dict:
     """Converts a primary MID to its expected JSON representation."""
-    payment_scheme_code = (
-        await PaymentScheme.select(PaymentScheme.code)
-        .where(PaymentScheme.slug == primary_mid.payment_scheme)
-        .first()
-    )["code"]
-
     return {
         "mid_ref": str(primary_mid.pk),
         "mid_metadata": {
-            "payment_scheme_code": payment_scheme_code,
+            "payment_scheme_slug": primary_mid.payment_scheme,
             "mid": primary_mid.mid,
             "visa_bin": primary_mid.visa_bin,
             "payment_enrolment_status": primary_mid.payment_enrolment_status,
@@ -148,7 +142,7 @@ async def test_create_without_onboarding(
         json={
             "onboard": False,
             "mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "mid": primary_mid.mid,
                 "visa_bin": primary_mid.visa_bin,
                 "payment_enrolment_status": primary_mid.payment_enrolment_status,
@@ -185,7 +179,7 @@ async def test_create_non_visa_mid_with_visa_bin(
         json={
             "onboard": False,
             "mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[2].code,
+                "payment_scheme_slug": default_payment_schemes[2].slug,
                 "mid": primary_mid.mid,
                 "visa_bin": primary_mid.visa_bin,
                 "payment_enrolment_status": primary_mid.payment_enrolment_status,
@@ -210,7 +204,7 @@ async def test_create_and_onboard(
         json={
             "onboard": True,
             "mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "mid": primary_mid.mid,
                 "visa_bin": primary_mid.visa_bin,
                 "payment_enrolment_status": primary_mid.payment_enrolment_status,
@@ -245,7 +239,7 @@ async def test_create_without_visa_bin(
         json={
             "onboard": False,
             "mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "mid": primary_mid.mid,
                 "payment_enrolment_status": primary_mid.payment_enrolment_status,
             },
@@ -274,7 +268,7 @@ async def test_create_with_nonexistent_plan(
         json={
             "onboard": False,
             "mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "mid": primary_mid.mid,
                 "visa_bin": primary_mid.visa_bin,
                 "payment_enrolment_status": primary_mid.payment_enrolment_status,
@@ -298,7 +292,7 @@ async def test_create_with_nonexistent_merchant(
         json={
             "onboard": False,
             "mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "mid": primary_mid.mid,
                 "visa_bin": primary_mid.visa_bin,
                 "payment_enrolment_status": primary_mid.payment_enrolment_status,
@@ -325,7 +319,7 @@ async def test_create_with_duplicate_mid(
         json={
             "onboard": False,
             "mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "mid": existing_mid.mid,
                 "visa_bin": new_mid.visa_bin,
                 "payment_enrolment_status": new_mid.payment_enrolment_status,
@@ -336,7 +330,7 @@ async def test_create_with_duplicate_mid(
     assert_is_uniqueness_error(resp, loc=["body", "mid_metadata", "mid"])
 
 
-async def test_create_without_payment_scheme_code(
+async def test_create_without_payment_scheme_slug(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     primary_mid_factory: Factory[PrimaryMID],
@@ -358,11 +352,11 @@ async def test_create_without_payment_scheme_code(
     )
 
     assert_is_missing_field_error(
-        resp, loc=["body", "mid_metadata", "payment_scheme_code"]
+        resp, loc=["body", "mid_metadata", "payment_scheme_slug"]
     )
 
 
-async def test_create_with_null_payment_scheme_code(
+async def test_create_with_null_payment_scheme_slug(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     primary_mid_factory: Factory[PrimaryMID],
@@ -376,7 +370,7 @@ async def test_create_with_null_payment_scheme_code(
         json={
             "onboard": False,
             "mid_metadata": {
-                "payment_scheme_code": None,
+                "payment_scheme_slug": None,
                 "mid": new_mid.mid,
                 "visa_bin": new_mid.visa_bin,
                 "payment_enrolment_status": new_mid.payment_enrolment_status,
@@ -384,7 +378,7 @@ async def test_create_with_null_payment_scheme_code(
         },
     )
 
-    assert_is_null_error(resp, loc=["body", "mid_metadata", "payment_scheme_code"])
+    assert_is_null_error(resp, loc=["body", "mid_metadata", "payment_scheme_slug"])
 
 
 async def test_create_without_mid(
@@ -402,7 +396,7 @@ async def test_create_without_mid(
         json={
             "onboard": False,
             "mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "visa_bin": new_mid.visa_bin,
                 "payment_enrolment_status": new_mid.payment_enrolment_status,
             },
@@ -427,7 +421,7 @@ async def test_create_with_null_mid(
         json={
             "onboard": False,
             "mid_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "mid": None,
                 "visa_bin": new_mid.visa_bin,
                 "payment_enrolment_status": new_mid.payment_enrolment_status,

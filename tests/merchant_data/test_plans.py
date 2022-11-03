@@ -48,8 +48,7 @@ async def plan_overview_json(
             "locations": locations,
             "payment_schemes": [
                 {
-                    "label": payment_scheme.label,
-                    "scheme_code": payment_scheme.code,
+                    "scheme_slug": payment_scheme.slug,
                     "count": {
                         "visa": visa_mids,
                         "mastercard": mastercard_mids,
@@ -92,13 +91,9 @@ async def plan_detail_json(
                 "merchant_counts": {
                     "locations": locations,
                     "payment_schemes": [
-                        {"scheme_code": 1, "label": "VISA", "count": visa_mids},
-                        {
-                            "scheme_code": 2,
-                            "label": "MASTERCARD",
-                            "count": mastercard_mids,
-                        },
-                        {"scheme_code": 3, "label": "AMEX", "count": amex_mids},
+                        {"scheme_slug": "visa", "count": visa_mids},
+                        {"scheme_slug": "mastercard", "count": mastercard_mids},
+                        {"scheme_slug": "amex", "count": amex_mids},
                     ],
                 },
             }

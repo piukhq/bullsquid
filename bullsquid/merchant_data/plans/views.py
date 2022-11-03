@@ -50,8 +50,7 @@ async def create_plan_overview_response(
             locations=await Location.count().where(Location.merchant.plan == plan),
             payment_schemes=[
                 PlanPaymentSchemeCountResponse(
-                    label=payment_scheme.label,
-                    scheme_code=payment_scheme.code,
+                    scheme_slug=payment_scheme.slug,
                     count=await PrimaryMID.count().where(
                         PrimaryMID.merchant.plan == plan,
                         PrimaryMID.payment_scheme == payment_scheme,

@@ -2,18 +2,12 @@
     "merchant_data": {
         "PaymentScheme": [
             {
-                "code": 1,
-                "label": "VISA",
                 "slug": "visa"
             },
             {
-                "code": 2,
-                "label": "MASTERCARD",
                 "slug": "mastercard"
             },
             {
-                "code": 3,
-                "label": "AMEX",
                 "slug": "amex"
             }
         ],

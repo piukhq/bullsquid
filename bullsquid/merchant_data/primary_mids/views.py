@@ -37,7 +37,7 @@ async def create_primary_mid_response(
     return PrimaryMIDResponse(
         mid_ref=primary_mid["pk"],
         mid_metadata=PrimaryMIDMetadata(
-            payment_scheme_code=primary_mid["payment_scheme.code"],
+            payment_scheme_slug=primary_mid["payment_scheme.slug"],
             mid=primary_mid["mid"],
             visa_bin=primary_mid["visa_bin"],
             payment_enrolment_status=primary_mid["payment_enrolment_status"],

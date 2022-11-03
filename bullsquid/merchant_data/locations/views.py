@@ -84,8 +84,7 @@ async def create_location_overview_response(
         location_metadata=create_location_overview_metadata(location),
         payment_schemes=[
             LocationPaymentSchemeCountResponse(
-                label=payment_scheme.label,
-                scheme_code=payment_scheme.code,
+                scheme_slug=payment_scheme.slug,
                 count=0,
             )
             for payment_scheme in payment_schemes
@@ -106,8 +105,7 @@ async def create_location_detail_response(
         location_metadata=create_location_detail_metadata(location),
         payment_schemes=[
             LocationPaymentSchemeCountResponse(
-                label=payment_scheme.label,
-                scheme_code=payment_scheme.code,
+                scheme_slug=payment_scheme.slug,
                 count=0,
             )
             for payment_scheme in payment_schemes

@@ -21,18 +21,12 @@ from tests.helpers import (
 
 async def identifier_to_json(identifier: Identifier) -> dict:
     """Converts an identifier to its expected JSON representation."""
-    payment_scheme_code = (
-        await PaymentScheme.select(PaymentScheme.code)
-        .where(PaymentScheme.slug == identifier.payment_scheme)
-        .first()
-    )["code"]
-
     return {
         "identifier_ref": str(identifier.pk),
         "identifier_metadata": {
             "value": identifier.value,
             "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
-            "payment_scheme_code": payment_scheme_code,
+            "payment_scheme_slug": identifier.payment_scheme,
         },
         "identifier_status": identifier.status,
         "date_added": identifier.date_added.isoformat(),
@@ -208,7 +202,7 @@ async def test_create_without_onboarding(
             "identifier_metadata": {
                 "value": identifier.value,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
             },
         },
     )
@@ -242,7 +236,7 @@ async def test_create_and_onboard(
             "onboard": True,
             "identifier_metadata": {
                 "value": identifier.value,
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
         },
@@ -275,7 +269,7 @@ async def test_create_on_nonexistent_plan(
             "onboard": False,
             "identifier_metadata": {
                 "value": identifier.value,
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
         },
@@ -298,7 +292,7 @@ async def test_create_on_nonexistent_merchant(
             "onboard": False,
             "identifier_metadata": {
                 "value": identifier.value,
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
         },
@@ -324,7 +318,7 @@ async def test_create_with_existing_value(
             "onboard": False,
             "identifier_metadata": {
                 "value": existing_identifier.value,
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
         },
@@ -333,7 +327,7 @@ async def test_create_with_existing_value(
     assert_is_uniqueness_error(resp, loc=["body", "identifier_metadata", "value"])
 
 
-async def test_create_with_missing_payment_scheme_code(
+async def test_create_with_missing_payment_scheme_slug(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     identifier_factory: Factory[Identifier],
@@ -354,11 +348,11 @@ async def test_create_with_missing_payment_scheme_code(
     )
 
     assert_is_missing_field_error(
-        resp, loc=["body", "identifier_metadata", "payment_scheme_code"]
+        resp, loc=["body", "identifier_metadata", "payment_scheme_slug"]
     )
 
 
-async def test_create_with_null_payment_scheme_code(
+async def test_create_with_null_payment_scheme_slug(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     identifier_factory: Factory[Identifier],
@@ -373,14 +367,14 @@ async def test_create_with_null_payment_scheme_code(
             "onboard": False,
             "identifier_metadata": {
                 "value": identifier.value,
-                "payment_scheme_code": None,
+                "payment_scheme_slug": None,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
         },
     )
 
     assert_is_null_error(
-        resp, loc=["body", "identifier_metadata", "payment_scheme_code"]
+        resp, loc=["body", "identifier_metadata", "payment_scheme_slug"]
     )
 
 
@@ -399,7 +393,7 @@ async def test_create_without_value(
         json={
             "onboard": False,
             "identifier_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },
         },
@@ -423,7 +417,7 @@ async def test_create_with_null_value(
         json={
             "onboard": False,
             "identifier_metadata": {
-                "payment_scheme_code": default_payment_schemes[0].code,
+                "payment_scheme_slug": default_payment_schemes[0].slug,
                 "value": None,
                 "payment_scheme_merchant_name": identifier.payment_scheme_merchant_name,
             },

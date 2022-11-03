@@ -155,25 +155,7 @@ def comment_factory(database: None) -> Factory[Comment]:
 @pytest.fixture
 async def default_payment_schemes(database: None) -> list[PaymentScheme]:
     return [
-        await PaymentScheme.objects().get_or_create(
-            PaymentScheme.slug == "visa",
-            defaults={
-                PaymentScheme.label: "VISA",
-                PaymentScheme.code: 1,
-            },
-        ),
-        await PaymentScheme.objects().get_or_create(
-            PaymentScheme.slug == "mastercard",
-            defaults={
-                PaymentScheme.label: "MASTERCARD",
-                PaymentScheme.code: 2,
-            },
-        ),
-        await PaymentScheme.objects().get_or_create(
-            PaymentScheme.slug == "amex",
-            defaults={
-                PaymentScheme.label: "AMEX",
-                PaymentScheme.code: 3,
-            },
-        ),
+        await PaymentScheme.objects().get_or_create(PaymentScheme.slug == "visa"),
+        await PaymentScheme.objects().get_or_create(PaymentScheme.slug == "mastercard"),
+        await PaymentScheme.objects().get_or_create(PaymentScheme.slug == "amex"),
     ]

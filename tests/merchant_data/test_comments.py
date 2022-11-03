@@ -854,3 +854,47 @@ async def test_cant_delete_nonexistent_comment(
 
     comment = await Comment.objects().get(Comment.pk == comment.pk)
     assert_is_not_found_error(resp, loc=["path", "comment_ref"])
+
+
+async def test_get_deleted_comment_by_owner_ref(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[merchant.pk],
+        subject_type=ResourceType.MERCHANT,
+        is_deleted=True,
+        text="Test text",
+    )
+
+    resp = test_client.get(f"/api/v1/directory_comments/", params={"ref": str(plan.pk)})
+    assert resp.json()["lower_comments"][0]["comments"][0]["metadata"]["text"] == None
+
+
+async def test_get_deleted_comment_by_subject_ref(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[merchant.pk],
+        subject_type=ResourceType.MERCHANT,
+        is_deleted=True,
+        text="Test text",
+    )
+
+    resp = test_client.get(
+        f"/api/v1/directory_comments/", params={"ref": str(merchant.pk)}
+    )
+    assert resp.json()["entity_comments"]["comments"][0]["metadata"]["text"] == None

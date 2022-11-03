@@ -9,7 +9,7 @@ from piccolo.table import Table
 
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.comments.models import (
-    CommentMetadata,
+    CommentMetadataResponse,
     CommentResponse,
     CommentSubject,
     CreateCommentRequest,
@@ -73,6 +73,7 @@ def validate_subject_owners(
 
 async def _list_comments_by_parent(parent: Comment) -> list[CommentResponse]:
     comments = await Comment.objects().where(Comment.parent == parent)
+
     return [
         await create_comment_response(
             comment,
@@ -106,10 +107,10 @@ async def create_comment_response(
             )
             for subject in subjects
         ],
-        metadata=CommentMetadata(
+        metadata=CommentMetadataResponse(
             owner_ref=comment.owner,
             owner_type=comment.owner_type,
-            text=comment.text,
+            text=None if comment.is_deleted is True else comment.text,
         ),
         responses=await _list_comments_by_parent(comment),
     )

@@ -12,16 +12,13 @@ from bullsquid.merchant_data.validators import (
 )
 
 
-class CommentMetadata(BaseModel):
+class CommentMetadataBase(BaseModel):
     """
     Request & response model for comment metadata.
     """
 
     owner_ref: UUID4
     owner_type: ResourceType
-    text: str
-
-    _ = validator("text", allow_reuse=True)(string_must_not_be_blank)
 
     @validator("owner_type")
     @classmethod
@@ -35,12 +32,32 @@ class CommentMetadata(BaseModel):
         return v
 
 
+class CommentMetadataRequest(CommentMetadataBase):
+    """
+    Request model for editing and creating comment text
+    """
+
+    text: str
+
+    _ = validator("text", allow_reuse=True)(string_must_not_be_blank)
+
+
+class CommentMetadataResponse(CommentMetadataBase):
+    """
+    Response model for deleting comment text
+    """
+
+    text: str | None
+
+    _ = validator("text", allow_reuse=True)(nullify_blank_strings)
+
+
 class CreateCommentRequest(BaseModel):
     """
     Request model for creating a comment.
     """
 
-    metadata: CommentMetadata
+    metadata: CommentMetadataRequest
     subjects: list[UUID4]
     subject_type: ResourceType
 
@@ -99,7 +116,7 @@ class CommentResponse(BaseModel):
     is_edited: bool
     is_deleted: bool
     subjects: list[CommentSubject]
-    metadata: CommentMetadata
+    metadata: CommentMetadataResponse
     responses: list["CommentResponse"]
 
     _ = validator("created_by", allow_reuse=True)(string_must_not_be_blank)

@@ -1,14 +1,12 @@
 """Action log table definitions."""
-from piccolo.columns import (
-    Text,
-    Timestamptz,
-)
+from piccolo.columns import Text, Timestamptz
 
 from bullsquid.merchant_data.tables import TableWithPK
 
+
 class Action(TableWithPK):
     """Represents a logged action made by a user"""
-    
+
     date = Timestamptz()
     user = Text(required=True)
     action = Text(required=True)

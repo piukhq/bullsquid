@@ -240,7 +240,11 @@ async def edit_comment(
     fields: EditCommentRequest,
 ) -> CommentResponse:
     """Edit existing comment with new text"""
-    comment = await Comment.objects().get(Comment.pk == comment_ref)
+    comment = (
+        await Comment.objects()
+        .where(Comment.pk == comment_ref and Comment.is_deleted.eq(False))
+        .first()
+    )
 
     if not comment:
         raise NoSuchRecord(Comment)

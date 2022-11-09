@@ -898,3 +898,22 @@ async def test_get_deleted_comment_by_subject_ref(
         f"/api/v1/directory_comments/", params={"ref": str(merchant.pk)}
     )
     assert resp.json()["entity_comments"]["comments"][0]["metadata"]["text"] == None
+
+
+async def test_edit_deleted_comment(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(is_deleted=True)
+    resp = test_client.patch(
+        f"/api/v1/directory_comments/{comment.pk}",
+        json={
+            "text": "test text",
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "comment_ref"])

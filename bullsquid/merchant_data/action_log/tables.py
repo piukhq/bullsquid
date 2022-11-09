@@ -1,15 +1,26 @@
 """Action log table definitions."""
-from piccolo.columns import Text, Timestamptz
+from enum import Enum
 
+from piccolo.columns import JSON, UUID, Timestamptz
+
+from bullsquid.merchant_data.enums import ResourceType
 from bullsquid.merchant_data.tables import TableWithPK
+
+
+class ActionList(Enum):
+    """List of actions that a user can make"""
+
+    CREATE = 1
+    UPDATE = 2
+    DELETE = 3
 
 
 class Action(TableWithPK):
     """Represents a logged action made by a user"""
 
     date = Timestamptz()
-    user = Text(required=True)
-    action = Text(required=True)
-    entity_changed = Text(required=True)
-    before_change = Text(required=True)
-    after_change = Text(required=True)
+    user = UUID(required=True)
+    action = ActionList(required=True)
+    entity = UUID(required=True)
+    entity_type = ResourceType(required=True)
+    changes = JSON(default=str, required=True)

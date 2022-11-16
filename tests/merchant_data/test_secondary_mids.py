@@ -640,6 +640,7 @@ async def test_delete(
 async def test_delete_with_location_link(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
     secondary_mid_factory: Factory[SecondaryMID],
     secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
     test_client: TestClient,
@@ -647,7 +648,10 @@ async def test_delete_with_location_link(
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
-    await secondary_mid_location_link_factory(secondary_mid=secondary_mid)
+    location = await location_factory(merchant=merchant)
+    await secondary_mid_location_link_factory(
+        secondary_mid=secondary_mid, location=location
+    )
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/deletion",
         json={"secondary_mid_refs": [str(secondary_mid.pk)]},

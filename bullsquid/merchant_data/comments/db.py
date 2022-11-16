@@ -90,7 +90,7 @@ async def create_comment_response(
     comment: Comment, *, subjects: list[TableWithPK]
 ) -> CommentResponse:
     """
-    Create and return a CommentResponse instace for the given comment and list
+    Create and return a CommentResponse instance for the given comment and list
     of subjects.
     """
     return CommentResponse(

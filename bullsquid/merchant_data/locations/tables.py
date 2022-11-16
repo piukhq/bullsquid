@@ -27,6 +27,7 @@ class Location(SoftDeletable, TableWithPK):
     merchant_internal_id = Text(null=True, default=None)
     date_added = Timestamptz()
     merchant = ForeignKey(Merchant, required=True)
+    parent = ForeignKey("self")
 
     secondary_mids = M2M(
         LazyTableReference("SecondaryMIDLocationLink", "merchant_data")

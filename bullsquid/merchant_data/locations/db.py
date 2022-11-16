@@ -5,8 +5,17 @@ from uuid import UUID
 
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.locations.models import (
+    LocationDetailMetadata,
+    LocationDetailResponse,
+    LocationOverviewMetadata,
+    LocationOverviewResponse,
+    LocationPaymentSchemeCountResponse,
+)
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant
+from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
+from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
@@ -59,11 +68,11 @@ LocationDetailResult = TypedDict(
         "merchant_internal_id": int | None,
         "is_physical_location": bool,
         "address_line_1": str | None,
+        "address_line_2": str | None,
         "town_city": str | None,
         "postcode": str | None,
         "county": str | None,
         "country": str | None,
-        "address_line_2": str | None,
     },
 )
 
@@ -80,6 +89,79 @@ AvailableMIDResult = TypedDict(
         "location.postcode": str | None,
     },
 )
+
+
+def create_location_overview_metadata(
+    location: LocationResult,
+) -> LocationOverviewMetadata:
+    """Creates a LocationMetadataResponse instance from the given location object."""
+    return LocationOverviewMetadata(
+        name=location["name"],
+        location_id=location["location_id"],
+        merchant_internal_id=location["merchant_internal_id"],
+        is_physical_location=location["is_physical_location"],
+        address_line_1=location["address_line_1"],
+        town_city=location["town_city"],
+        postcode=location["postcode"],
+    )
+
+
+def create_location_detail_metadata(
+    location: LocationDetailResult,
+) -> LocationDetailMetadata:
+    """Creates a LocationMetadataResponse instance from the given location object."""
+    return LocationDetailMetadata(
+        name=location["name"],
+        location_id=location["location_id"],
+        merchant_internal_id=location["merchant_internal_id"],
+        is_physical_location=location["is_physical_location"],
+        address_line_1=location["address_line_1"],
+        town_city=location["town_city"],
+        postcode=location["postcode"],
+        address_line_2=location["address_line_2"],
+        county=location["county"],
+        country=location["country"],
+    )
+
+
+async def create_location_overview_response(
+    location: LocationResult, payment_schemes: list[PaymentScheme]
+) -> LocationOverviewResponse:
+    """Creates a LocationOverviewResponse instance from the given merchant object."""
+    return LocationOverviewResponse(
+        date_added=location["date_added"],
+        location_ref=location["pk"],
+        location_status=location["status"],
+        location_metadata=create_location_overview_metadata(location),
+        payment_schemes=[
+            LocationPaymentSchemeCountResponse(
+                scheme_slug=payment_scheme.slug,
+                count=0,
+            )
+            for payment_scheme in payment_schemes
+        ],
+    )
+
+
+async def create_location_detail_response(
+    location: LocationDetailResult, payment_schemes: list[PaymentScheme]
+) -> LocationDetailResponse:
+    """Creates a LocationDetailResponse instance from the given merchant object."""
+    return LocationDetailResponse(
+        date_added=location["date_added"],
+        location_ref=location["pk"],
+        location_status=location["status"],
+        linked_mids_count=0,
+        linked_secondary_mids_count=0,
+        location_metadata=create_location_detail_metadata(location),
+        payment_schemes=[
+            LocationPaymentSchemeCountResponse(
+                scheme_slug=payment_scheme.slug,
+                count=0,
+            )
+            for payment_scheme in payment_schemes
+        ],
+    )
 
 
 async def list_locations(
@@ -128,6 +210,54 @@ async def list_locations(
         query,
         n=n,
         p=p,
+    )
+
+
+async def create_location(
+    location_data: LocationDetailMetadata,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    parent: UUID | None,
+) -> LocationOverviewResponse:
+    """Create and return response for a location"""
+    if parent:
+        await get_location(
+            location_ref=parent, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    else:
+        await get_merchant(merchant_ref, plan_ref=plan_ref)
+    location = Location(
+        location_id=location_data.location_id,
+        name=location_data.name,
+        is_physical_location=location_data.is_physical_location,
+        address_line_1=location_data.address_line_1,
+        address_line_2=location_data.address_line_2,
+        town_city=location_data.town_city,
+        county=location_data.county,
+        country=location_data.country,
+        postcode=location_data.postcode,
+        merchant_internal_id=location_data.merchant_internal_id,
+        merchant=merchant_ref,
+        parent=parent,
+    )
+    await location.save()
+
+    payment_schemes = await list_payment_schemes()
+    return await create_location_overview_response(
+        LocationResult(
+            pk=location.pk,
+            status=ResourceStatus(location.status),
+            date_added=location.date_added,
+            name=location.name,
+            location_id=location.location_id,
+            merchant_internal_id=location.merchant_internal_id,
+            is_physical_location=location.is_physical_location,
+            address_line_1=location.address_line_1,
+            town_city=location.town_city,
+            postcode=location.postcode,
+        ),
+        payment_schemes,
     )
 
 

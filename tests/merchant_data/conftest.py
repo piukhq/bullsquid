@@ -58,6 +58,7 @@ def location_factory(database: None) -> Factory[Location]:
         return await ModelBuilder.build(
             Location,
             defaults={
+                "parent": None,
                 "status": ResourceStatus.ACTIVE,
                 **defaults,  # type: ignore
             },

@@ -17,18 +17,14 @@ from bullsquid.merchant_data.locations.models import (
     LocationDeletionResponse,
     LocationDetailMetadata,
     LocationDetailResponse,
-    LocationOverviewMetadata,
     LocationOverviewResponse,
-    LocationPaymentSchemeCountResponse,
     PrimaryMIDLinkRequest,
     PrimaryMIDLinkResponse,
     SecondaryMIDLinkRequest,
     SecondaryMIDLinkResponse,
 )
 from bullsquid.merchant_data.locations.tables import Location
-from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
-from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.primary_mids.models import LocationLinkResponse
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mid_location_links.db import (
@@ -38,79 +34,6 @@ from bullsquid.merchant_data.secondary_mid_location_links.db import (
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/locations")
-
-
-def create_location_overview_metadata(
-    location: db.LocationResult,
-) -> LocationOverviewMetadata:
-    """Creates a LocationMetadataResponse instance from the given location object."""
-    return LocationOverviewMetadata(
-        name=location["name"],
-        location_id=location["location_id"],
-        merchant_internal_id=location["merchant_internal_id"],
-        is_physical_location=location["is_physical_location"],
-        address_line_1=location["address_line_1"],
-        town_city=location["town_city"],
-        postcode=location["postcode"],
-    )
-
-
-def create_location_detail_metadata(
-    location: db.LocationDetailResult,
-) -> LocationDetailMetadata:
-    """Creates a LocationMetadataResponse instance from the given location object."""
-    return LocationDetailMetadata(
-        name=location["name"],
-        location_id=location["location_id"],
-        merchant_internal_id=location["merchant_internal_id"],
-        is_physical_location=location["is_physical_location"],
-        address_line_1=location["address_line_1"],
-        town_city=location["town_city"],
-        postcode=location["postcode"],
-        address_line_2=location["address_line_2"],
-        county=location["county"],
-        country=location["country"],
-    )
-
-
-async def create_location_overview_response(
-    location: db.LocationResult, payment_schemes: list[PaymentScheme]
-) -> LocationOverviewResponse:
-    """Creates a LocationOverviewResponse instance from the given merchant object."""
-    return LocationOverviewResponse(
-        date_added=location["date_added"],
-        location_ref=location["pk"],
-        location_status=location["status"],
-        location_metadata=create_location_overview_metadata(location),
-        payment_schemes=[
-            LocationPaymentSchemeCountResponse(
-                scheme_slug=payment_scheme.slug,
-                count=0,
-            )
-            for payment_scheme in payment_schemes
-        ],
-    )
-
-
-async def create_location_detail_response(
-    location: db.LocationDetailResult, payment_schemes: list[PaymentScheme]
-) -> LocationDetailResponse:
-    """Creates a LocationDetailResponse instance from the given merchant object."""
-    return LocationDetailResponse(
-        date_added=location["date_added"],
-        location_ref=location["pk"],
-        location_status=location["status"],
-        linked_mids_count=0,
-        linked_secondary_mids_count=0,
-        location_metadata=create_location_detail_metadata(location),
-        payment_schemes=[
-            LocationPaymentSchemeCountResponse(
-                scheme_slug=payment_scheme.slug,
-                count=0,
-            )
-            for payment_scheme in payment_schemes
-        ],
-    )
 
 
 @router.get("", response_model=list[LocationOverviewResponse])
@@ -142,7 +65,7 @@ async def list_locations(
 
     payment_schemes = await list_payment_schemes()
     return [
-        await create_location_overview_response(location, payment_schemes)
+        await db.create_location_overview_response(location, payment_schemes)
         for location in locations
     ]
 
@@ -162,10 +85,14 @@ async def get_location(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
     payment_schemes = await list_payment_schemes()
-    return await create_location_detail_response(location, payment_schemes)
+    return await db.create_location_detail_response(location, payment_schemes)
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=LocationOverviewResponse,
+)
 async def create_location(
     location_data: LocationDetailMetadata,
     plan_ref: UUID,
@@ -179,41 +106,13 @@ async def create_location(
         raise UniqueError(loc=["body", "location_id"])
 
     try:
-        merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+        location = await db.create_location(
+            location_data, plan_ref=plan_ref, merchant_ref=merchant_ref, parent=None
+        )
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
-    location = Location(
-        location_id=location_data.location_id,
-        name=location_data.name,
-        is_physical_location=location_data.is_physical_location,
-        address_line_1=location_data.address_line_1,
-        address_line_2=location_data.address_line_2,
-        town_city=location_data.town_city,
-        county=location_data.county,
-        country=location_data.country,
-        postcode=location_data.postcode,
-        merchant_internal_id=location_data.merchant_internal_id,
-        merchant=merchant,
-    )
-    await location.save()
-
-    payment_schemes = await list_payment_schemes()
-    return await create_location_overview_response(
-        db.LocationResult(
-            pk=location.pk,
-            status=ResourceStatus(location.status),
-            date_added=location.date_added,
-            name=location.name,
-            location_id=location.location_id,
-            merchant_internal_id=location.merchant_internal_id,
-            is_physical_location=location.is_physical_location,
-            address_line_1=location.address_line_1,
-            town_city=location.town_city,
-            postcode=location.postcode,
-        ),
-        payment_schemes,
-    )
+    return location
 
 
 @router.post(
@@ -445,3 +344,32 @@ async def list_secondary_mid_location_links(
         )
         for mid in mids
     ]
+
+
+@router.post(
+    "/{location_ref}/sub_locations",
+    response_model=LocationOverviewResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_sub_location(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    location_data: LocationDetailMetadata,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> LocationOverviewResponse:
+    """Create and return a response for a sub-location"""
+
+    try:
+        sub_location = await db.create_location(
+            location_data,
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+            parent=location_ref,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
+
+    return sub_location

@@ -11,7 +11,7 @@ from bullsquid.merchant_data.tables import BaseTable
 class PrimaryMID(BaseTable):
     """Represents a primary MID value."""
 
-    mid = Text(unique=True)
+    mid = Text(required=True)
     visa_bin = Text(null=True, default=None)
     payment_scheme = ForeignKey(PaymentScheme, required=True)
     date_added = Timestamptz()

@@ -28,8 +28,7 @@ async def test_run_worker_jobs(primary_mid_factory: Factory[PrimaryMID]) -> None
     await queue.push(OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
     assert await Job.count().where(Job.message_type == OnboardPrimaryMIDs.__name__) == 1
 
-    with patch("bullsquid.merchant_data.tasks.logger"):
-        await run_worker(burst=True)
+    await run_worker(burst=True)
 
     assert await Job.count().where(Job.message_type == OnboardPrimaryMIDs.__name__) == 0
 
@@ -46,10 +45,7 @@ async def test_run_worker_exceptions(primary_mid_factory: Factory[PrimaryMID]) -
         == 1
     )
 
-    with (
-        patch("bullsquid.merchant_data.tasks.logger"),
-        patch("bullsquid.merchant_data.tasks.txm.onboard_mids", side_effect=Exception),
-    ):
+    with patch("bullsquid.merchant_data.tasks.txm.onboard_mids", side_effect=Exception):
         await run_worker(burst=True)
 
     assert (
@@ -73,7 +69,6 @@ async def test_run_worker_sleep(primary_mid_factory: Factory[PrimaryMID]) -> Non
         """
 
     with (
-        patch("bullsquid.merchant_data.tasks.logger"),
         patch("bullsquid.merchant_data.tasks.asyncio.sleep", side_effect=MockedSleep),
         pytest.raises(MockedSleep),
     ):
@@ -84,8 +79,7 @@ async def test_onboard_primary_mids(primary_mid_factory: Factory[PrimaryMID]) ->
     primary_mid = await primary_mid_factory(txm_status=TXMStatus.NOT_ONBOARDED)
 
     await queue.push(OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
-    with patch("bullsquid.merchant_data.tasks.logger"):
-        await run_worker(burst=True)
+    await run_worker(burst=True)
 
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.txm_status == TXMStatus.ONBOARDED
@@ -96,8 +90,7 @@ async def test_offboard_primary_mids(primary_mid_factory: Factory[PrimaryMID]) -
     primary_mid = await primary_mid_factory(txm_status=TXMStatus.ONBOARDED)
 
     await queue.push(OffboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
-    with patch("bullsquid.merchant_data.tasks.logger"):
-        await run_worker(burst=True)
+    await run_worker(burst=True)
 
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.txm_status == TXMStatus.OFFBOARDED
@@ -110,8 +103,7 @@ async def test_offboard_delete_primary_mids(
     primary_mid = await primary_mid_factory(txm_status=TXMStatus.ONBOARDED)
 
     await queue.push(OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]))
-    with patch("bullsquid.merchant_data.tasks.logger"):
-        await run_worker(burst=True)
+    await run_worker(burst=True)
 
     primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.txm_status == TXMStatus.OFFBOARDED
@@ -130,8 +122,7 @@ async def test_offboard_delete_primary_mid_null_link(
     )
 
     await queue.push(OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]))
-    with patch("bullsquid.merchant_data.tasks.logger"):
-        await run_worker(burst=True)
+    await run_worker(burst=True)
 
     primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
     assert primary_mid.location is None
@@ -147,12 +138,12 @@ async def test_offboard_delete_merchant(
     )
 
     await queue.push(OffboardAndDeleteMerchant(merchant_ref=merchant.pk))
-    with patch("bullsquid.merchant_data.tasks.logger"):
-        # run this twice; once for OffboardAndDeleteMerchant and once more for
-        # OffboardAndDeletePrimaryMIDs.
-        # TODO: fix burst mode
-        await run_worker(burst=True)
-        await run_worker(burst=True)
+
+    # run this twice; once for OffboardAndDeleteMerchant and once more for
+    # OffboardAndDeletePrimaryMIDs.
+    # TODO: fix burst mode
+    await run_worker(burst=True)
+    await run_worker(burst=True)
 
     merchant = await Merchant.all_objects().get(Merchant.pk == merchant.pk)
     primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
@@ -173,14 +164,14 @@ async def test_offboard_delete_plan(
     )
 
     await queue.push(OffboardAndDeletePlan(plan_ref=plan.pk))
-    with patch("bullsquid.merchant_data.tasks.logger"):
-        # run this three times
-        # 1. OffboardAndDeletePlan
-        # 2. OffboardAndDeleteMerchant
-        # 3. OffboardAndDeletePrimaryMIDs
-        # TODO: fix burst mode
-        for _i in range(3):
-            await run_worker(burst=True)
+
+    # run this three times
+    # 1. OffboardAndDeletePlan
+    # 2. OffboardAndDeleteMerchant
+    # 3. OffboardAndDeletePrimaryMIDs
+    # TODO: fix burst mode
+    for _i in range(3):
+        await run_worker(burst=True)
 
     plan = await Plan.all_objects().get(Plan.pk == plan.pk)
     merchant = await Merchant.all_objects().get(Merchant.pk == merchant.pk)

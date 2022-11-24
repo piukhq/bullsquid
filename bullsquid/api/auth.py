@@ -151,7 +151,14 @@ class JWTBearer(HTTPBearer):
 
 
 jwt_bearer: Callable
-if settings.debug:
+if settings.debug or settings.oauth.domain is None:
+    warning_parts = ["AUTH IS DISABLED! "]
+    if settings.debug:
+        warning_parts.append("Debug mode (settings.debug) is enabled")
+    elif settings.oauth.domain is None:
+        warning_parts.append("settings.oauth.domain is null")
+    warning_parts.append(", so no authentication will be used.")
+    logger.warning("".join(warning_parts))
 
     def jwt_bearer() -> JWTCredentials:
         """A fake jwt_bearer dependency for use in debug mode."""

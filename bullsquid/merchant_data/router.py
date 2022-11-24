@@ -2,6 +2,7 @@
 from fastapi import APIRouter
 
 from bullsquid.merchant_data.comments.views import router as comments_router
+from bullsquid.merchant_data.csv_upload.views import router as csv_upload_router
 from bullsquid.merchant_data.identifiers.views import router as identifiers_router
 from bullsquid.merchant_data.locations.views import router as locations_router
 from bullsquid.merchant_data.merchants.views import router as merchants_router
@@ -21,3 +22,4 @@ router.include_router(secondary_mids_router)
 router.include_router(identifiers_router)
 router.include_router(locations_router)
 router.include_router(secondary_mid_location_links_router)
+router.include_router(csv_upload_router)

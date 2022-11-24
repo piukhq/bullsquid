@@ -4,6 +4,7 @@ Base merchant data tables.
 
 from piccolo.columns import UUID, ForeignKey, Selectable, Text
 from piccolo.query import Count, Objects, Select
+from piccolo.query.methods.exists import Exists
 from piccolo.table import Table
 
 from bullsquid.merchant_data.enums import ResourceStatus
@@ -64,3 +65,14 @@ class BaseTable(Table):
         Passes through to super().count() without filtering deleted items.
         """
         return super().count()
+
+    @classmethod
+    def exists(cls) -> Exists:
+        return super().exists().where(cls.status != ResourceStatus.DELETED)
+
+    @classmethod
+    def all_exists(cls) -> Exists:
+        """
+        Passes through to super().exists() without filtering deleted items.
+        """
+        return super().exists()

@@ -58,6 +58,7 @@ async def test_list(
 
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids")
 
+    __import__("pprint").pprint(resp.json())
     assert resp.status_code == status.HTTP_200_OK
 
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)

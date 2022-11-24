@@ -14,6 +14,10 @@ from bullsquid.merchant_data.plans.db import plan_has_onboarded_resources
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.service.txm import txm
+from bullsquid.merchant_data.tasks.import_locations import (
+    ImportLocationFileRecord,
+    import_location_file_record,
+)
 from bullsquid.settings import settings
 
 
@@ -54,6 +58,7 @@ queue = Queue(
         OffboardAndDeletePrimaryMIDs,
         OffboardAndDeleteMerchant,
         OffboardAndDeletePlan,
+        ImportLocationFileRecord,
     ]
 )
 
@@ -139,6 +144,12 @@ async def _run_job(message: BaseModel) -> None:
                 merchant.status = ResourceStatus.PENDING_DELETION
                 await merchant.save()
                 await queue.push(OffboardAndDeleteMerchant(merchant_ref=merchant.pk))
+        case ImportLocationFileRecord():
+            await import_location_file_record(
+                message.record,
+                plan_ref=message.plan_ref,
+                merchant_ref=message.merchant_ref,
+            )
 
 
 async def run_worker(*, burst: bool = False) -> None:
@@ -159,7 +170,7 @@ async def run_worker(*, burst: bool = False) -> None:
                     logger.exception(ex)
 
                 event_id = sentry_sdk.capture_exception()
-                logger.warning(f"Job {job} failed: {ex} (event ID: {event_id})")
+                logger.warning(f"Job {job} failed: {ex!r} (event ID: {event_id})")
 
                 await queue.fail_job(job.id)
             else:

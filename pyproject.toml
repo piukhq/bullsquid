@@ -33,10 +33,11 @@ docopt-ng = "^0.8.1"
 tomli = "^2.0.1"
 pyjwt = {extras = ["crypto"], version = "^2.6.0"}
 pyyaml = "^6.0"
+python-multipart = "^0.0.5"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.10.0"
-pylint = "^2.15.6"
+pylint = "^2.15.7"
 mypy = "^0.991"
 isort = "^5.10.1"
 ipython = "^8.7.0"

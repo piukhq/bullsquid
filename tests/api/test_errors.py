@@ -13,8 +13,7 @@ from bullsquid.api.errors import (
 
 
 def test_error_response_default_args() -> None:
-    with patch("bullsquid.api.errors.logger"):
-        resp = error_response(Exception("Test exception"))
+    resp = error_response(Exception("Test exception"))
 
     assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert json.loads(resp.body) == {
@@ -28,12 +27,11 @@ def test_error_response_default_args() -> None:
 
 
 def test_error_response_custom_args() -> None:
-    with patch("bullsquid.api.errors.logger"):
-        resp = error_response(
-            Exception("Test exception"),
-            status_code=status.HTTP_418_IM_A_TEAPOT,
-            message="I'm a teapot",
-        )
+    resp = error_response(
+        Exception("Test exception"),
+        status_code=status.HTTP_418_IM_A_TEAPOT,
+        message="I'm a teapot",
+    )
 
     assert resp.status_code == status.HTTP_418_IM_A_TEAPOT
     assert json.loads(resp.body) == {

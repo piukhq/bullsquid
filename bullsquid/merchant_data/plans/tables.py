@@ -1,10 +1,10 @@
 """Plan table definitions."""
 from piccolo.columns import Integer, Text
 
-from bullsquid.merchant_data.tables import SoftDeletable, TableWithPK
+from bullsquid.merchant_data.tables import BaseTable
 
 
-class Plan(SoftDeletable, TableWithPK):
+class Plan(BaseTable):
     """Represents a loyalty plan that may contain any number of merchants."""
 
     name = Text(required=True, unique=True)

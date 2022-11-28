@@ -76,8 +76,8 @@ class LocationPaymentSchemeCountResponse(BaseModel):
     _ = validator("scheme_slug", allow_reuse=True)(string_must_not_be_blank)
 
 
-class LocationOverviewResponse(BaseModel):
-    """Location overview response model."""
+class LocationOverviewBase(BaseModel):
+    """Base location overview model."""
 
     location_ref: UUID4
     location_status: ResourceStatus
@@ -86,7 +86,13 @@ class LocationOverviewResponse(BaseModel):
     date_added: datetime
 
 
-class LocationDetailResponse(LocationOverviewResponse):
+class LocationOverviewResponse(LocationOverviewBase):
+    """Location overview response model."""
+
+    sub_locations: list["LocationOverviewResponse"] | None
+
+
+class LocationDetailResponse(LocationOverviewBase):
     """Location detail response model"""
 
     location_metadata: LocationDetailMetadata

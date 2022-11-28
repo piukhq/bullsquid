@@ -2,8 +2,6 @@
 Base merchant data tables.
 """
 
-from typing import TYPE_CHECKING
-
 from piccolo.columns import UUID, ForeignKey, Selectable, Text
 from piccolo.query import Count, Objects, Select
 from piccolo.table import Table
@@ -11,12 +9,13 @@ from piccolo.table import Table
 from bullsquid.merchant_data.enums import ResourceStatus
 
 
-class TableWithPK(Table):
+class BaseTable(Table):
     """
-    Base table with a UUID primary key.
+    Base table with a UUID primary key, status, and objects/select overrides for soft deletion.
     """
 
     pk = UUID(primary_key=True)
+    status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE)
 
     @property
     def display_text(self) -> str:
@@ -24,20 +23,6 @@ class TableWithPK(Table):
         The pretty printable text for this table.
         """
         raise NotImplementedError
-
-
-if TYPE_CHECKING:
-    _Base = Table
-else:
-    _Base = object
-
-
-class SoftDeletable(_Base):  # pylint: disable=all
-    """
-    Table mixin with a status column and objects/select overrides for soft deletion.
-    """
-
-    status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE)
 
     @classmethod
     def objects(cls, *prefetch: ForeignKey | list[ForeignKey]) -> Objects:

@@ -4,10 +4,10 @@ from piccolo.columns import M2M, ForeignKey, LazyTableReference, Text, Timestamp
 from bullsquid.merchant_data.enums import PaymentEnrolmentStatus, TXMStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
-from bullsquid.merchant_data.tables import SoftDeletable, TableWithPK
+from bullsquid.merchant_data.tables import BaseTable
 
 
-class SecondaryMID(SoftDeletable, TableWithPK):
+class SecondaryMID(BaseTable):
     """Represents a secondary MID value."""
 
     secondary_mid = Text(unique=True, required=True)

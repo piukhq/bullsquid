@@ -24,7 +24,6 @@ from bullsquid.merchant_data.locations.models import (
     SecondaryMIDLinkResponse,
 )
 from bullsquid.merchant_data.locations.tables import Location
-from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.primary_mids.models import LocationLinkResponse
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mid_location_links.db import (
@@ -61,13 +60,9 @@ async def list_locations(
         )
         raise ResourceNotFoundError.from_no_such_record(
             ex, loc=loc, override_field_name=override_field_name
-        )
+        ) from ex
 
-    payment_schemes = await list_payment_schemes()
-    return [
-        await db.create_location_overview_response(location, payment_schemes)
-        for location in locations
-    ]
+    return locations
 
 
 @router.get("/{location_ref}", response_model=LocationDetailResponse)
@@ -83,9 +78,8 @@ async def get_location(
             location_ref, merchant_ref=merchant_ref, plan_ref=plan_ref
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
-    payment_schemes = await list_payment_schemes()
-    return await db.create_location_detail_response(location, payment_schemes)
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
+    return location
 
 
 @router.post(
@@ -110,7 +104,7 @@ async def create_location(
             location_data, plan_ref=plan_ref, merchant_ref=merchant_ref, parent=None
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return location
 
@@ -140,7 +134,9 @@ async def delete_locations(
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == Location else ["path"]
         plural = ex.table == Location
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc, plural=plural)
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=loc, plural=plural
+        ) from ex
 
     await db.update_locations_status(
         deletion.location_refs,
@@ -182,7 +178,7 @@ async def link_location_to_primary_mid(
         )
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == PrimaryMID else ["path"]
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
 
     return [
         PrimaryMIDLinkResponse(
@@ -224,7 +220,7 @@ async def link_location_to_secondary_mid(
         )
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == SecondaryMID else ["path"]
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc)
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
 
     content = jsonable_encoder(
         [
@@ -299,7 +295,7 @@ async def list_location_primary_mids(
             p=p,
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return [
         PrimaryMIDLinkResponse(
@@ -333,7 +329,7 @@ async def list_secondary_mid_location_links(
             p=p,
         )
     except NoSuchRecord as ex:
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return [
         SecondaryMIDLinkResponse(

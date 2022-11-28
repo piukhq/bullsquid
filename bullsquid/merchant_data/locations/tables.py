@@ -9,10 +9,10 @@ from piccolo.columns import (
 )
 
 from bullsquid.merchant_data.merchants.tables import Merchant
-from bullsquid.merchant_data.tables import SoftDeletable, TableWithPK
+from bullsquid.merchant_data.tables import BaseTable
 
 
-class Location(SoftDeletable, TableWithPK):
+class Location(BaseTable):
     """Represents a location that can have multiple MIDs."""
 
     location_id = Text(required=True, unique=True)

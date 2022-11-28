@@ -17,7 +17,7 @@ from bullsquid.merchant_data.comments.models import (
     SubjectComments,
 )
 from bullsquid.merchant_data.comments.tables import Comment
-from bullsquid.merchant_data.db import RESOURCE_TYPE_TO_TABLE, TableWithPK
+from bullsquid.merchant_data.db import RESOURCE_TYPE_TO_TABLE, BaseTable
 from bullsquid.merchant_data.enums import FilterSubjectType, ResourceType
 from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.locations.tables import Location
@@ -26,7 +26,7 @@ from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
-T = TypeVar("T", bound=TableWithPK)
+T = TypeVar("T", bound=BaseTable)
 
 
 async def find_subjects(table: Type[T], entity_refs: list[UUID]) -> list[T]:
@@ -41,7 +41,7 @@ async def find_subjects(table: Type[T], entity_refs: list[UUID]) -> list[T]:
 
 
 def validate_subject_owners(
-    subjects: list[TableWithPK], *, subject_type: ResourceType, owner: UUID
+    subjects: list[BaseTable], *, subject_type: ResourceType, owner: UUID
 ) -> None:
     """
     Raise a NoSuchRecord error if the given subjects do not match the given owner.
@@ -87,7 +87,7 @@ async def _list_comments_by_parent(parent: Comment) -> list[CommentResponse]:
 
 
 async def create_comment_response(
-    comment: Comment, *, subjects: list[TableWithPK]
+    comment: Comment, *, subjects: list[BaseTable]
 ) -> CommentResponse:
     """
     Create and return a CommentResponse instance for the given comment and list
@@ -142,7 +142,7 @@ async def list_comments_by_owner(
 
     # TODO: rewrite with list comprehensions once 3.11 is out.
     # at least as far as 3.10.8 you can't have an async comprehension inside a sync one.
-    result = []
+    result = []  # noqa
     for subject_type, comments in comments_by_subject_type.items():
         result.append(
             SubjectComments(

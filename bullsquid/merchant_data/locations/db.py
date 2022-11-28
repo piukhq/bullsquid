@@ -1,6 +1,4 @@
 """Database access layer for operations on locations"""
-from datetime import datetime
-from typing import TypedDict
 from uuid import UUID
 
 from bullsquid.db import NoSuchRecord, paginate
@@ -22,78 +20,8 @@ from bullsquid.merchant_data.secondary_mid_location_links.tables import (
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
-LocationResult = TypedDict(
-    "LocationResult",
-    {
-        "pk": UUID,
-        "status": ResourceStatus,
-        "date_added": datetime,
-        "name": str | None,
-        "location_id": str,
-        "merchant_internal_id": str | None,
-        "is_physical_location": bool,
-        "address_line_1": str | None,
-        "town_city": str | None,
-        "postcode": str | None,
-    },
-)
 
-AssociatedPrimaryMIDResult = TypedDict(
-    "AssociatedPrimaryMIDResult",
-    {
-        "pk": UUID,
-        "mid": str,
-        "payment_scheme.slug": str,
-    },
-)
-
-AssociatedSecondaryMIDResult = TypedDict(
-    "AssociatedSecondaryMIDResult",
-    {
-        "pk": UUID,
-        "secondary_mid.pk": UUID,
-        "secondary_mid.secondary_mid": str,
-        "secondary_mid.payment_scheme.slug": str,
-    },
-)
-
-LocationDetailResult = TypedDict(
-    "LocationDetailResult",
-    {
-        "pk": UUID,
-        "status": ResourceStatus,
-        "date_added": datetime,
-        "name": str | None,
-        "location_id": str,
-        "merchant_internal_id": int | None,
-        "is_physical_location": bool,
-        "address_line_1": str | None,
-        "address_line_2": str | None,
-        "town_city": str | None,
-        "postcode": str | None,
-        "county": str | None,
-        "country": str | None,
-    },
-)
-
-AvailableMIDResult = TypedDict(
-    "AvailableMIDResult",
-    {
-        "pk": UUID,
-        "mid": str,
-        "payment_scheme.slug": str,
-        "location.pk": UUID | None,
-        "location.name": str | None,
-        "location.address_line_1": str | None,
-        "location.town_city": str | None,
-        "location.postcode": str | None,
-    },
-)
-
-
-def create_location_overview_metadata(
-    location: LocationResult,
-) -> LocationOverviewMetadata:
+def create_location_overview_metadata(location: Location) -> LocationOverviewMetadata:
     """Creates a LocationMetadataResponse instance from the given location object."""
     return LocationOverviewMetadata(
         name=location["name"],
@@ -106,9 +34,7 @@ def create_location_overview_metadata(
     )
 
 
-def create_location_detail_metadata(
-    location: LocationDetailResult,
-) -> LocationDetailMetadata:
+def create_location_detail_metadata(location: Location) -> LocationDetailMetadata:
     """Creates a LocationMetadataResponse instance from the given location object."""
     return LocationDetailMetadata(
         name=location["name"],
@@ -125,7 +51,10 @@ def create_location_detail_metadata(
 
 
 async def create_location_overview_response(
-    location: LocationResult, payment_schemes: list[PaymentScheme]
+    location: Location,
+    *,
+    sub_locations: list[Location],
+    payment_schemes: list[PaymentScheme],
 ) -> LocationOverviewResponse:
     """Creates a LocationOverviewResponse instance from the given merchant object."""
     return LocationOverviewResponse(
@@ -140,11 +69,19 @@ async def create_location_overview_response(
             )
             for payment_scheme in payment_schemes
         ],
+        sub_locations=[
+            await create_location_overview_response(
+                sub_location, sub_locations=[], payment_schemes=payment_schemes
+            )
+            for sub_location in sub_locations
+        ]
+        if sub_locations
+        else None,
     )
 
 
 async def create_location_detail_response(
-    location: LocationDetailResult, payment_schemes: list[PaymentScheme]
+    location: Location, payment_schemes: list[PaymentScheme]
 ) -> LocationDetailResponse:
     """Creates a LocationDetailResponse instance from the given merchant object."""
     return LocationDetailResponse(
@@ -171,24 +108,11 @@ async def list_locations(
     exclude_secondary_mid: UUID | None,
     n: int,
     p: int,
-) -> list[LocationResult]:
+) -> list[LocationOverviewResponse]:
     """Return a list of all locations on the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    query = Location.select(
-        Location.pk,
-        Location.status,
-        Location.date_added,
-        Location.name,
-        Location.location_id,
-        Location.merchant_internal_id,
-        Location.is_physical_location,
-        Location.address_line_1,
-        Location.town_city,
-        Location.postcode,
-    ).where(
-        Location.merchant == merchant,
-    )
+    query = Location.objects().where(Location.merchant == merchant)
 
     if exclude_secondary_mid:
         # validate secondary MID ref
@@ -206,11 +130,23 @@ async def list_locations(
         if linked_location_pks:
             query = query.where(Location.pk.not_in(linked_location_pks))
 
-    return await paginate(
+    locations = await paginate(
         query,
         n=n,
         p=p,
     )
+
+    payment_schemes = await list_payment_schemes()
+    return [
+        await create_location_overview_response(
+            location,
+            sub_locations=await Location.objects().where(
+                Location.parent == location.pk
+            ),
+            payment_schemes=payment_schemes,
+        )
+        for location in locations
+    ]
 
 
 async def create_location(
@@ -245,19 +181,7 @@ async def create_location(
 
     payment_schemes = await list_payment_schemes()
     return await create_location_overview_response(
-        LocationResult(
-            pk=location.pk,
-            status=ResourceStatus(location.status),
-            date_added=location.date_added,
-            name=location.name,
-            location_id=location.location_id,
-            merchant_internal_id=location.merchant_internal_id,
-            is_physical_location=location.is_physical_location,
-            address_line_1=location.address_line_1,
-            town_city=location.town_city,
-            postcode=location.postcode,
-        ),
-        payment_schemes,
+        location, sub_locations=[], payment_schemes=payment_schemes
     )
 
 
@@ -265,7 +189,7 @@ async def list_available_primary_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
     location_ref: UUID,
-) -> list[AvailableMIDResult]:
+) -> list[PrimaryMID]:
     """List available mids for association with a location"""
     await get_location(location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref)
     return await PrimaryMID.select(
@@ -288,26 +212,12 @@ async def get_location(
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
-) -> LocationDetailResult:
+) -> LocationDetailResponse:
     """Return the details of a location with the given primary key."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
     location = await (
-        Location.select(
-            Location.pk,
-            Location.status,
-            Location.date_added,
-            Location.name,
-            Location.location_id,
-            Location.merchant_internal_id,
-            Location.is_physical_location,
-            Location.address_line_1,
-            Location.town_city,
-            Location.postcode,
-            Location.address_line_2,
-            Location.county,
-            Location.country,
-        )
+        Location.objects()
         .where(
             Location.pk == location_ref,
             Location.merchant == merchant,
@@ -317,7 +227,8 @@ async def get_location(
     if not location:
         raise NoSuchRecord(Location)
 
-    return location
+    payment_schemes = await list_payment_schemes()
+    return await create_location_detail_response(location, payment_schemes)
 
 
 async def get_location_instance(
@@ -391,7 +302,7 @@ async def list_associated_primary_mids(
     location_ref: UUID,
     n: int,
     p: int,
-) -> list[AssociatedPrimaryMIDResult]:
+) -> list[PrimaryMID]:
     """List available mids in association with a location"""
     await get_location(location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref)
     return await paginate(
@@ -415,7 +326,7 @@ async def list_associated_secondary_mids(
     location_ref: UUID,
     n: int,
     p: int,
-) -> list[AssociatedSecondaryMIDResult]:
+) -> list[SecondaryMIDLocationLink]:
     """List available secondary mids in association with a location"""
     location = await get_location_instance(
         location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref

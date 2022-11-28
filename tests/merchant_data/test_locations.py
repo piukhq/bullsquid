@@ -25,6 +25,7 @@ async def location_to_json(
     location: Location, payment_schemes: list[PaymentScheme]
 ) -> dict:
     """Converts a location to its expected JSON representation."""
+    sub_locations = await Location.objects().where(Location.parent == location.pk)
     return {
         "location_ref": str(location.pk),
         "location_metadata": {
@@ -45,6 +46,12 @@ async def location_to_json(
             }
             for payment_scheme in payment_schemes
         ],
+        "sub_locations": [
+            await location_to_json(sub_location, payment_schemes)
+            for sub_location in sub_locations
+        ]
+        if sub_locations
+        else None,
     }
 
 

@@ -2,10 +2,10 @@
 from piccolo.columns import ForeignKey, Text
 
 from bullsquid.merchant_data.plans.tables import Plan
-from bullsquid.merchant_data.tables import SoftDeletable, TableWithPK
+from bullsquid.merchant_data.tables import BaseTable
 
 
-class Merchant(SoftDeletable, TableWithPK):
+class Merchant(BaseTable):
     """Represents a merchant such as Iceland or Wasabi."""
 
     name = Text(required=True, unique=True)

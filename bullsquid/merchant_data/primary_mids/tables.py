@@ -5,10 +5,10 @@ from bullsquid.merchant_data.enums import PaymentEnrolmentStatus, TXMStatus
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
-from bullsquid.merchant_data.tables import SoftDeletable, TableWithPK
+from bullsquid.merchant_data.tables import BaseTable
 
 
-class PrimaryMID(SoftDeletable, TableWithPK):
+class PrimaryMID(BaseTable):
     """Represents a primary MID value."""
 
     mid = Text(unique=True)

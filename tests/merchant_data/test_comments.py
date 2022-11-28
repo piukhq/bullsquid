@@ -12,7 +12,7 @@ from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from bullsquid.merchant_data.tables import TableWithPK
+from bullsquid.merchant_data.tables import BaseTable
 from tests.helpers import (
     Factory,
     assert_is_missing_field_error,
@@ -24,7 +24,7 @@ from tests.helpers import (
 def comment_json(
     comment: Comment,
     *,
-    subject: TableWithPK,
+    subject: BaseTable,
 ) -> dict:
     return {
         "comment_ref": str(comment.pk),

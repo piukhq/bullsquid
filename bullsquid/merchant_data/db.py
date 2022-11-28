@@ -10,9 +10,9 @@ from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from bullsquid.merchant_data.tables import TableWithPK
+from bullsquid.merchant_data.tables import BaseTable
 
-RESOURCE_TYPE_TO_TABLE: dict[ResourceType, Type[TableWithPK]] = {
+RESOURCE_TYPE_TO_TABLE: dict[ResourceType, Type[BaseTable]] = {
     ResourceType.PLAN: Plan,
     ResourceType.MERCHANT: Merchant,
     ResourceType.LOCATION: Location,

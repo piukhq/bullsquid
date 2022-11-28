@@ -154,7 +154,7 @@ async def create_location(
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
-    parent: UUID | None,
+    parent: UUID | None = None,
 ) -> LocationOverviewResponse:
     """Create and return response for a location"""
     if parent:
@@ -212,8 +212,13 @@ async def get_location(
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
+    parent: UUID | None = None,
 ) -> LocationDetailResponse:
     """Return the details of a location with the given primary key."""
+    if parent:
+        await get_location(
+            location_ref=parent, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
     location = await (
@@ -221,6 +226,7 @@ async def get_location(
         .where(
             Location.pk == location_ref,
             Location.merchant == merchant,
+            Location.parent == parent,
         )
         .first()
     )

@@ -369,3 +369,29 @@ async def create_sub_location(
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return sub_location
+
+
+@router.get(
+    "/{location_ref}/sub_locations/{sub_location_ref}",
+    response_model=LocationDetailResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_sub_location(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    sub_location_ref: UUID,
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
+) -> LocationDetailResponse:
+    """Get sub_location details."""
+    try:
+        sub_location = await db.get_location(
+            sub_location_ref,
+            merchant_ref=merchant_ref,
+            plan_ref=plan_ref,
+            parent=location_ref,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
+
+    return sub_location

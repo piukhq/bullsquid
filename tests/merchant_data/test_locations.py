@@ -1375,3 +1375,43 @@ async def test_incorrect_parent_ref(
     )
 
     assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+async def test_sub_location_details(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    sub_location = await location_factory(parent=location, merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations/{sub_location.pk}"
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+    location = await Location.objects().get(Location.pk == resp.json()["location_ref"])
+    assert resp.json() == await location_to_json_detail(
+        location, default_payment_schemes
+    )
+
+
+async def test_get_nonexistent_sublocation(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    await location_factory(parent=location, merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations/{uuid4()}"
+    )
+
+    assert resp.status_code == status.HTTP_404_NOT_FOUND, resp.text

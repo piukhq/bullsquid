@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from requests import Response
+from httpx import Response
 
 from bullsquid.customer_wallet.user_lookups.tables import UserLookup
 from tests.customer_wallet.conftest import Factory

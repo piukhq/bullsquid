@@ -1,8 +1,8 @@
 from typing import Any, Protocol, TypeVar
 
 from fastapi import status
+from httpx import Response
 from piccolo.table import Table
-from requests import Response
 
 T = TypeVar("T", bound=Table, covariant=True)
 

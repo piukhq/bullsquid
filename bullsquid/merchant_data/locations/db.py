@@ -105,11 +105,16 @@ async def list_locations(
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
+    parent: UUID | None = None,
     exclude_secondary_mid: UUID | None,
     n: int,
     p: int,
 ) -> list[LocationOverviewResponse]:
     """Return a list of all locations on the given merchant."""
+    if parent:
+        await get_location(
+            location_ref=parent, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
     query = Location.objects().where(Location.merchant == merchant)

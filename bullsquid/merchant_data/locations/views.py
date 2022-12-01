@@ -372,6 +372,37 @@ async def create_sub_location(
 
 
 @router.get(
+    "/{location_ref}/sub_locations",
+    response_model=list[LocationOverviewResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def list_sub_locations(
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    exclude_secondary_mid: UUID | None = Query(default=None),
+    n: int = Query(default=10),
+    p: int = Query(default=1),
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
+) -> list[LocationOverviewResponse]:
+    """List locations on a merchant."""
+    try:
+        locations = await db.list_locations(
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+            parent=location_ref,
+            exclude_secondary_mid=exclude_secondary_mid,
+            n=n,
+            p=p,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
+
+    return locations
+
+
+@router.get(
     "/{location_ref}/sub_locations/{sub_location_ref}",
     response_model=LocationDetailResponse,
     status_code=status.HTTP_200_OK,

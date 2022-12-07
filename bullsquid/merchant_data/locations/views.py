@@ -357,6 +357,8 @@ async def create_sub_location(
     ),
 ) -> LocationOverviewResponse:
     """Create and return a response for a sub-location"""
+    if not await field_is_unique(Location, "location_id", location_data.location_id):
+        raise UniqueError(loc=["body", "location_id"])
 
     try:
         sub_location = await db.create_location(
@@ -415,6 +417,7 @@ async def get_sub_location(
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> LocationDetailResponse:
     """Get sub_location details."""
+
     try:
         sub_location = await db.get_location(
             sub_location_ref,

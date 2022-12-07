@@ -1453,3 +1453,39 @@ async def test_incorrect_location_ref_list_sub_locations(
     )
 
     assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+async def test_create_sub_location_with_duplicate_location_id(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    existing_sub_location = await location_factory(merchant=merchant)
+    sub_location = await location_factory(
+        persist=False, merchant=merchant, location_id=existing_sub_location.location_id
+    )
+
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations",
+        json={
+            field: getattr(sub_location, field)
+            for field in [
+                "name",
+                "location_id",
+                "merchant_internal_id",
+                "is_physical_location",
+                "address_line_1",
+                "address_line_2",
+                "town_city",
+                "county",
+                "country",
+                "postcode",
+            ]
+        },
+    )
+
+    assert_is_uniqueness_error(resp, loc=["body", "location_id"])

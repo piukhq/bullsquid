@@ -460,3 +460,32 @@ async def edit_sub_location(
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return sub_location
+
+
+@router.put(
+    "/{location_ref}",
+    response_model=LocationDetailResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def edit_location(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    fields: LocationDetailMetadata,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> LocationDetailResponse:
+    """Edit a locations details"""
+
+    try:
+        location = await db.edit_location(
+            fields,
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+            location_ref=location_ref,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
+
+    return location

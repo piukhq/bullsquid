@@ -1556,3 +1556,67 @@ async def test_edit_sub_locations_with_non_existent_id(
     )
 
     assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+async def test_edit_locations(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    new_details = await location_factory(persist=False)
+    resp = test_client.put(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}",
+        json={
+            "name": new_details.name,
+            "location_id": new_details.location_id,
+            "merchant_internal_id": new_details.merchant_internal_id,
+            "is_physical_location": new_details.is_physical_location,
+            "address_line_1": new_details.address_line_1,
+            "address_line_2": new_details.address_line_2,
+            "town_city": new_details.town_city,
+            "county": new_details.county,
+            "country": new_details.country,
+            "postcode": new_details.postcode,
+        },
+    )
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    location = await Location.objects().get(Location.pk == location.pk)
+    assert resp.json() == await location_to_json_detail(
+        location, default_payment_schemes
+    )
+    assert location.name == new_details.name
+
+
+async def test_edit_location_with_non_existent_id(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    new_details = await location_factory(persist=False)
+    resp = test_client.put(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}",
+        json={
+            "name": new_details.name,
+            "location_id": new_details.location_id,
+            "merchant_internal_id": new_details.merchant_internal_id,
+            "is_physical_location": new_details.is_physical_location,
+            "address_line_1": new_details.address_line_1,
+            "address_line_2": new_details.address_line_2,
+            "town_city": new_details.town_city,
+            "county": new_details.county,
+            "country": new_details.country,
+            "postcode": new_details.postcode,
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "location_ref"])

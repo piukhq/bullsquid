@@ -352,3 +352,35 @@ async def list_associated_secondary_mids(
         n=n,
         p=p,
     )
+
+
+async def edit_location(
+    fields: LocationDetailMetadata,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    parent: UUID | None = None,
+) -> LocationDetailResponse:
+    """Edit existing sub_location"""
+    if parent:
+        await get_location(
+            location_ref=parent, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    location = (
+        await Location.objects()
+        .where(
+            Location.pk == location_ref,
+            Location.merchant == merchant,
+            Location.parent == parent,
+        )
+        .first()
+    )
+    if not location:
+        raise NoSuchRecord(Location)
+    for key, value in fields:
+        setattr(location, key, value)
+    await location.save()
+    payment_schemes = await list_payment_schemes()
+    return await create_location_detail_response(location, payment_schemes)

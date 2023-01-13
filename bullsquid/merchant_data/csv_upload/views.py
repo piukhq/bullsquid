@@ -8,8 +8,12 @@ from pydantic import UUID4
 
 from bullsquid.api.errors import DataError
 from bullsquid.merchant_data.csv_upload.file_handling import csv_model_reader
-from bullsquid.merchant_data.csv_upload.models import LocationFileRecord
+from bullsquid.merchant_data.csv_upload.models import (
+    LocationFileRecord,
+    MerchantFileRecord,
+)
 from bullsquid.merchant_data.tasks import ImportLocationFileRecord, queue
+from bullsquid.merchant_data.tasks.import_merchants import ImportMerchantFileRecord
 
 router = APIRouter(prefix="/plans/csv_upload")
 
@@ -37,6 +41,15 @@ async def import_locations_file(
         )
 
 
+async def import_merchants_file(file: UploadFile, *, plan_ref: UUID4) -> None:
+    """
+    Import a merchant details file.
+    """
+    reader = csv_model_reader(file.file, row_model=MerchantFileRecord)
+    for record in reader:
+        await queue.push(ImportMerchantFileRecord(plan_ref=plan_ref, record=record))
+
+
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
 async def csv_upload_file(
     file: UploadFile,
@@ -51,6 +64,13 @@ async def csv_upload_file(
                 await import_locations_file(
                     file, plan_ref=plan_ref, merchant_ref=merchant_ref
                 )
+            except Exception as ex:
+                raise DataError(
+                    loc=["body", "file"], resource_name="CSV upload"
+                ) from ex
+        case FileType.MERCHANT_DETAILS:
+            try:
+                await import_merchants_file(file, plan_ref=plan_ref)
             except Exception as ex:
                 raise DataError(
                     loc=["body", "file"], resource_name="CSV upload"

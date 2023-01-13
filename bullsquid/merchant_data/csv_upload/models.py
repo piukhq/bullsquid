@@ -48,3 +48,14 @@ class LocationFileRecord(BaseModel):
         "postcode",
         allow_reuse=True,
     )(nullify_blank_strings)
+
+
+class MerchantFileRecord(BaseModel):
+    """
+    Models a single line of a merchants details CSV file
+    """
+
+    name: str
+    location_label: str = "stores"
+
+    _ = validator("name", "location_label", allow_reuse=True)(string_must_not_be_blank)

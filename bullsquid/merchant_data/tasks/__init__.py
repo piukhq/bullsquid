@@ -18,6 +18,10 @@ from bullsquid.merchant_data.tasks.import_locations import (
     ImportLocationFileRecord,
     import_location_file_record,
 )
+from bullsquid.merchant_data.tasks.import_merchants import (
+    ImportMerchantFileRecord,
+    import_merchant_file_record,
+)
 from bullsquid.settings import settings
 
 
@@ -59,6 +63,7 @@ queue = Queue(
         OffboardAndDeleteMerchant,
         OffboardAndDeletePlan,
         ImportLocationFileRecord,
+        ImportMerchantFileRecord,
     ]
 )
 
@@ -150,6 +155,8 @@ async def _run_job(message: BaseModel) -> None:
                 plan_ref=message.plan_ref,
                 merchant_ref=message.merchant_ref,
             )
+        case ImportMerchantFileRecord():
+            await import_merchant_file_record(message.record, plan_ref=message.plan_ref)
 
 
 async def run_worker(*, burst: bool = False) -> None:

@@ -5,6 +5,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 
 from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.tasks import run_worker
@@ -57,6 +58,15 @@ def garbage_file() -> Generator[BinaryIO, None, None]:
     A file containing purely random bytes.
     """
     with open("tests/merchant_data/fixtures/garbage_do_not_open.csv", "rb") as f:
+        yield f
+
+
+@pytest.fixture
+def merchants_file() -> Generator[BinaryIO, None, None]:
+    """
+    A merchant details file containing several merchants.
+    """
+    with open("tests/merchant_data/fixtures/merchants.csv", "rb") as f:
         yield f
 
 
@@ -355,3 +365,26 @@ async def test_load_garbage_file(
     )
 
     assert resp.status_code == status.HTTP_409_CONFLICT, resp.text
+
+
+async def test_load_merchants_file(
+    test_client: TestClient,
+    merchants_file: BinaryIO,
+    plan_factory: Factory[Plan],
+    default_payment_schemes: list[PaymentScheme],
+) -> None:
+    """Load a valid file with the correct plans in place."""
+    plan = await plan_factory()
+    resp = test_client.post(
+        "/api/v1/plans/csv_upload",
+        files={
+            "file": merchants_file,
+        },
+        data={
+            "file_type": "merchant_details",
+            "plan_ref": str(plan.pk),
+        },
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+    await run_worker(burst=True)

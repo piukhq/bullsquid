@@ -47,7 +47,7 @@ class UpdatePrimaryMIDRequest(BaseModel):
     _ = validator("visa_bin", allow_reuse=True)(nullify_blank_strings)
 
 
-class PrimaryMIDResponse(BaseModel):
+class PrimaryMIDOverviewResponse(BaseModel):
     """Primary MID response model"""
 
     mid_ref: UUID4
@@ -83,3 +83,10 @@ class LocationLinkResponse(BaseModel):
 
     location_ref: UUID4
     location_title: str
+
+
+class PrimaryMIDDetailResponse(BaseModel):
+    """Detailed primary MID response model."""
+
+    mid: PrimaryMIDOverviewResponse
+    location: LocationLinkResponse | None

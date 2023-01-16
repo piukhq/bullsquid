@@ -16,7 +16,10 @@ from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.primary_mids.models import (
+    LocationLinkResponse,
+    PrimaryMIDDetailResponse,
     PrimaryMIDMetadata,
+    PrimaryMIDOverviewResponse,
     UpdatePrimaryMIDRequest,
 )
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
@@ -53,6 +56,44 @@ async def get_primary_mid_instance(
         raise NoSuchRecord(PrimaryMID)
 
     return mid
+
+
+async def get_primary_mid(
+    pk: UUID,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> PrimaryMIDDetailResponse:
+    """Get primary MID details by its primary key."""
+    mid = await get_primary_mid_instance(
+        pk, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+
+    if mid.location:
+        location = await mid.get_related(PrimaryMID.location)
+    else:
+        location = None
+
+    return PrimaryMIDDetailResponse(
+        mid=PrimaryMIDOverviewResponse(
+            mid_ref=mid.pk,
+            mid_metadata=PrimaryMIDMetadata(
+                payment_scheme_slug=mid.payment_scheme.slug,
+                mid=mid.mid,
+                visa_bin=mid.visa_bin,
+                payment_enrolment_status=mid.payment_enrolment_status,
+            ),
+            mid_status=mid.status,
+            date_added=mid.date_added,
+            txm_status=mid.txm_status,
+        ),
+        location=LocationLinkResponse(
+            location_ref=location.pk,
+            location_title=location.display_text,
+        )
+        if location
+        else None,
+    )
 
 
 async def list_primary_mids(

@@ -30,7 +30,7 @@ from tests.helpers import (
 )
 
 
-async def primary_mid_to_json(primary_mid: PrimaryMID) -> dict:
+async def primary_mid_overview_json(primary_mid: PrimaryMID) -> dict:
     """Converts a primary MID to its expected JSON representation."""
     return {
         "mid_ref": str(primary_mid.pk),
@@ -43,6 +43,35 @@ async def primary_mid_to_json(primary_mid: PrimaryMID) -> dict:
         "mid_status": primary_mid.status,
         "date_added": primary_mid.date_added.isoformat(),
         "txm_status": primary_mid.txm_status,
+    }
+
+
+async def primary_mid_detail_json(primary_mid: PrimaryMID) -> dict:
+    """Converts a primary MID to its expected JSON representation."""
+    if primary_mid.location:
+        location = await primary_mid.get_related(PrimaryMID.location)
+    else:
+        location = None
+
+    return {
+        "mid": {
+            "mid_ref": str(primary_mid.pk),
+            "mid_metadata": {
+                "payment_scheme_slug": primary_mid.payment_scheme,
+                "mid": primary_mid.mid,
+                "visa_bin": primary_mid.visa_bin,
+                "payment_enrolment_status": primary_mid.payment_enrolment_status,
+            },
+            "mid_status": primary_mid.status,
+            "date_added": primary_mid.date_added.isoformat(),
+            "txm_status": primary_mid.txm_status,
+        },
+        "location": {
+            "location_ref": str(location.pk),
+            "location_title": location.display_text,
+        }
+        if location
+        else None,
     }
 
 
@@ -62,7 +91,7 @@ async def test_list(
     assert resp.status_code == status.HTTP_200_OK
 
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert resp.json() == [await primary_mid_to_json(primary_mid)]
+    assert resp.json() == [await primary_mid_overview_json(primary_mid)]
 
 
 async def test_list_deleted_mids(
@@ -83,7 +112,7 @@ async def test_list_deleted_mids(
     assert resp.status_code == status.HTTP_200_OK
 
     primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert resp.json() == [await primary_mid_to_json(primary_mid)]
+    assert resp.json() == [await primary_mid_overview_json(primary_mid)]
 
 
 async def test_list_by_plan(
@@ -104,7 +133,7 @@ async def test_list_by_plan(
 
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
-        await primary_mid_to_json(primary_mid) for primary_mid in expected
+        await primary_mid_overview_json(primary_mid) for primary_mid in expected
     ]
 
 
@@ -126,6 +155,59 @@ async def test_list_with_nonexistent_merchant(
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/mids")
 
     assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+async def test_get_details(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    mid = await primary_mid_factory(merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}"
+    )
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+    assert resp.json() == await primary_mid_detail_json(mid)
+
+
+async def test_get_details_linked_location(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    primary_mid_factory: Factory[PrimaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    mid = await primary_mid_factory(merchant=merchant, location=location)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}"
+    )
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+    assert resp.json() == await primary_mid_detail_json(mid)
+
+
+async def test_get_details_invalid_mid(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    await primary_mid_factory(merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{uuid4()}"
+    )
+    assert_is_not_found_error(resp, loc=["path", "mid_ref"])
 
 
 async def test_create_without_onboarding(
@@ -155,7 +237,7 @@ async def test_create_without_onboarding(
     mid_ref = resp.json()["mid_ref"]
 
     expected = await PrimaryMID.objects().where(PrimaryMID.pk == mid_ref).first()
-    assert resp.json() == await primary_mid_to_json(expected)
+    assert resp.json() == await primary_mid_overview_json(expected)
 
     assert not await Job.exists().where(
         Job.message_type == OnboardPrimaryMIDs.__name__,
@@ -217,7 +299,7 @@ async def test_create_and_onboard(
     mid_ref = resp.json()["mid_ref"]
 
     expected = await PrimaryMID.objects().where(PrimaryMID.pk == mid_ref).first()
-    assert resp.json() == await primary_mid_to_json(expected)
+    assert resp.json() == await primary_mid_overview_json(expected)
 
     assert await Job.exists().where(
         Job.message_type == OnboardPrimaryMIDs.__name__,
@@ -253,7 +335,7 @@ async def test_create_without_visa_bin(
         .where(PrimaryMID.pk == resp.json()["mid_ref"])
         .first()
     )
-    assert resp.json() == await primary_mid_to_json(expected)
+    assert resp.json() == await primary_mid_overview_json(expected)
 
 
 async def test_create_with_nonexistent_plan(
@@ -453,7 +535,7 @@ async def test_update_enrolment_status(
 
     assert resp.status_code == status.HTTP_200_OK, resp.json()
 
-    expected = await primary_mid_to_json(mid)
+    expected = await primary_mid_overview_json(mid)
     expected["mid_metadata"][
         "payment_enrolment_status"
     ] = PaymentEnrolmentStatus.ENROLLED.value
@@ -482,7 +564,7 @@ async def test_update_visa_bin(
 
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
-    expected = await primary_mid_to_json(mid)
+    expected = await primary_mid_overview_json(mid)
     expected["mid_metadata"]["visa_bin"] = "new-test-visa-bin"
     assert resp.json() == expected
 

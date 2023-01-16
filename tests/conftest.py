@@ -14,6 +14,7 @@ from aioresponses import aioresponses
 from asyncpg import DuplicateTableError
 from fastapi.testclient import TestClient
 from piccolo.conf.apps import Finder
+from piccolo.table import create_db_tables_sync, drop_db_tables_sync
 from piccolo.utils.warnings import colored_warning
 
 from bullsquid.api.app import create_app

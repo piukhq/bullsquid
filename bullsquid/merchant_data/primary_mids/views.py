@@ -21,8 +21,9 @@ from bullsquid.merchant_data.primary_mids.models import (
     LocationLinkResponse,
     PrimaryMIDDeletionRequest,
     PrimaryMIDDeletionResponse,
+    PrimaryMIDDetailResponse,
     PrimaryMIDMetadata,
-    PrimaryMIDResponse,
+    PrimaryMIDOverviewResponse,
     UpdatePrimaryMIDRequest,
 )
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
@@ -30,11 +31,11 @@ from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/mids")
 
 
-async def create_primary_mid_response(
+async def create_primary_mid_overview_response(
     primary_mid: db.PrimaryMIDResult,
-) -> PrimaryMIDResponse:
-    """Creates a PrimaryMIDResponse instance from the given primary MID."""
-    return PrimaryMIDResponse(
+) -> PrimaryMIDOverviewResponse:
+    """Creates a PrimaryMIDOverviewResponse instance from the given primary MID."""
+    return PrimaryMIDOverviewResponse(
         mid_ref=primary_mid["pk"],
         mid_metadata=PrimaryMIDMetadata(
             payment_scheme_slug=primary_mid["payment_scheme.slug"],
@@ -48,14 +49,14 @@ async def create_primary_mid_response(
     )
 
 
-@router.get("", response_model=list[PrimaryMIDResponse])
+@router.get("", response_model=list[PrimaryMIDOverviewResponse])
 async def list_primary_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
     n: int = Query(default=10),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
-) -> list[PrimaryMIDResponse]:
+) -> list[PrimaryMIDOverviewResponse]:
     """List all primary MIDs for a merchant."""
     try:
         mids = await db.list_primary_mids(
@@ -64,10 +65,30 @@ async def list_primary_mids(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
-    return [await create_primary_mid_response(mid) for mid in mids]
+    return [await create_primary_mid_overview_response(mid) for mid in mids]
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, response_model=PrimaryMIDResponse)
+@router.get("/{mid_ref}", response_model=PrimaryMIDDetailResponse)
+async def get_primary_mid_details(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    mid_ref: UUID,
+    _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
+) -> PrimaryMIDDetailResponse:
+    """Get the details of a single primary MID on a merchant."""
+    try:
+        mid = await db.get_primary_mid(
+            mid_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
+
+    return mid
+
+
+@router.post(
+    "", status_code=status.HTTP_201_CREATED, response_model=PrimaryMIDOverviewResponse
+)
 async def create_primary_mid(
     plan_ref: UUID,
     merchant_ref: UUID,
@@ -75,7 +96,7 @@ async def create_primary_mid(
     _credentials: JWTCredentials = Depends(
         require_access_level(AccessLevel.READ_WRITE)
     ),
-) -> PrimaryMIDResponse:
+) -> PrimaryMIDOverviewResponse:
     """Create a primary MID for a merchant."""
 
     if not await field_is_unique(PrimaryMID, "mid", mid_data.mid_metadata.mid):
@@ -96,10 +117,10 @@ async def create_primary_mid(
     if mid_data.onboard:
         await tasks.queue.push(tasks.OnboardPrimaryMIDs(mid_refs=[mid["pk"]]))
 
-    return await create_primary_mid_response(mid)
+    return await create_primary_mid_overview_response(mid)
 
 
-@router.patch("/{mid_ref}", response_model=PrimaryMIDResponse)
+@router.patch("/{mid_ref}", response_model=PrimaryMIDOverviewResponse)
 async def update_primary_mid(
     plan_ref: UUID,
     merchant_ref: UUID,
@@ -108,7 +129,7 @@ async def update_primary_mid(
     _credentials: JWTCredentials = Depends(
         require_access_level(AccessLevel.READ_WRITE)
     ),
-) -> PrimaryMIDResponse:
+) -> PrimaryMIDOverviewResponse:
     """Update a primary MID's editable fields."""
     try:
         mid = await db.update_primary_mid(
@@ -119,7 +140,7 @@ async def update_primary_mid(
     except InvalidData as ex:
         raise DataError.from_invalid_data(ex, loc=["body", "visa_bin"]) from ex
 
-    return await create_primary_mid_response(mid)
+    return await create_primary_mid_overview_response(mid)
 
 
 @router.post(

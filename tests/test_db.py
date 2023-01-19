@@ -3,7 +3,7 @@ from typing import Any, AsyncGenerator, Type
 
 import pytest
 from piccolo.columns import Text
-from piccolo.table import Table, create_tables, drop_tables
+from piccolo.table import Table, create_db_tables, drop_db_tables
 
 from bullsquid.db import paginate
 
@@ -17,7 +17,7 @@ async def test_table() -> AsyncGenerator[Type[Table], None]:
 
         name = Text()
 
-    create_tables(TestTable)
+    await create_db_tables(TestTable)
     await TestTable.insert(
         TestTable(name="test-1"),
         TestTable(name="test-2"),
@@ -26,7 +26,7 @@ async def test_table() -> AsyncGenerator[Type[Table], None]:
         TestTable(name="test-5"),
     )
     yield TestTable
-    drop_tables(TestTable)
+    await drop_db_tables(TestTable)
 
 
 def names(results: list[dict[str, Any]]) -> list[str]:

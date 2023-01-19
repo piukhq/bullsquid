@@ -874,7 +874,7 @@ async def test_get_deleted_comment_by_owner_ref(
     )
 
     resp = test_client.get(f"/api/v1/directory_comments/", params={"ref": str(plan.pk)})
-    assert resp.json()["lower_comments"][0]["comments"][0]["metadata"]["text"] == None
+    assert resp.json()["lower_comments"][0]["comments"][0]["metadata"]["text"] is None
 
 
 async def test_get_deleted_comment_by_subject_ref(
@@ -897,7 +897,7 @@ async def test_get_deleted_comment_by_subject_ref(
     resp = test_client.get(
         f"/api/v1/directory_comments/", params={"ref": str(merchant.pk)}
     )
-    assert resp.json()["entity_comments"]["comments"][0]["metadata"]["text"] == None
+    assert resp.json()["entity_comments"]["comments"][0]["metadata"]["text"] is None
 
 
 async def test_edit_deleted_comment(

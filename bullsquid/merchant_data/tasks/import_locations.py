@@ -30,6 +30,10 @@ class LocationFileRecordError(Exception):
     """Base error type for all location file import errors."""
 
 
+class SkipRecord(LocationFileRecordError):
+    """Indicates that a record was intentionally skipped."""
+
+
 class InvalidRecord(LocationFileRecordError):
     """The location file record is badly formed."""
 
@@ -79,10 +83,10 @@ async def find_merchant(
             .first()
         )
     else:
-        raise InvalidRecord("either merchant_ref or merchant_name must be given")
+        raise InvalidRecord("Either merchant_ref or merchant_name must be given")
 
     if merchant is None:
-        raise InvalidMerchant("no such merchant")
+        raise InvalidMerchant("No such merchant")
 
     # if uploading to a merchant, reject records with a non-null & different merchant name
     if (
@@ -90,8 +94,7 @@ async def find_merchant(
         and merchant_name is not None
         and merchant.name.lower().strip() != merchant_name.lower().strip()
     ):
-        # not really invalid, but this makes it skip the line anyway.
-        raise InvalidMerchant("merchant name does not match")
+        raise SkipRecord("Merchant name does not match.")
 
     return merchant
 

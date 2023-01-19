@@ -5,7 +5,6 @@ from fastapi import status
 from fastapi.testclient import TestClient
 
 from bullsquid.merchant_data.merchants.tables import Merchant
-from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.tasks import run_worker
@@ -80,12 +79,12 @@ async def test_load_invalid_file_type(
     assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, resp.text
 
 
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_load_locations_file(
     test_client: TestClient,
     locations_file: BinaryIO,
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
-    default_payment_schemes: list[PaymentScheme],
 ) -> None:
     """Load a valid file with the correct merchants in place."""
     plan = await plan_factory()
@@ -107,12 +106,12 @@ async def test_load_locations_file(
     await run_worker(burst=True)
 
 
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_load_locations_file_clean(
     test_client: TestClient,
     locations_file_clean: BinaryIO,
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
-    default_payment_schemes: list[PaymentScheme],
 ) -> None:
     """Load a valid file with no byte-order mark and with the correct merchants in place."""
     plan = await plan_factory()
@@ -134,12 +133,12 @@ async def test_load_locations_file_clean(
     await run_worker(burst=True)
 
 
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_load_locations_file_with_merchant_ref(
     test_client: TestClient,
     locations_file: BinaryIO,
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
-    default_payment_schemes: list[PaymentScheme],
 ) -> None:
     """Load a valid file onto a specific merchant."""
     plan = await plan_factory()
@@ -160,12 +159,12 @@ async def test_load_locations_file_with_merchant_ref(
     await run_worker(burst=True)
 
 
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_load_locations_file_with_no_merchant_ref_or_name(
     test_client: TestClient,
     locations_file_no_merchant_name: BinaryIO,
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
-    default_payment_schemes: list[PaymentScheme],
 ) -> None:
     """Load a file with no merchant name, and without providing a merchant ref."""
     plan = await plan_factory()
@@ -185,11 +184,11 @@ async def test_load_locations_file_with_no_merchant_ref_or_name(
     await run_worker(burst=True)
 
 
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_load_locations_file_no_merchants(
     test_client: TestClient,
     locations_file: BinaryIO,
     plan_factory: Factory[Plan],
-    default_payment_schemes: list[PaymentScheme],
 ) -> None:
     """Test loading a valid file without any of the required merchants in the database."""
     plan = await plan_factory()
@@ -208,12 +207,12 @@ async def test_load_locations_file_no_merchants(
     await run_worker(burst=True)
 
 
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_load_locations_file_physical_no_address(
     test_client: TestClient,
     locations_file_physical_no_address: BinaryIO,
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
-    default_payment_schemes: list[PaymentScheme],
 ) -> None:
     """Test loading a file containing a physical location with no address details."""
     plan = await plan_factory()
@@ -233,12 +232,12 @@ async def test_load_locations_file_physical_no_address(
     await run_worker(burst=True)
 
 
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_load_locations_file_duplicate_location(
     test_client: TestClient,
     locations_file: BinaryIO,
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
-    default_payment_schemes: list[PaymentScheme],
 ) -> None:
     """Test loading the same file twice."""
     plan = await plan_factory()
@@ -277,13 +276,13 @@ async def test_load_locations_file_duplicate_location(
     await run_worker(burst=True)
 
 
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_load_locations_file_duplicate_primary_mid(
     test_client: TestClient,
     locations_file: BinaryIO,
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     primary_mid_factory: Factory[PrimaryMID],
-    default_payment_schemes: list[PaymentScheme],
 ) -> None:
     """Test loading a file containing a primary MID that already exists."""
     plan = await plan_factory()
@@ -306,13 +305,13 @@ async def test_load_locations_file_duplicate_primary_mid(
     await run_worker(burst=True)
 
 
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_load_locations_file_duplicate_secondary_mid(
     test_client: TestClient,
     locations_file: BinaryIO,
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     secondary_mid_factory: Factory[PrimaryMID],
-    default_payment_schemes: list[PaymentScheme],
 ) -> None:
     """Test loading a file containing a secondary MID that already exists."""
     plan = await plan_factory()

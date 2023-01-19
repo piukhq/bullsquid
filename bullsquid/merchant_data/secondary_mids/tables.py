@@ -10,7 +10,7 @@ from bullsquid.merchant_data.tables import BaseTable
 class SecondaryMID(BaseTable):
     """Represents a secondary MID value."""
 
-    secondary_mid = Text(unique=True, required=True)
+    secondary_mid = Text(required=True)
     payment_scheme = ForeignKey(PaymentScheme, required=True)
     payment_scheme_store_name = Text(null=True, default=None)
     date_added = Timestamptz()

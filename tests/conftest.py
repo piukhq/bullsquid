@@ -1,5 +1,7 @@
 import os
 
+from piccolo.table import create_db_tables_sync, drop_db_tables_sync
+
 os.environ["PICCOLO_CONF"] = "piccolo_conf_test"
 os.environ["debug"] = "true"
 os.environ.pop("txm_base_url", None)
@@ -12,7 +14,6 @@ from aioresponses import aioresponses
 from asyncpg import DuplicateTableError
 from fastapi.testclient import TestClient
 from piccolo.conf.apps import Finder
-from piccolo.table import create_tables, drop_tables
 from piccolo.utils.warnings import colored_warning
 
 from bullsquid.api.app import create_app
@@ -27,7 +28,7 @@ def database() -> Generator[None, None, None]:
     """
     tables = Finder().get_table_classes()
     try:
-        create_tables(*tables)
+        create_db_tables_sync(*tables)
     except DuplicateTableError:
         colored_warning(
             "\n\n"
@@ -39,7 +40,7 @@ def database() -> Generator[None, None, None]:
         )
         raise
     yield
-    drop_tables(*tables)
+    drop_db_tables_sync(*tables)
 
 
 @pytest.fixture

@@ -7,13 +7,13 @@ isort --check .
 info 'black'
 black --check .
 
+info 'mypy'
+mypy .
+
 info 'pylint'
 pylint bullsquid asgi
 
 info 'refurb'
 refurb bullsquid tests asgi.py
-
-info 'mypy'
-mypy .
 
 success 'all linters passed successfully'

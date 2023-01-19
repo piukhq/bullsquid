@@ -12,18 +12,16 @@ from bullsquid.merchant_data.validators import (
 )
 
 
-class LocationOverviewMetadata(BaseModel):
-    """Location details."""
+class LocationOverviewMetadataBase(BaseModel):
+    """Location & sub-location details."""
 
     name: str
-    location_id: str
     merchant_internal_id: str | None
     is_physical_location: bool
     address_line_1: str | None
     town_city: str | None
     postcode: str | None
 
-    _ = validator("location_id", allow_reuse=True)(string_must_not_be_blank)
     _ = validator(
         "name",
         "merchant_internal_id",
@@ -49,10 +47,36 @@ class LocationOverviewMetadata(BaseModel):
         return values
 
 
+class LocationOverviewMetadata(LocationOverviewMetadataBase):
+    """Location details - adds location_id to the general base model."""
+
+    location_id: str
+
+    _ = validator("location_id", allow_reuse=True)(string_must_not_be_blank)
+
+
 class LocationDetailMetadata(LocationOverviewMetadata):
     """
     Detailed location metadata request & response model.
     This is a superset of the location overview metadata model.
+    """
+
+    address_line_2: str | None
+    county: str | None
+    country: str | None
+
+    _ = validator(
+        "address_line_2",
+        "county",
+        "country",
+        allow_reuse=True,
+    )(nullify_blank_strings)
+
+
+class SubLocationDetailMetadata(LocationOverviewMetadataBase):
+    """
+    Detailed sub-location metadata request & response model.
+    This is a superset of the sub-location overview metadata model.
     """
 
     address_line_2: str | None
@@ -81,21 +105,35 @@ class LocationOverviewBase(BaseModel):
 
     location_ref: UUID4
     location_status: ResourceStatus
-    location_metadata: LocationOverviewMetadata
     payment_schemes: list[LocationPaymentSchemeCountResponse]
     date_added: datetime
+
+
+class SubLocationOverviewResponse(LocationOverviewBase):
+    """Sub-location overview response model."""
+
+    location_metadata: LocationOverviewMetadataBase
 
 
 class LocationOverviewResponse(LocationOverviewBase):
     """Location overview response model."""
 
-    sub_locations: list["LocationOverviewResponse"] | None
+    location_metadata: LocationOverviewMetadata
+    sub_locations: list[SubLocationOverviewResponse]
 
 
 class LocationDetailResponse(LocationOverviewBase):
     """Location detail response model"""
 
     location_metadata: LocationDetailMetadata
+    linked_mids_count: int
+    linked_secondary_mids_count: int
+
+
+class SubLocationDetailResponse(LocationOverviewBase):
+    """Location detail response model"""
+
+    location_metadata: SubLocationDetailMetadata
     linked_mids_count: int
     linked_secondary_mids_count: int
 

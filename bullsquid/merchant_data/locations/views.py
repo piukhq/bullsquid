@@ -22,6 +22,9 @@ from bullsquid.merchant_data.locations.models import (
     PrimaryMIDLinkResponse,
     SecondaryMIDLinkRequest,
     SecondaryMIDLinkResponse,
+    SubLocationDetailMetadata,
+    SubLocationDetailResponse,
+    SubLocationOverviewResponse,
 )
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.primary_mids.models import LocationLinkResponse
@@ -101,7 +104,9 @@ async def create_location(
 
     try:
         location = await db.create_location(
-            location_data, plan_ref=plan_ref, merchant_ref=merchant_ref, parent=None
+            location_data,
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
         )
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
@@ -344,24 +349,21 @@ async def list_secondary_mid_location_links(
 
 @router.post(
     "/{location_ref}/sub_locations",
-    response_model=LocationOverviewResponse,
+    response_model=SubLocationOverviewResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_sub_location(
     plan_ref: UUID,
     merchant_ref: UUID,
     location_ref: UUID,
-    location_data: LocationDetailMetadata,
+    location_data: SubLocationDetailMetadata,
     _credentials: JWTCredentials = Depends(
         require_access_level(AccessLevel.READ_WRITE)
     ),
-) -> LocationOverviewResponse:
+) -> SubLocationOverviewResponse:
     """Create and return a response for a sub-location"""
-    if not await field_is_unique(Location, "location_id", location_data.location_id):
-        raise UniqueError(loc=["body", "location_id"])
-
     try:
-        sub_location = await db.create_location(
+        sub_location = await db.create_sub_location(
             location_data,
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
@@ -375,7 +377,7 @@ async def create_sub_location(
 
 @router.get(
     "/{location_ref}/sub_locations",
-    response_model=list[LocationOverviewResponse],
+    response_model=list[SubLocationOverviewResponse],
     status_code=status.HTTP_200_OK,
 )
 async def list_sub_locations(
@@ -383,18 +385,16 @@ async def list_sub_locations(
     plan_ref: UUID,
     merchant_ref: UUID,
     location_ref: UUID,
-    exclude_secondary_mid: UUID | None = Query(default=None),
     n: int = Query(default=10),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
-) -> list[LocationOverviewResponse]:
+) -> list[SubLocationOverviewResponse]:
     """List locations on a merchant."""
     try:
-        locations = await db.list_locations(
+        locations = await db.list_sub_locations(
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
-            parent=location_ref,
-            exclude_secondary_mid=exclude_secondary_mid,
+            parent_ref=location_ref,
             n=n,
             p=p,
         )
@@ -406,7 +406,7 @@ async def list_sub_locations(
 
 @router.get(
     "/{location_ref}/sub_locations/{sub_location_ref}",
-    response_model=LocationDetailResponse,
+    response_model=SubLocationDetailResponse,
     status_code=status.HTTP_200_OK,
 )
 async def get_sub_location(
@@ -415,15 +415,15 @@ async def get_sub_location(
     location_ref: UUID,
     sub_location_ref: UUID,
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
-) -> LocationDetailResponse:
+) -> SubLocationDetailResponse:
     """Get sub_location details."""
 
     try:
-        sub_location = await db.get_location(
+        sub_location = await db.get_sub_location(
             sub_location_ref,
             merchant_ref=merchant_ref,
             plan_ref=plan_ref,
-            parent=location_ref,
+            parent_ref=location_ref,
         )
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
@@ -433,7 +433,7 @@ async def get_sub_location(
 
 @router.put(
     "/{location_ref}/sub_locations/{sub_location_ref}",
-    response_model=LocationDetailResponse,
+    response_model=SubLocationDetailResponse,
     status_code=status.HTTP_200_OK,
 )
 async def edit_sub_location(
@@ -441,20 +441,20 @@ async def edit_sub_location(
     merchant_ref: UUID,
     location_ref: UUID,
     sub_location_ref: UUID,
-    fields: LocationDetailMetadata,
+    fields: SubLocationDetailMetadata,
     _credentials: JWTCredentials = Depends(
         require_access_level(AccessLevel.READ_WRITE)
     ),
-) -> LocationDetailResponse:
+) -> SubLocationDetailResponse:
     """Edit a sub_locations details"""
 
     try:
-        sub_location = await db.edit_location(
+        sub_location = await db.edit_sub_location(
             fields,
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
             location_ref=sub_location_ref,
-            parent=location_ref,
+            parent_ref=location_ref,
         )
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex

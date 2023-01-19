@@ -7,8 +7,12 @@ from bullsquid.merchant_data.locations.models import (
     LocationDetailMetadata,
     LocationDetailResponse,
     LocationOverviewMetadata,
+    LocationOverviewMetadataBase,
     LocationOverviewResponse,
     LocationPaymentSchemeCountResponse,
+    SubLocationDetailMetadata,
+    SubLocationDetailResponse,
+    SubLocationOverviewResponse,
 )
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant
@@ -19,6 +23,20 @@ from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+
+
+def create_location_overview_metadata_base(
+    location: Location,
+) -> LocationOverviewMetadataBase:
+    """Creates a LocationMetadataResponse instance from the given location object."""
+    return LocationOverviewMetadataBase(
+        name=location["name"],
+        merchant_internal_id=location["merchant_internal_id"],
+        is_physical_location=location["is_physical_location"],
+        address_line_1=location["address_line_1"],
+        town_city=location["town_city"],
+        postcode=location["postcode"],
+    )
 
 
 def create_location_overview_metadata(location: Location) -> LocationOverviewMetadata:
@@ -39,6 +57,23 @@ def create_location_detail_metadata(location: Location) -> LocationDetailMetadat
     return LocationDetailMetadata(
         name=location["name"],
         location_id=location["location_id"],
+        merchant_internal_id=location["merchant_internal_id"],
+        is_physical_location=location["is_physical_location"],
+        address_line_1=location["address_line_1"],
+        town_city=location["town_city"],
+        postcode=location["postcode"],
+        address_line_2=location["address_line_2"],
+        county=location["county"],
+        country=location["country"],
+    )
+
+
+def create_sub_location_detail_metadata(
+    location: Location,
+) -> SubLocationDetailMetadata:
+    """Creates a LocationMetadataResponse instance from the given location object."""
+    return SubLocationDetailMetadata(
+        name=location["name"],
         merchant_internal_id=location["merchant_internal_id"],
         is_physical_location=location["is_physical_location"],
         address_line_1=location["address_line_1"],
@@ -74,9 +109,28 @@ async def create_location_overview_response(
                 sub_location, sub_locations=[], payment_schemes=payment_schemes
             )
             for sub_location in sub_locations
-        ]
-        if sub_locations
-        else None,
+        ],
+    )
+
+
+async def create_sub_location_overview_response(
+    location: Location,
+    *,
+    payment_schemes: list[PaymentScheme],
+) -> SubLocationOverviewResponse:
+    """Creates a LocationOverviewResponse instance from the given merchant object."""
+    return SubLocationOverviewResponse(
+        date_added=location["date_added"],
+        location_ref=location["pk"],
+        location_status=location["status"],
+        location_metadata=create_location_overview_metadata_base(location),
+        payment_schemes=[
+            LocationPaymentSchemeCountResponse(
+                scheme_slug=payment_scheme.slug,
+                count=0,
+            )
+            for payment_scheme in payment_schemes
+        ],
     )
 
 
@@ -101,23 +155,42 @@ async def create_location_detail_response(
     )
 
 
+async def create_sub_location_detail_response(
+    location: Location, payment_schemes: list[PaymentScheme]
+) -> SubLocationDetailResponse:
+    """Creates a SubLocationDetailResponse instance from the given merchant object."""
+    return SubLocationDetailResponse(
+        date_added=location["date_added"],
+        location_ref=location["pk"],
+        location_status=location["status"],
+        linked_mids_count=0,
+        linked_secondary_mids_count=0,
+        location_metadata=create_sub_location_detail_metadata(location),
+        payment_schemes=[
+            LocationPaymentSchemeCountResponse(
+                scheme_slug=payment_scheme.slug,
+                count=0,
+            )
+            for payment_scheme in payment_schemes
+        ],
+    )
+
+
 async def list_locations(
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
-    parent: UUID | None = None,
     exclude_secondary_mid: UUID | None,
     n: int,
     p: int,
 ) -> list[LocationOverviewResponse]:
     """Return a list of all locations on the given merchant."""
-    if parent:
-        await get_location(
-            location_ref=parent, plan_ref=plan_ref, merchant_ref=merchant_ref
-        )
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    query = Location.objects().where(Location.merchant == merchant)
+    query = Location.objects().where(
+        Location.merchant == merchant,
+        Location.parent.is_null(),
+    )
 
     if exclude_secondary_mid:
         # validate secondary MID ref
@@ -154,22 +227,84 @@ async def list_locations(
     ]
 
 
+async def list_sub_locations(
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    parent_ref: UUID,
+    n: int,
+    p: int,
+) -> list[SubLocationOverviewResponse]:
+    """Return a list of all locations on the given merchant."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    parent = await get_location_instance(
+        location_ref=parent_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+
+    query = Location.objects().where(
+        Location.merchant == merchant,
+        Location.parent == parent,
+    )
+
+    locations = await paginate(
+        query,
+        n=n,
+        p=p,
+    )
+
+    payment_schemes = await list_payment_schemes()
+    return [
+        await create_sub_location_overview_response(
+            location,
+            payment_schemes=payment_schemes,
+        )
+        for location in locations
+    ]
+
+
 async def create_location(
     location_data: LocationDetailMetadata,
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
-    parent: UUID | None = None,
 ) -> LocationOverviewResponse:
     """Create and return response for a location"""
-    if parent:
-        await get_location(
-            location_ref=parent, plan_ref=plan_ref, merchant_ref=merchant_ref
-        )
-    else:
-        await get_merchant(merchant_ref, plan_ref=plan_ref)
+    await get_merchant(merchant_ref, plan_ref=plan_ref)
     location = Location(
         location_id=location_data.location_id,
+        name=location_data.name,
+        is_physical_location=location_data.is_physical_location,
+        address_line_1=location_data.address_line_1,
+        address_line_2=location_data.address_line_2,
+        town_city=location_data.town_city,
+        county=location_data.county,
+        country=location_data.country,
+        postcode=location_data.postcode,
+        merchant_internal_id=location_data.merchant_internal_id,
+        merchant=merchant_ref,
+        parent=None,
+    )
+    await location.save()
+
+    payment_schemes = await list_payment_schemes()
+    return await create_location_overview_response(
+        location, sub_locations=[], payment_schemes=payment_schemes
+    )
+
+
+async def create_sub_location(
+    location_data: SubLocationDetailMetadata,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    parent: UUID,
+) -> SubLocationOverviewResponse:
+    """Create and return response for a sub-location."""
+    await get_location(
+        location_ref=parent, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+    location = Location(
+        location_id=None,
         name=location_data.name,
         is_physical_location=location_data.is_physical_location,
         address_line_1=location_data.address_line_1,
@@ -185,8 +320,8 @@ async def create_location(
     await location.save()
 
     payment_schemes = await list_payment_schemes()
-    return await create_location_overview_response(
-        location, sub_locations=[], payment_schemes=payment_schemes
+    return await create_sub_location_overview_response(
+        location, payment_schemes=payment_schemes
     )
 
 
@@ -217,19 +352,43 @@ async def get_location(
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
-    parent: UUID | None = None,
 ) -> LocationDetailResponse:
     """Return the details of a location with the given primary key."""
-    if parent:
-        await get_location(
-            location_ref=parent, plan_ref=plan_ref, merchant_ref=merchant_ref
-        )
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
     location = await (
         Location.objects()
         .where(
             Location.pk == location_ref,
+            Location.merchant == merchant,
+            Location.parent.is_null(),
+        )
+        .first()
+    )
+    if not location:
+        raise NoSuchRecord(Location)
+
+    payment_schemes = await list_payment_schemes()
+    return await create_location_detail_response(location, payment_schemes)
+
+
+async def get_sub_location(
+    sub_location_ref: UUID,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    parent_ref: UUID,
+) -> SubLocationDetailResponse:
+    """Return the details of a location with the given primary key."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    parent = await get_location_instance(
+        location_ref=parent_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+
+    location = await (
+        Location.objects()
+        .where(
+            Location.pk == sub_location_ref,
             Location.merchant == merchant,
             Location.parent == parent,
         )
@@ -239,7 +398,7 @@ async def get_location(
         raise NoSuchRecord(Location)
 
     payment_schemes = await list_payment_schemes()
-    return await create_location_detail_response(location, payment_schemes)
+    return await create_sub_location_detail_response(location, payment_schemes)
 
 
 async def get_location_instance(
@@ -360,20 +519,15 @@ async def edit_location(
     plan_ref: UUID,
     merchant_ref: UUID,
     location_ref: UUID,
-    parent: UUID | None = None,
 ) -> LocationDetailResponse:
     """Edit existing sub_location"""
-    if parent:
-        await get_location(
-            location_ref=parent, plan_ref=plan_ref, merchant_ref=merchant_ref
-        )
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
     location = (
         await Location.objects()
         .where(
             Location.pk == location_ref,
             Location.merchant == merchant,
-            Location.parent == parent,
+            Location.parent.is_null(),
         )
         .first()
     )
@@ -384,3 +538,39 @@ async def edit_location(
     await location.save()
     payment_schemes = await list_payment_schemes()
     return await create_location_detail_response(location, payment_schemes)
+
+
+async def edit_sub_location(
+    fields: SubLocationDetailMetadata,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    parent_ref: UUID,
+) -> SubLocationDetailResponse:
+    """Edit existing sub_location"""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    parent = await get_location_instance(
+        location_ref=parent_ref,
+        plan_ref=plan_ref,
+        merchant_ref=merchant_ref,
+    )
+    location = (
+        await Location.objects()
+        .where(
+            Location.pk == location_ref,
+            Location.merchant == merchant,
+            Location.parent == parent,
+        )
+        .first()
+    )
+
+    if not location:
+        raise NoSuchRecord(Location)
+
+    for key, value in fields:
+        setattr(location, key, value)
+    await location.save()
+
+    payment_schemes = await list_payment_schemes()
+    return await create_sub_location_detail_response(location, payment_schemes)

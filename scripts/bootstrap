@@ -6,10 +6,6 @@ if [ -n "${VIRTUAL_ENV-}" ]; then
     exit 1
 fi
 
-if ! poetry --version | grep 1.2; then
-    warn 'poetry version 1.2 is required. this script may not function correctly.'
-fi
-
 install() {
     poetry install
 }

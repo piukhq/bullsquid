@@ -105,8 +105,8 @@ async def create_location_overview_response(
             for payment_scheme in payment_schemes
         ],
         sub_locations=[
-            await create_location_overview_response(
-                sub_location, sub_locations=[], payment_schemes=payment_schemes
+            await create_sub_location_overview_response(
+                sub_location, payment_schemes=payment_schemes
             )
             for sub_location in sub_locations
         ],

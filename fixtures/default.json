@@ -68,6 +68,39 @@
                 "plan": "ce2c7875-48d4-4d52-893d-2c671f0cf22a",
                 "status": "active"
             }
+        ],
+        "Location": [
+            {
+                "pk": "7ce98987-7581-4012-8c03-18e765c7629f",
+                "location_id": "7ce98987-7581-4012-8c03-18e765c7629f",
+                "name": "Iceland Ascot",
+                "is_physical_location": true,
+                "address_line_1": "1 High Street",
+                "address_line_2": null,
+                "town_city": "Ascot",
+                "county": "Surrey",
+                "country": "United Kingdom",
+                "postcode": "SL5 9FE",
+                "merchant_internal_id": null,
+                "merchant": "549d6769-9416-499b-85f2-22336cff4bd8",
+                "date_added": "2023-01-24T14:28:22.764153",
+                "status": "active"
+            }, {
+                "pk": "41adeb72-0a03-487a-950a-4fb7a04aa5f7",
+                "location_id": "41adeb72-0a03-487a-950a-4fb7a04aa5f7",
+                "name": "Iceland Bagshot",
+                "is_physical_location": true,
+                "address_line_1": "1 High Street",
+                "address_line_2": null,
+                "town_city": "Bagshot",
+                "county": "Surrey",
+                "country": "United Kingdom",
+                "postcode": "GU15 5QL",
+                "merchant_internal_id": null,
+                "merchant": "549d6769-9416-499b-85f2-22336cff4bd8",
+                "date_added": "2023-01-24T14:28:23.064374",
+                "status": "active"
+            }
         ]
     }
 }

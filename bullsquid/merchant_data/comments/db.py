@@ -34,7 +34,7 @@ async def find_subjects(table: Type[T], entity_refs: list[UUID]) -> list[T]:
     Query the given table for all entities in the entity_refs list.
     """
     # clearly this function can only be called on tables with a pk field.
-    subjects = await table.objects().where(table.pk.is_in(entity_refs))
+    subjects = await table.all_objects().where(table.pk.is_in(entity_refs))
     if len(subjects) != len(entity_refs):
         raise NoSuchRecord(table)
     return subjects
@@ -242,7 +242,7 @@ async def edit_comment(
     """Edit existing comment with new text"""
     comment = (
         await Comment.objects()
-        .where(Comment.pk == comment_ref and Comment.is_deleted.eq(False))
+        .where(Comment.pk == comment_ref, Comment.is_deleted.eq(False))
         .first()
     )
 

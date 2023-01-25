@@ -10,6 +10,8 @@
             "request": "launch",
             "module": "uvicorn",
             "args": [
+                "--port",
+                "6502",
                 "asgi:app"
             ]
         },

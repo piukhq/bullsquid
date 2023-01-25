@@ -9,7 +9,7 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.tasks import run_worker
-from tests.helpers import Factory
+from tests.helpers import Factory, assert_is_uniqueness_error
 
 
 @pytest.fixture
@@ -67,6 +67,15 @@ def merchants_file() -> Generator[BinaryIO, None, None]:
     A merchant details file containing several merchants.
     """
     with open("tests/merchant_data/fixtures/merchants.csv", "rb") as f:
+        yield f
+
+
+@pytest.fixture
+def merchants_file_no_merchant_name() -> Generator[BinaryIO, None, None]:
+    """
+    A merchant details file missing the name column.
+    """
+    with open("tests/merchant_data/fixtures/merchants_no_merchant_name.csv", "rb") as f:
         yield f
 
 
@@ -387,4 +396,28 @@ async def test_load_merchants_file(
     )
 
     assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+    await run_worker(burst=True)
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
+async def test_load_merchants_file_with_no_merchant_name(
+    test_client: TestClient,
+    merchants_file_no_merchant_name: BinaryIO,
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+) -> None:
+    """Load a file with no merchant name, and without providing a merchant ref."""
+    plan = await plan_factory()
+    resp = test_client.post(
+        "/api/v1/plans/csv_upload",
+        files={
+            "file": merchants_file_no_merchant_name,
+        },
+        data={
+            "file_type": "merchant_details",
+            "plan_ref": str(plan.pk),
+        },
+    )
+
+    assert resp.status_code == status.HTTP_409_CONFLICT, resp.text
     await run_worker(burst=True)

@@ -28,6 +28,7 @@ async def location_to_json(
     payment_schemes: list[PaymentScheme],
     *,
     is_sub_location: bool = False,
+    include_sub_locations: bool = False,
 ) -> dict:
     """Converts a location to its expected JSON representation."""
     data: dict[str, Any] = {
@@ -53,12 +54,18 @@ async def location_to_json(
 
     if not is_sub_location:
         data["location_metadata"]["location_id"] = location.location_id
-        data["sub_locations"] = [
-            await location_to_json(sub_location, payment_schemes)
-            for sub_location in await Location.objects().where(
-                Location.parent == location.pk
-            )
-        ]
+        data["sub_locations"] = (
+            [
+                await location_to_json(
+                    sub_location, payment_schemes, is_sub_location=True
+                )
+                for sub_location in await Location.objects().where(
+                    Location.parent == location.pk
+                )
+            ]
+            if include_sub_locations
+            else None
+        )
 
     return data
 
@@ -138,6 +145,31 @@ async def test_list(
     assert resp.status_code == status.HTTP_200_OK
     location = await Location.objects().get(Location.pk == location.pk)
     assert resp.json() == [await location_to_json(location, default_payment_schemes)]
+
+
+async def test_list_with_sub_locations(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    await location_factory(merchant=merchant, parent=location)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations?include_sub_locations=true"
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    location = await Location.objects().get(Location.pk == location.pk)
+    assert resp.json() == [
+        await location_to_json(
+            location, default_payment_schemes, include_sub_locations=True
+        )
+    ]
 
 
 async def test_list_with_invalid_plan(

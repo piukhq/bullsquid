@@ -119,7 +119,7 @@ class LocationOverviewResponse(LocationOverviewBase):
     """Location overview response model."""
 
     location_metadata: LocationOverviewMetadata
-    sub_locations: list[SubLocationOverviewResponse]
+    sub_locations: list[SubLocationOverviewResponse] | None
 
 
 class LocationDetailResponse(LocationOverviewBase):

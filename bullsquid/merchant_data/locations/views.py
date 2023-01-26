@@ -39,10 +39,11 @@ router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/locations"
 
 
 @router.get("", response_model=list[LocationOverviewResponse])
-async def list_locations(
+async def list_locations(  # pylint: disable=too-many-arguments
     plan_ref: UUID,
     merchant_ref: UUID,
     exclude_secondary_mid: UUID | None = Query(default=None),
+    include_sub_locations: bool = Query(default=False),
     n: int = Query(default=10),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
@@ -53,6 +54,7 @@ async def list_locations(
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
             exclude_secondary_mid=exclude_secondary_mid,
+            include_sub_locations=include_sub_locations,
             n=n,
             p=p,
         )

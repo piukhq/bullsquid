@@ -30,41 +30,41 @@ def create_location_overview_metadata_base(
 ) -> LocationOverviewMetadataBase:
     """Creates a LocationMetadataResponse instance from the given location object."""
     return LocationOverviewMetadataBase(
-        name=location["name"],
-        merchant_internal_id=location["merchant_internal_id"],
-        is_physical_location=location["is_physical_location"],
-        address_line_1=location["address_line_1"],
-        town_city=location["town_city"],
-        postcode=location["postcode"],
+        name=location.name,
+        merchant_internal_id=location.merchant_internal_id,
+        is_physical_location=location.is_physical_location,
+        address_line_1=location.address_line_1,
+        town_city=location.town_city,
+        postcode=location.postcode,
     )
 
 
 def create_location_overview_metadata(location: Location) -> LocationOverviewMetadata:
     """Creates a LocationMetadataResponse instance from the given location object."""
     return LocationOverviewMetadata(
-        name=location["name"],
-        location_id=location["location_id"],
-        merchant_internal_id=location["merchant_internal_id"],
-        is_physical_location=location["is_physical_location"],
-        address_line_1=location["address_line_1"],
-        town_city=location["town_city"],
-        postcode=location["postcode"],
+        name=location.name,
+        location_id=location.location_id,
+        merchant_internal_id=location.merchant_internal_id,
+        is_physical_location=location.is_physical_location,
+        address_line_1=location.address_line_1,
+        town_city=location.town_city,
+        postcode=location.postcode,
     )
 
 
 def create_location_detail_metadata(location: Location) -> LocationDetailMetadata:
     """Creates a LocationMetadataResponse instance from the given location object."""
     return LocationDetailMetadata(
-        name=location["name"],
-        location_id=location["location_id"],
-        merchant_internal_id=location["merchant_internal_id"],
-        is_physical_location=location["is_physical_location"],
-        address_line_1=location["address_line_1"],
-        town_city=location["town_city"],
-        postcode=location["postcode"],
-        address_line_2=location["address_line_2"],
-        county=location["county"],
-        country=location["country"],
+        name=location.name,
+        location_id=location.location_id,
+        merchant_internal_id=location.merchant_internal_id,
+        is_physical_location=location.is_physical_location,
+        address_line_1=location.address_line_1,
+        town_city=location.town_city,
+        postcode=location.postcode,
+        address_line_2=location.address_line_2,
+        county=location.county,
+        country=location.country,
     )
 
 
@@ -73,29 +73,29 @@ def create_sub_location_detail_metadata(
 ) -> SubLocationDetailMetadata:
     """Creates a LocationMetadataResponse instance from the given location object."""
     return SubLocationDetailMetadata(
-        name=location["name"],
-        merchant_internal_id=location["merchant_internal_id"],
-        is_physical_location=location["is_physical_location"],
-        address_line_1=location["address_line_1"],
-        town_city=location["town_city"],
-        postcode=location["postcode"],
-        address_line_2=location["address_line_2"],
-        county=location["county"],
-        country=location["country"],
+        name=location.name,
+        merchant_internal_id=location.merchant_internal_id,
+        is_physical_location=location.is_physical_location,
+        address_line_1=location.address_line_1,
+        town_city=location.town_city,
+        postcode=location.postcode,
+        address_line_2=location.address_line_2,
+        county=location.county,
+        country=location.country,
     )
 
 
 async def create_location_overview_response(
     location: Location,
     *,
-    sub_locations: list[Location],
+    sub_locations: list[Location] | None,
     payment_schemes: list[PaymentScheme],
 ) -> LocationOverviewResponse:
     """Creates a LocationOverviewResponse instance from the given merchant object."""
     return LocationOverviewResponse(
-        date_added=location["date_added"],
-        location_ref=location["pk"],
-        location_status=location["status"],
+        date_added=location.date_added,
+        location_ref=location.pk,
+        location_status=location.status,
         location_metadata=create_location_overview_metadata(location),
         payment_schemes=[
             LocationPaymentSchemeCountResponse(
@@ -109,7 +109,9 @@ async def create_location_overview_response(
                 sub_location, payment_schemes=payment_schemes
             )
             for sub_location in sub_locations
-        ],
+        ]
+        if sub_locations
+        else None,
     )
 
 
@@ -120,9 +122,9 @@ async def create_sub_location_overview_response(
 ) -> SubLocationOverviewResponse:
     """Creates a LocationOverviewResponse instance from the given merchant object."""
     return SubLocationOverviewResponse(
-        date_added=location["date_added"],
-        location_ref=location["pk"],
-        location_status=location["status"],
+        date_added=location.date_added,
+        location_ref=location.pk,
+        location_status=location.status,
         location_metadata=create_location_overview_metadata_base(location),
         payment_schemes=[
             LocationPaymentSchemeCountResponse(
@@ -139,9 +141,9 @@ async def create_location_detail_response(
 ) -> LocationDetailResponse:
     """Creates a LocationDetailResponse instance from the given merchant object."""
     return LocationDetailResponse(
-        date_added=location["date_added"],
-        location_ref=location["pk"],
-        location_status=location["status"],
+        date_added=location.date_added,
+        location_ref=location.pk,
+        location_status=location.status,
         linked_mids_count=0,
         linked_secondary_mids_count=0,
         location_metadata=create_location_detail_metadata(location),
@@ -160,9 +162,9 @@ async def create_sub_location_detail_response(
 ) -> SubLocationDetailResponse:
     """Creates a SubLocationDetailResponse instance from the given merchant object."""
     return SubLocationDetailResponse(
-        date_added=location["date_added"],
-        location_ref=location["pk"],
-        location_status=location["status"],
+        date_added=location.date_added,
+        location_ref=location.pk,
+        location_status=location.status,
         linked_mids_count=0,
         linked_secondary_mids_count=0,
         location_metadata=create_sub_location_detail_metadata(location),
@@ -181,6 +183,7 @@ async def list_locations(
     plan_ref: UUID,
     merchant_ref: UUID,
     exclude_secondary_mid: UUID | None,
+    include_sub_locations: bool,
     n: int,
     p: int,
 ) -> list[LocationOverviewResponse]:
@@ -218,9 +221,9 @@ async def list_locations(
     return [
         await create_location_overview_response(
             location,
-            sub_locations=await Location.objects().where(
-                Location.parent == location.pk
-            ),
+            sub_locations=await Location.objects().where(Location.parent == location.pk)
+            if include_sub_locations
+            else None,
             payment_schemes=payment_schemes,
         )
         for location in locations

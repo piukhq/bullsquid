@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import BinaryIO, Generator
 
 import pytest
@@ -5,11 +6,14 @@ from fastapi import status
 from fastapi.testclient import TestClient
 
 from bullsquid.merchant_data.merchants.tables import Merchant
-from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.tasks import run_worker
-from tests.helpers import Factory, assert_is_uniqueness_error
+from bullsquid.merchant_data.tasks.import_merchants import (
+    InvalidRecord,
+    import_merchant_file_record,
+)
+from tests.helpers import Factory
 
 
 @pytest.fixture
@@ -376,11 +380,11 @@ async def test_load_garbage_file(
     assert resp.status_code == status.HTTP_409_CONFLICT, resp.text
 
 
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_load_merchants_file(
     test_client: TestClient,
     merchants_file: BinaryIO,
     plan_factory: Factory[Plan],
-    default_payment_schemes: list[PaymentScheme],
 ) -> None:
     """Load a valid file with the correct plans in place."""
     plan = await plan_factory()
@@ -404,7 +408,6 @@ async def test_load_merchants_file_with_no_merchant_name(
     test_client: TestClient,
     merchants_file_no_merchant_name: BinaryIO,
     plan_factory: Factory[Plan],
-    merchant_factory: Factory[Merchant],
 ) -> None:
     """Load a file with no merchant name, and without providing a merchant ref."""
     plan = await plan_factory()
@@ -421,3 +424,25 @@ async def test_load_merchants_file_with_no_merchant_name(
 
     assert resp.status_code == status.HTTP_409_CONFLICT, resp.text
     await run_worker(burst=True)
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
+async def test_process_invalid_merchant_file_record(
+    plan_factory: Factory[Plan],
+) -> None:
+    """
+    Ensure that the merchant file import task correctly validates the incoming data.
+    We can't send a file to the API with these problems as it would be rejected outright.
+    We can't put a bad record on the queue for the same reason.
+    This uses a mock record to bypass pydantic's validation, and sends it directly to the task method.
+    """
+
+    @dataclass(frozen=True)
+    class MerchantFileRecord:
+        name: str
+        location_label: str = "stores"
+
+    plan = await plan_factory()
+
+    with pytest.raises(InvalidRecord):
+        await import_merchant_file_record(MerchantFileRecord(name=""), plan_ref=plan.pk)  # type: ignore

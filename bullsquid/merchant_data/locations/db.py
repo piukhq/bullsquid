@@ -10,8 +10,10 @@ from bullsquid.merchant_data.locations.models import (
     LocationOverviewMetadataBase,
     LocationOverviewResponse,
     LocationPaymentSchemeCountResponse,
+    ParentLocation,
     SubLocationDetailMetadata,
     SubLocationDetailResponse,
+    SubLocationDetails,
     SubLocationOverviewResponse,
 )
 from bullsquid.merchant_data.locations.tables import Location
@@ -162,19 +164,25 @@ async def create_sub_location_detail_response(
 ) -> SubLocationDetailResponse:
     """Creates a SubLocationDetailResponse instance from the given merchant object."""
     return SubLocationDetailResponse(
-        date_added=location.date_added,
-        location_ref=location.pk,
-        location_status=location.status,
-        linked_mids_count=0,
-        linked_secondary_mids_count=0,
-        location_metadata=create_sub_location_detail_metadata(location),
-        payment_schemes=[
-            LocationPaymentSchemeCountResponse(
-                scheme_slug=payment_scheme.slug,
-                count=0,
-            )
-            for payment_scheme in payment_schemes
-        ],
+        parent_location=ParentLocation(
+            location_ref=location.parent.pk,
+            location_title=location.parent.display_text,
+        ),
+        sub_location=SubLocationDetails(
+            date_added=location.date_added,
+            location_ref=location.pk,
+            location_status=location.status,
+            linked_mids_count=0,
+            linked_secondary_mids_count=0,
+            location_metadata=create_sub_location_detail_metadata(location),
+            payment_schemes=[
+                LocationPaymentSchemeCountResponse(
+                    scheme_slug=payment_scheme.slug,
+                    count=0,
+                )
+                for payment_scheme in payment_schemes
+            ],
+        ),
     )
 
 
@@ -384,16 +392,13 @@ async def get_sub_location(
 ) -> SubLocationDetailResponse:
     """Return the details of a location with the given primary key."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
-    parent = await get_location_instance(
-        location_ref=parent_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
-    )
 
     location = await (
-        Location.objects()
+        Location.objects(Location.parent)
         .where(
             Location.pk == sub_location_ref,
             Location.merchant == merchant,
-            Location.parent == parent,
+            Location.parent == parent_ref,
         )
         .first()
     )
@@ -553,17 +558,12 @@ async def edit_sub_location(
 ) -> SubLocationDetailResponse:
     """Edit existing sub_location"""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
-    parent = await get_location_instance(
-        location_ref=parent_ref,
-        plan_ref=plan_ref,
-        merchant_ref=merchant_ref,
-    )
     location = (
-        await Location.objects()
+        await Location.objects(Location.parent)
         .where(
             Location.pk == location_ref,
             Location.merchant == merchant,
-            Location.parent == parent,
+            Location.parent == parent_ref,
         )
         .first()
     )

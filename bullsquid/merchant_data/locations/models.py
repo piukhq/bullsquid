@@ -130,12 +130,28 @@ class LocationDetailResponse(LocationOverviewBase):
     linked_secondary_mids_count: int
 
 
-class SubLocationDetailResponse(LocationOverviewBase):
-    """Location detail response model"""
+class SubLocationDetails(LocationOverviewBase):
+    """
+    Response model for the `sub_location` object of a sub-location detail response.
+    """
 
     location_metadata: SubLocationDetailMetadata
     linked_mids_count: int
     linked_secondary_mids_count: int
+
+
+class ParentLocation(BaseModel):
+    """Sub-Location parent info model."""
+
+    location_ref: UUID4
+    location_title: str
+
+
+class SubLocationDetailResponse(BaseModel):
+    """Response model for Sub-Location details."""
+
+    parent_location: ParentLocation
+    sub_location: SubLocationDetails
 
 
 class LocationDeletionRequest(BaseModel):

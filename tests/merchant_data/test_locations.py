@@ -73,14 +73,16 @@ async def location_to_json(
 async def location_to_json_detail(
     location: Location,
     payment_schemes: list[PaymentScheme],
-    *,
-    is_sub_location: bool = False,
 ) -> dict:
     """Converts a location to its expected JSON representation."""
-    data: dict[str, Any] = {
+    if location.parent:
+        raise ValueError("sub-location passed to location json helper")
+
+    return {
         "location_ref": str(location.pk),
         "location_metadata": {
             "name": location.name,
+            "location_id": location.location_id,
             "merchant_internal_id": location.merchant_internal_id,
             "is_physical_location": location.is_physical_location,
             "address_line_1": location.address_line_1,
@@ -103,10 +105,47 @@ async def location_to_json_detail(
         ],
     }
 
-    if not is_sub_location:
-        data["location_metadata"]["location_id"] = location.location_id
 
-    return data
+async def sub_location_to_json_detail(
+    location: Location,
+    parent: Location,
+    payment_schemes: list[PaymentScheme],
+) -> dict:
+    """Converts a location to its expected JSON representation."""
+    if not location.parent:
+        raise ValueError("location passed to sub-location json helper")
+
+    return {
+        "parent_location": {
+            "location_ref": str(parent.pk),
+            "location_title": parent.display_text,
+        },
+        "sub_location": {
+            "location_ref": str(location.pk),
+            "location_metadata": {
+                "name": location.name,
+                "merchant_internal_id": location.merchant_internal_id,
+                "is_physical_location": location.is_physical_location,
+                "address_line_1": location.address_line_1,
+                "town_city": location.town_city,
+                "postcode": location.postcode,
+                "address_line_2": location.address_line_2,
+                "county": location.county,
+                "country": location.country,
+            },
+            "location_status": location.status,
+            "date_added": location.date_added.isoformat(),
+            "linked_mids_count": 0,
+            "linked_secondary_mids_count": 0,
+            "payment_schemes": [
+                {
+                    "scheme_slug": payment_scheme.slug,
+                    "count": 0,
+                }
+                for payment_scheme in payment_schemes
+            ],
+        },
+    }
 
 
 def test_title_name_only() -> None:
@@ -1470,11 +1509,13 @@ async def test_sub_location_details(
     )
 
     assert resp.status_code == status.HTTP_200_OK, resp.text
-    location = await Location.objects().get(Location.pk == resp.json()["location_ref"])
-    assert resp.json() == await location_to_json_detail(
+    sub_location = await Location.objects().get(
+        Location.pk == resp.json()["sub_location"]["location_ref"]
+    )
+    assert resp.json() == await sub_location_to_json_detail(
+        sub_location,
         location,
         default_payment_schemes,
-        is_sub_location=True,
     )
 
 
@@ -1544,10 +1585,10 @@ async def test_edit_sub_locations(
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
     sub_location = await Location.objects().get(Location.pk == sub_location.pk)
-    assert resp.json() == await location_to_json_detail(
+    assert resp.json() == await sub_location_to_json_detail(
         sub_location,
+        location,
         default_payment_schemes,
-        is_sub_location=True,
     )
     assert sub_location.name == new_details.name
 

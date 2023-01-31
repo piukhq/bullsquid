@@ -139,7 +139,7 @@ async def _run_job(message: BaseModel) -> None:
             await queue.push(
                 OffboardAndDeletePrimaryMIDs(mid_refs=onboarded_primary_mids)
             )
-            # TODO: also offboard & delete secondary MIDs and identifiers
+            # TODO: also offboard & delete secondary MIDs and PSIMIs
 
         case OffboardAndDeletePlan():
             merchants = await Merchant.objects().where(

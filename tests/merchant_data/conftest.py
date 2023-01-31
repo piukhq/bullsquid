@@ -7,12 +7,12 @@ from piccolo.testing.model_builder import ModelBuilder
 
 from bullsquid.merchant_data.comments.tables import Comment
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
-from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.psimis.tables import PSIMI
 from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
 )
@@ -108,10 +108,10 @@ def secondary_mid_factory(
 
 
 @pytest.fixture
-def identifier_factory(database: None) -> Factory[Identifier]:
-    async def factory(*, persist: bool = True, **defaults: Any) -> Identifier:
+def psimi_factory(database: None) -> Factory[PSIMI]:
+    async def factory(*, persist: bool = True, **defaults: Any) -> PSIMI:
         return await ModelBuilder.build(
-            Identifier,
+            PSIMI,
             defaults={
                 "status": ResourceStatus.ACTIVE,
                 "txm_status": TXMStatus.NOT_ONBOARDED,

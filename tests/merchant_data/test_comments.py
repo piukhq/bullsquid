@@ -6,11 +6,11 @@ from fastapi.testclient import TestClient
 from bullsquid.merchant_data.comments.models import CommentResponse, EditCommentRequest
 from bullsquid.merchant_data.comments.tables import Comment
 from bullsquid.merchant_data.enums import ResourceType
-from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.psimis.tables import PSIMI
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.merchant_data.tables import BaseTable
 from tests.helpers import (
@@ -482,13 +482,13 @@ async def test_create_on_secondary_mid(
 async def test_create_on_psimi(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
-    identifier_factory: Factory[Identifier],
+    psimi_factory: Factory[PSIMI],
     comment_factory: Factory[Comment],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
-    psimi = await identifier_factory(merchant=merchant)
+    psimi = await psimi_factory(merchant=merchant)
     comment = await comment_factory(persist=False)
 
     resp = test_client.post(

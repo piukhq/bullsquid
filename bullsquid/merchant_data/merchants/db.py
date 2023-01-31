@@ -7,13 +7,13 @@ from piccolo.columns import Column
 
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
-from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.models import CreateMerchantRequest
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.psimis.tables import PSIMI
 from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
 )
@@ -72,7 +72,7 @@ async def update_merchant(
 async def merchant_has_onboarded_resources(pk: UUID) -> bool:
     """
     Returns true if the given merchant has any onboarded primary MIDs,
-    secondary MIDs, or identifiers.
+    secondary MIDs, or PSIMIs.
     """
     primary_mids = PrimaryMID.exists().where(
         PrimaryMID.merchant == pk, PrimaryMID.txm_status == TXMStatus.ONBOARDED
@@ -80,11 +80,11 @@ async def merchant_has_onboarded_resources(pk: UUID) -> bool:
     secondary_mids = SecondaryMID.exists().where(
         SecondaryMID.merchant == pk, SecondaryMID.txm_status == TXMStatus.ONBOARDED
     )
-    identifiers = Identifier.exists().where(
-        Identifier.merchant == pk, Identifier.txm_status == TXMStatus.ONBOARDED
+    psimis = PSIMI.exists().where(
+        PSIMI.merchant == pk, PSIMI.txm_status == TXMStatus.ONBOARDED
     )
 
-    return (await primary_mids) or (await secondary_mids) or (await identifiers)
+    return (await primary_mids) or (await secondary_mids) or (await psimis)
 
 
 async def update_merchant_status(
@@ -105,9 +105,7 @@ async def update_merchant_status(
             await SecondaryMID.update({SecondaryMID.status: status}).where(
                 SecondaryMID.merchant == pk
             )
-            await Identifier.update({Identifier.status: status}).where(
-                Identifier.merchant == pk
-            )
+            await PSIMI.update({PSIMI.status: status}).where(PSIMI.merchant == pk)
             await Location.update({Location.status: status}).where(
                 Location.merchant == pk
             )

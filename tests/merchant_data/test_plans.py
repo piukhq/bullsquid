@@ -9,13 +9,13 @@ from fastapi.testclient import TestClient
 from qbert.tables import Job
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
-from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.psimis.tables import PSIMI
 from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
 )
@@ -376,7 +376,7 @@ async def test_delete_no_onboarded_resources(
     merchant_factory: Factory[Merchant],
     primary_mid_factory: Factory[PrimaryMID],
     secondary_mid_factory: Factory[SecondaryMID],
-    identifier_factory: Factory[Identifier],
+    psimi_factory: Factory[PSIMI],
     location_factory: Factory[Location],
     secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
     test_client: TestClient,
@@ -389,9 +389,7 @@ async def test_delete_no_onboarded_resources(
     secondary_mid = await secondary_mid_factory(
         merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
     )
-    identifier = await identifier_factory(
-        merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
-    )
+    psimi = await psimi_factory(merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED)
     location = await location_factory(merchant=merchant)
     secondary_mid_location_link = await secondary_mid_location_link_factory(
         secondary_mid=secondary_mid, location=location
@@ -418,11 +416,7 @@ async def test_delete_no_onboarded_resources(
         .where(SecondaryMID.pk == secondary_mid.pk)
         .first()
     )
-    identifier = (
-        await Identifier.all_select(Identifier.status)
-        .where(Identifier.pk == identifier.pk)
-        .first()
-    )
+    psimi = await PSIMI.all_select(PSIMI.status).where(PSIMI.pk == psimi.pk).first()
     location = (
         await Location.all_select(Location.status)
         .where(Location.pk == location.pk)
@@ -433,7 +427,7 @@ async def test_delete_no_onboarded_resources(
     assert merchant["status"] == ResourceStatus.DELETED
     assert primary_mid["status"] == ResourceStatus.DELETED
     assert secondary_mid["status"] == ResourceStatus.DELETED
-    assert identifier["status"] == ResourceStatus.DELETED
+    assert psimi["status"] == ResourceStatus.DELETED
     assert location["status"] == ResourceStatus.DELETED
     assert not await SecondaryMIDLocationLink.exists().where(
         SecondaryMIDLocationLink.pk == secondary_mid_location_link.pk
@@ -445,14 +439,14 @@ async def test_delete_with_onboarded_resources(
     merchant_factory: Factory[Merchant],
     primary_mid_factory: Factory[PrimaryMID],
     secondary_mid_factory: Factory[SecondaryMID],
-    identifier_factory: Factory[Identifier],
+    psimi_factory: Factory[PSIMI],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     await primary_mid_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
     await secondary_mid_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
-    await identifier_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
+    await psimi_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
 
     resp = test_client.delete(f"/api/v1/plans/{plan.pk}")
 

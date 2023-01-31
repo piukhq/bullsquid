@@ -16,7 +16,7 @@ APP_CONFIG = AppConfig(
     table_classes=table_finder(
         [
             "bullsquid.merchant_data.locations.tables",
-            "bullsquid.merchant_data.identifiers.tables",
+            "bullsquid.merchant_data.psimis.tables",
             "bullsquid.merchant_data.merchants.tables",
             "bullsquid.merchant_data.payment_schemes.tables",
             "bullsquid.merchant_data.plans.tables",

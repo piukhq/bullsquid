@@ -6,6 +6,7 @@ from piccolo.table import Table
 
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.psimis.tables import PSIMI
 from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
 )
@@ -23,9 +24,11 @@ def get_pretty_table_name(table: Type[Table]) -> str:
         >>> get_pretty_table_name(PaymentScheme)
         'Payment Scheme'
 
-        >>> get_pretty_table_name(Identifier)
-        'Identifier'
+        >>> get_pretty_table_name(PSIMI)
+        'PSIMI'
     """
+    if table == PSIMI:
+        return "PSIMI"
     return titleize(table.__name__).replace("Mid", "MID")
 
 

@@ -1,4 +1,4 @@
-"""Merchant identifier table definitions."""
+"""PSIMI table definitions."""
 from piccolo.columns import ForeignKey, Text, Timestamptz
 
 from bullsquid.merchant_data.enums import TXMStatus
@@ -7,8 +7,8 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.tables import BaseTable
 
 
-class Identifier(BaseTable):
-    """Represents a payment scheme's internal merchant identifier (PSIMI)."""
+class PSIMI(BaseTable):
+    """Represents a payment scheme's internal merchant identifier."""
 
     value = Text(required=True, unique=True)
     payment_scheme = ForeignKey(PaymentScheme, required=True)

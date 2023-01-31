@@ -19,11 +19,11 @@ from bullsquid.merchant_data.comments.models import (
 from bullsquid.merchant_data.comments.tables import Comment
 from bullsquid.merchant_data.db import RESOURCE_TYPE_TO_TABLE, BaseTable
 from bullsquid.merchant_data.enums import FilterSubjectType, ResourceType
-from bullsquid.merchant_data.identifiers.tables import Identifier
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.psimis.tables import PSIMI
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 T = TypeVar("T", bound=BaseTable)
@@ -55,7 +55,7 @@ def validate_subject_owners(
 
     def other_owner(subject: Table) -> bool:
         return (
-            isinstance(subject, Location | PrimaryMID | SecondaryMID | Identifier)
+            isinstance(subject, Location | PrimaryMID | SecondaryMID | PSIMI)
             and subject.merchant == owner
         )
 

@@ -12,7 +12,7 @@ class PSIMI(BaseTable):
 
     value = Text(required=True, unique=True)
     payment_scheme = ForeignKey(PaymentScheme, required=True)
-    payment_scheme_merchant_name = Text(required=True)
+    payment_scheme_merchant_name = Text(null=True)
     date_added = Timestamptz()
     txm_status = Text(choices=TXMStatus, default=TXMStatus.NOT_ONBOARDED)
     merchant = ForeignKey(Merchant, required=True)

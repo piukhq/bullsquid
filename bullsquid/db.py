@@ -5,6 +5,8 @@ from uuid import UUID
 from piccolo.query import Objects, Select
 from piccolo.table import Table
 
+from bullsquid.merchant_data.tables import BaseTable
+
 
 class NoSuchRecord(Exception):
     """Raised when the requested record could not be found."""
@@ -23,7 +25,7 @@ class InvalidData(Exception):
 
 
 async def field_is_unique(
-    model: Type[Table], field: str, value: Any, *, pk: UUID | None = None
+    model: Type[BaseTable], field: str, value: Any, *, pk: UUID | None = None
 ) -> bool:
     """Returns true if the given field on the given table is unique, false otherwise."""
     if value is None:
@@ -33,8 +35,8 @@ async def field_is_unique(
     field = getattr(model, field)
     if pk:
         pk_field = getattr(model, "pk")
-        return not await model.exists().where(pk_field != pk, field == value)
-    return not await model.exists().where(field == value)
+        return not await model.all_exists().where(pk_field != pk, field == value)
+    return not await model.all_exists().where(field == value)
 
 
 Paginatable = TypeVar("Paginatable", Select, Objects)

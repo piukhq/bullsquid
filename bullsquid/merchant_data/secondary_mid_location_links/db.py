@@ -67,6 +67,7 @@ async def create_secondary_mid_location_links(
     locations = await Location.objects().where(
         Location.pk.is_in(location_refs),
         Location.merchant == merchant,
+        Location.parent.is_null(),
     )
 
     if len(location_refs) != len(locations):

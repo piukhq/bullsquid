@@ -423,6 +423,7 @@ async def get_location_instance(
         .where(
             Location.pk == location_ref,
             Location.merchant == merchant,
+            Location.parent.is_null(),
         )
         .first()
     )

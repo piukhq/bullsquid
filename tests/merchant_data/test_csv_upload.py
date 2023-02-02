@@ -446,3 +446,33 @@ async def test_process_invalid_merchant_file_record(
 
     with pytest.raises(InvalidRecord):
         await import_merchant_file_record(MerchantFileRecord(name=""), plan_ref=plan.pk)  # type: ignore
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
+async def test_load_locations_with_merchant_ref_file(
+    test_client: TestClient,
+    locations_file: BinaryIO,
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+) -> None:
+    """Load a valid file with the correct merchants in place."""
+    plan = await plan_factory()
+    await merchant_factory(plan=plan, name="The Chester Mayfair")
+    await merchant_factory(plan=plan, name="The Rubens at the Palace")
+    merchant = await merchant_factory(
+        plan=plan, name="100 Wardour St (Restaurant & Club)"
+    )
+    resp = test_client.post(
+        "/api/v1/plans/csv_upload",
+        files={
+            "file": locations_file,
+        },
+        data={
+            "file_type": "locations",
+            "plan_ref": str(plan.pk),
+            "merchant_ref": str(merchant.pk),
+        },
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+    await run_worker(burst=True)

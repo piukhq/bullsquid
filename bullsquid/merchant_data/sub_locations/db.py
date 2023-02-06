@@ -19,6 +19,7 @@ from bullsquid.merchant_data.sub_locations.models import (
     SubLocationDetailMetadata,
     SubLocationDetailResponse,
     SubLocationDetails,
+    SubLocationReparentResponse,
 )
 
 
@@ -189,3 +190,35 @@ async def edit_sub_location(
 
     payment_schemes = await list_payment_schemes()
     return await create_sub_location_detail_response(location, payment_schemes)
+
+
+async def reparent_sub_location(
+    sub_location_ref: UUID,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    parent_ref: UUID,
+    new_parent_ref: UUID | None,
+) -> SubLocationReparentResponse:
+    """Change or remove the parent of a sub-location."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    location = (
+        await Location.objects()
+        .where(
+            Location.pk == sub_location_ref,
+            Location.merchant == merchant,
+            Location.parent == parent_ref,
+        )
+        .first()
+    )
+
+    if not location:
+        raise NoSuchRecord(Location)
+
+    location.parent = new_parent_ref
+    await location.save()
+
+    return SubLocationReparentResponse(
+        location_ref=location.pk,
+        parent_ref=new_parent_ref,
+    )

@@ -49,3 +49,16 @@ class SubLocationDetailResponse(BaseModel):
 
     parent_location: ParentLocation
     sub_location: SubLocationDetails
+
+
+class SubLocationReparentRequest(BaseModel):
+    """Request model for reparenting a sub-location."""
+
+    parent_ref: UUID4 | None
+
+
+class SubLocationReparentResponse(BaseModel):
+    """Response model for reparenting a sub-location."""
+
+    location_ref: UUID4
+    parent_ref: UUID4 | None

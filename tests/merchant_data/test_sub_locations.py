@@ -311,3 +311,74 @@ async def test_edit_sub_locations_with_non_existent_id(
     )
 
     assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+async def test_reparent_sub_location(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    parent1 = await location_factory(merchant=merchant)
+    parent2 = await location_factory(merchant=merchant)
+    sub_location = await location_factory(parent=parent1, merchant=merchant)
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{parent1.pk}/sub_locations/{sub_location.pk}",
+        json={
+            "parent_ref": str(parent2.pk),
+        },
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    sub_location = await Location.objects().get(Location.pk == sub_location.pk)
+    assert sub_location.parent == parent2.pk
+
+
+async def test_remove_sub_location_parent(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    parent = await location_factory(merchant=merchant)
+    sub_location = await location_factory(parent=parent, merchant=merchant)
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{parent.pk}/sub_locations/{sub_location.pk}",
+        json={
+            "parent_ref": None,
+        },
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    sub_location = await Location.objects().get(Location.pk == sub_location.pk)
+    assert sub_location.parent is None
+
+
+async def test_reparent_nonexistent_sub_location(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    parent1 = await location_factory(merchant=merchant)
+    parent2 = await location_factory(merchant=merchant)
+    await location_factory(parent=parent1, merchant=merchant)
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{parent1.pk}/sub_locations/{uuid4()}",
+        json={
+            "parent_ref": str(parent2.pk),
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "location_ref"])

@@ -1,0 +1,313 @@
+from typing import Any
+from uuid import uuid4
+
+import pytest
+from fastapi import status
+from fastapi.testclient import TestClient
+
+from bullsquid.merchant_data.locations.tables import Location
+from bullsquid.merchant_data.merchants.tables import Merchant
+from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
+from bullsquid.merchant_data.plans.tables import Plan
+from tests.helpers import Factory, assert_is_not_found_error
+
+
+async def sub_location_to_json(
+    location: Location,
+    payment_schemes: list[PaymentScheme],
+) -> dict:
+    """Converts a sub-location to its expected JSON representation."""
+    data: dict[str, Any] = {
+        "location_ref": str(location.pk),
+        "location_metadata": {
+            "name": location.name,
+            "merchant_internal_id": location.merchant_internal_id,
+            "is_physical_location": location.is_physical_location,
+            "address_line_1": location.address_line_1,
+            "town_city": location.town_city,
+            "postcode": location.postcode,
+        },
+        "location_status": location.status,
+        "date_added": location.date_added.isoformat(),
+        "payment_schemes": [
+            {
+                "scheme_slug": payment_scheme.slug,
+                "count": 0,
+            }
+            for payment_scheme in payment_schemes
+        ],
+    }
+
+    return data
+
+
+async def sub_location_to_json_detail(
+    location: Location,
+    parent: Location,
+    payment_schemes: list[PaymentScheme],
+) -> dict:
+    """Converts a location to its expected JSON representation."""
+    if not location.parent:
+        raise ValueError("location passed to sub-location json helper")
+
+    return {
+        "parent_location": {
+            "location_ref": str(parent.pk),
+            "location_title": parent.display_text,
+        },
+        "sub_location": {
+            "location_ref": str(location.pk),
+            "location_metadata": {
+                "name": location.name,
+                "merchant_internal_id": location.merchant_internal_id,
+                "is_physical_location": location.is_physical_location,
+                "address_line_1": location.address_line_1,
+                "town_city": location.town_city,
+                "postcode": location.postcode,
+                "address_line_2": location.address_line_2,
+                "county": location.county,
+                "country": location.country,
+            },
+            "location_status": location.status,
+            "date_added": location.date_added.isoformat(),
+            "linked_mids_count": 0,
+            "linked_secondary_mids_count": 0,
+            "payment_schemes": [
+                {
+                    "scheme_slug": payment_scheme.slug,
+                    "count": 0,
+                }
+                for payment_scheme in payment_schemes
+            ],
+        },
+    }
+
+
+async def test_create_sub_location(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    sub_location = await location_factory(persist=False, merchant=merchant)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations",
+        json={
+            field: getattr(sub_location, field)
+            for field in [
+                "name",
+                "merchant_internal_id",
+                "is_physical_location",
+                "address_line_1",
+                "address_line_2",
+                "town_city",
+                "county",
+                "country",
+                "postcode",
+                "parent",
+            ]
+        },
+    )
+
+    assert resp.status_code == status.HTTP_201_CREATED, resp.text
+
+    location = await Location.objects().get(Location.pk == resp.json()["location_ref"])
+    assert resp.json() == await sub_location_to_json(location, default_payment_schemes)
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
+async def test_incorrect_parent_ref(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    await location_factory(merchant=merchant)
+    sub_location = await location_factory(persist=False, merchant=merchant)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/sub_locations",
+        json={
+            field: getattr(sub_location, field)
+            for field in [
+                "name",
+                "location_id",
+                "merchant_internal_id",
+                "is_physical_location",
+                "address_line_1",
+                "address_line_2",
+                "town_city",
+                "county",
+                "country",
+                "postcode",
+                "parent",
+            ]
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+async def test_list_sub_locations(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    sub_locations = [
+        await location_factory(merchant=merchant, parent=location) for _ in range(3)
+    ]
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations"
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    location = await Location.objects().get(Location.pk == location.pk)
+    assert resp.json() == [
+        await sub_location_to_json(
+            await Location.objects().get(Location.pk == sub_location.pk),
+            default_payment_schemes,
+        )
+        for sub_location in sub_locations
+    ]
+
+
+async def test_sub_location_details(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    sub_location = await location_factory(parent=location, merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations/{sub_location.pk}"
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+    sub_location = await Location.objects().get(
+        Location.pk == resp.json()["sub_location"]["location_ref"]
+    )
+    assert resp.json() == await sub_location_to_json_detail(
+        sub_location,
+        location,
+        default_payment_schemes,
+    )
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
+async def test_get_nonexistent_sub_location(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+
+    await location_factory(parent=location, merchant=merchant)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations/{uuid4()}"
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
+async def test_incorrect_location_ref_list_sub_locations(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/sub_locations"
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+async def test_edit_sub_locations(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    sub_location = await location_factory(parent=location, merchant=merchant)
+    new_details = await location_factory(persist=False)
+    resp = test_client.put(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations/{sub_location.pk}",
+        json={
+            "name": new_details.name,
+            "merchant_internal_id": new_details.merchant_internal_id,
+            "is_physical_location": new_details.is_physical_location,
+            "address_line_1": new_details.address_line_1,
+            "address_line_2": new_details.address_line_2,
+            "town_city": new_details.town_city,
+            "county": new_details.county,
+            "country": new_details.country,
+            "postcode": new_details.postcode,
+        },
+    )
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    sub_location = await Location.objects().get(Location.pk == sub_location.pk)
+    assert resp.json() == await sub_location_to_json_detail(
+        sub_location,
+        location,
+        default_payment_schemes,
+    )
+    assert sub_location.name == new_details.name
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
+async def test_edit_sub_locations_with_non_existent_id(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    await location_factory(parent=location, merchant=merchant)
+    new_details = await location_factory(persist=False)
+    resp = test_client.put(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations/{uuid4()}",
+        json={
+            "name": new_details.name,
+            "merchant_internal_id": new_details.merchant_internal_id,
+            "is_physical_location": new_details.is_physical_location,
+            "address_line_1": new_details.address_line_1,
+            "address_line_2": new_details.address_line_2,
+            "town_city": new_details.town_city,
+            "county": new_details.county,
+            "country": new_details.country,
+            "postcode": new_details.postcode,
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "location_ref"])

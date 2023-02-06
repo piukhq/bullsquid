@@ -12,6 +12,7 @@ from bullsquid.merchant_data.secondary_mid_location_links.views import (
     router as secondary_mid_location_links_router,
 )
 from bullsquid.merchant_data.secondary_mids.views import router as secondary_mids_router
+from bullsquid.merchant_data.sub_locations.views import router as sub_locations_router
 
 router = APIRouter(tags=["Merchant Data Management"])
 router.include_router(comments_router)
@@ -21,5 +22,6 @@ router.include_router(primary_mids_router)
 router.include_router(secondary_mids_router)
 router.include_router(psimis_router)
 router.include_router(locations_router)
+router.include_router(sub_locations_router)
 router.include_router(secondary_mid_location_links_router)
 router.include_router(csv_upload_router)

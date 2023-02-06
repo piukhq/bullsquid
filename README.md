@@ -1,22 +1,22 @@
-![project logo](docs/bullsquid.png)
-
 # bullsquid
+
+![project logo](docs/bullsquid.png)
 
 Portal API backend project.
 
-# Prerequisites
+## Prerequisites
 
 Ensure Poetry 1.2+ is installed:
 
-```
-❯ poetry --version
+```bash
+$ poetry --version
 Poetry (version 1.2.0)
 ```
 
 Ensure `psql` is installed:
 
-```
-❯ psql --version
+```bash
+$ psql --version
 psql (PostgreSQL) 14.2
 ```
 
@@ -26,8 +26,8 @@ psql (PostgreSQL) 14.2
 
 The bootstrap script will do most of the work setting up the project.
 
-```
-❯ scripts/bootstrap
+```bash
+scripts/bootstrap
 ```
 
 The script will install dependencies and attempt to set up the database.
@@ -38,12 +38,12 @@ install docker. Once you have done that, re-run the bootstrap script.
 
 ## Running the API server
 
-```
-❯ poetry run scripts/server
+```bash
+poetry run scripts/server
 ```
 
 ### Running tests
 
-```
-❯ poetry run scripts/test
+```bash
+poetry run scripts/test
 ```

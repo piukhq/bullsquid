@@ -1410,3 +1410,48 @@ async def test_edit_location_with_non_existent_id(
     )
 
     assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+async def test_delete_sub_location(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    sub_locations = [
+        await location_factory(merchant=merchant, parent=location),
+        await location_factory(merchant=merchant, parent=location),
+        await location_factory(merchant=merchant, parent=location),
+    ]
+
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations/deletion",
+        json={"location_refs": [str(location.pk) for location in sub_locations]},
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+    assert resp.json() == [
+        {"location_ref": str(sub_location.pk), "location_status": "deleted"}
+        for sub_location in sub_locations
+    ]
+
+
+async def test_delete_nonexistent_parent_location(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+    location_factory: Factory[Location],
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/sub_locations/deletion",
+        json={"location_refs": [str(uuid4()) for _ in range(3)]},
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "location_refs"])

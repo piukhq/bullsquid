@@ -373,3 +373,50 @@ async def edit_location(
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return location
+
+
+@router.post(
+    "/{location_ref}/sub_locations/deletion",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=list[LocationDeletionResponse],
+)
+async def delete_sub_locations(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    location_ref: UUID,
+    deletion: LocationDeletionRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE_DELETE)
+    ),
+) -> list[LocationDeletionResponse]:
+    """Remove a number of sub-locations from a merchant."""
+
+    if not deletion.location_refs:
+        return []
+
+    try:
+        await db.confirm_locations_exist(
+            deletion.location_refs,
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+    except NoSuchRecord as ex:
+        loc = ["body"] if ex.table == Location else ["path"]
+        plural = ex.table == Location
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=loc, plural=plural
+        ) from ex
+
+    await db.update_locations_status(
+        deletion.location_refs,
+        status=ResourceStatus.DELETED,
+        plan_ref=plan_ref,
+        merchant_ref=merchant_ref,
+    )
+
+    return [
+        LocationDeletionResponse(
+            location_ref=location_ref, location_status=ResourceStatus.DELETED
+        )
+        for location_ref in deletion.location_refs
+    ]

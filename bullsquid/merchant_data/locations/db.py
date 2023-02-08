@@ -289,7 +289,8 @@ async def update_locations_status(
     """Updates the status of a list of locations on a merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
     await Location.update({Location.status: status}).where(
-        Location.pk.is_in(location_refs), Location.merchant == merchant
+        Location.pk.is_in(location_refs),
+        Location.merchant == merchant,
     )
 
     if status == ResourceStatus.DELETED:

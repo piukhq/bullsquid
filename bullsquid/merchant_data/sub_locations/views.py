@@ -154,10 +154,10 @@ async def reparent_sublocation(
     try:
         sub_location = await db.reparent_sub_location(
             sub_location_ref,
+            fields,
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
             parent_ref=location_ref,
-            new_parent_ref=fields.parent_ref,
         )
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex

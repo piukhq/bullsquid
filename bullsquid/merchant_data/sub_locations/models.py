@@ -55,6 +55,7 @@ class SubLocationReparentRequest(BaseModel):
     """Request model for reparenting a sub-location."""
 
     parent_ref: UUID4 | None
+    new_location_id: str | None
 
 
 class SubLocationReparentResponse(BaseModel):

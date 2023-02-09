@@ -1,5 +1,5 @@
 """Database access layer for operations on locations"""
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.locations.db import get_location, get_location_instance
@@ -19,6 +19,7 @@ from bullsquid.merchant_data.sub_locations.models import (
     SubLocationDetailMetadata,
     SubLocationDetailResponse,
     SubLocationDetails,
+    SubLocationReparentRequest,
     SubLocationReparentResponse,
 )
 
@@ -194,11 +195,11 @@ async def edit_sub_location(
 
 async def reparent_sub_location(
     sub_location_ref: UUID,
+    fields: SubLocationReparentRequest,
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
     parent_ref: UUID,
-    new_parent_ref: UUID | None,
 ) -> SubLocationReparentResponse:
     """Change or remove the parent of a sub-location."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
@@ -215,10 +216,13 @@ async def reparent_sub_location(
     if not location:
         raise NoSuchRecord(Location)
 
-    location.parent = new_parent_ref
+    location.parent = fields.parent_ref
+    if fields.parent_ref is None:
+        location.location_id = fields.new_location_id or str(uuid4())
+
     await location.save()
 
     return SubLocationReparentResponse(
         location_ref=location.pk,
-        parent_ref=new_parent_ref,
+        parent_ref=fields.parent_ref,
     )

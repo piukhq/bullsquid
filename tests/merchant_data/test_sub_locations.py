@@ -347,7 +347,38 @@ async def test_remove_sub_location_parent(
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     parent = await location_factory(merchant=merchant)
-    sub_location = await location_factory(parent=parent, merchant=merchant)
+    sub_location = await location_factory(
+        parent=parent, merchant=merchant, location_id=None
+    )
+    new_location_id = str(uuid4())
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{parent.pk}/sub_locations/{sub_location.pk}",
+        json={
+            "parent_ref": None,
+            "new_location_id": new_location_id,
+        },
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    sub_location = await Location.objects().get(Location.pk == sub_location.pk)
+    assert sub_location.parent is None
+    assert sub_location.location_id == new_location_id
+
+
+async def test_remove_sub_location_parent_no_location_id(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    parent = await location_factory(merchant=merchant)
+    sub_location = await location_factory(
+        parent=parent, merchant=merchant, location_id=None
+    )
 
     resp = test_client.patch(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{parent.pk}/sub_locations/{sub_location.pk}",
@@ -360,6 +391,7 @@ async def test_remove_sub_location_parent(
 
     sub_location = await Location.objects().get(Location.pk == sub_location.pk)
     assert sub_location.parent is None
+    assert sub_location.location_id is not None
 
 
 async def test_reparent_nonexistent_sub_location(

@@ -46,6 +46,8 @@ class PaymentEnrolmentStatus(str, Enum):
     UNKNOWN = "unknown"
     ENROLLING = "enrolling"
     ENROLLED = "enrolled"
+    FAILED = "failed"
+    NOT_ENROLLED = "not_enrolled"
     REMOVED = "removed"
 
 

@@ -195,15 +195,8 @@ async def list_available_primary_mids(
 ) -> list[PrimaryMID]:
     """List available mids for association with a location"""
     await get_location(location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref)
-    return await PrimaryMID.select(
-        PrimaryMID.pk,
-        PrimaryMID.mid,
-        PrimaryMID.payment_scheme.slug,
-        PrimaryMID.location.pk,
-        PrimaryMID.location.name,
-        PrimaryMID.location.address_line_1,
-        PrimaryMID.location.town_city,
-        PrimaryMID.location.postcode,
+    return await PrimaryMID.objects(
+        PrimaryMID.payment_scheme, PrimaryMID.location
     ).where(
         PrimaryMID.merchant == merchant_ref,
         (PrimaryMID.location != location_ref) | (PrimaryMID.location.is_null()),
@@ -312,11 +305,7 @@ async def list_associated_primary_mids(
     """List available mids in association with a location"""
     await get_location(location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref)
     return await paginate(
-        PrimaryMID.select(
-            PrimaryMID.pk,
-            PrimaryMID.mid,
-            PrimaryMID.payment_scheme.slug,
-        ).where(
+        PrimaryMID.objects(PrimaryMID.payment_scheme).where(
             PrimaryMID.merchant == merchant_ref,
             (PrimaryMID.location == location_ref),
             PrimaryMID.status != ResourceStatus.DELETED,
@@ -338,11 +327,8 @@ async def list_associated_secondary_mids(
         location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
     )
     return await paginate(
-        SecondaryMIDLocationLink.select(
-            SecondaryMIDLocationLink.pk,
-            SecondaryMIDLocationLink.secondary_mid.pk,
-            SecondaryMIDLocationLink.secondary_mid.payment_scheme.slug,  # type: ignore
-            SecondaryMIDLocationLink.secondary_mid.secondary_mid,
+        SecondaryMIDLocationLink.objects(
+            SecondaryMIDLocationLink.secondary_mid,
         ).where(SecondaryMIDLocationLink.location == location),
         n=n,
         p=p,

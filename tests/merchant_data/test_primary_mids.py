@@ -1,5 +1,6 @@
 """Test merchant data API endpoints that operate on primary MIDs."""
 import random
+from typing import cast
 from uuid import uuid4
 
 from fastapi import status
@@ -47,11 +48,8 @@ async def primary_mid_overview_json(primary_mid: PrimaryMID) -> dict:
 
 
 async def primary_mid_detail_json(primary_mid: PrimaryMID) -> dict:
+    location = cast(Location | None, await primary_mid.get_related(PrimaryMID.location))
     """Converts a primary MID to its expected JSON representation."""
-    if primary_mid.location:
-        location = await primary_mid.get_related(PrimaryMID.location)
-    else:
-        location = None
 
     return {
         "mid": {
@@ -90,8 +88,9 @@ async def test_list(
     __import__("pprint").pprint(resp.json())
     assert resp.status_code == status.HTTP_200_OK
 
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert resp.json() == [await primary_mid_overview_json(primary_mid)]
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert resp.json() == [await primary_mid_overview_json(expected)]
 
 
 async def test_list_deleted_mids(
@@ -111,8 +110,9 @@ async def test_list_deleted_mids(
 
     assert resp.status_code == status.HTTP_200_OK
 
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert resp.json() == [await primary_mid_overview_json(primary_mid)]
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert resp.json() == [await primary_mid_overview_json(expected)]
 
 
 async def test_list_by_plan(
@@ -171,8 +171,9 @@ async def test_get_details(
     )
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
-    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
-    assert resp.json() == await primary_mid_detail_json(mid)
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+    assert expected is not None
+    assert resp.json() == await primary_mid_detail_json(expected)
 
 
 async def test_get_details_linked_location(
@@ -191,8 +192,9 @@ async def test_get_details_linked_location(
     )
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
-    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
-    assert resp.json() == await primary_mid_detail_json(mid)
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+    assert expected is not None
+    assert resp.json() == await primary_mid_detail_json(expected)
 
 
 async def test_get_details_invalid_mid(
@@ -237,6 +239,7 @@ async def test_create_without_onboarding(
     mid_ref = resp.json()["mid_ref"]
 
     expected = await PrimaryMID.objects().where(PrimaryMID.pk == mid_ref).first()
+    assert expected is not None
     assert resp.json() == await primary_mid_overview_json(expected)
 
     assert not await Job.exists().where(
@@ -299,6 +302,7 @@ async def test_create_and_onboard(
     mid_ref = resp.json()["mid_ref"]
 
     expected = await PrimaryMID.objects().where(PrimaryMID.pk == mid_ref).first()
+    assert expected is not None
     assert resp.json() == await primary_mid_overview_json(expected)
 
     assert await Job.exists().where(
@@ -335,6 +339,7 @@ async def test_create_without_visa_bin(
         .where(PrimaryMID.pk == resp.json()["mid_ref"])
         .first()
     )
+    assert expected is not None
     assert resp.json() == await primary_mid_overview_json(expected)
 
 
@@ -526,7 +531,6 @@ async def test_update_enrolment_status(
     mid = await primary_mid_factory(
         merchant=merchant, payment_enrolment_status=PaymentEnrolmentStatus.UNKNOWN
     )
-    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
 
     resp = test_client.patch(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}",
@@ -535,11 +539,10 @@ async def test_update_enrolment_status(
 
     assert resp.status_code == status.HTTP_200_OK, resp.json()
 
-    expected = await primary_mid_overview_json(mid)
-    expected["mid_metadata"][
-        "payment_enrolment_status"
-    ] = PaymentEnrolmentStatus.ENROLLED.value
-    assert resp.json() == expected
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+    assert expected is not None
+
+    assert resp.json() == await primary_mid_overview_json(expected)
 
 
 async def test_update_visa_bin(
@@ -555,7 +558,6 @@ async def test_update_visa_bin(
         merchant=merchant,
         payment_scheme=default_payment_schemes[0],
     )
-    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
 
     resp = test_client.patch(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}",
@@ -564,9 +566,10 @@ async def test_update_visa_bin(
 
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
-    expected = await primary_mid_overview_json(mid)
-    expected["mid_metadata"]["visa_bin"] = "new-test-visa-bin"
-    assert resp.json() == expected
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+    assert expected is not None
+
+    assert resp.json() == await primary_mid_overview_json(expected)
 
 
 async def test_update_visa_bin_on_non_visa_mid(
@@ -590,8 +593,9 @@ async def test_update_visa_bin_on_non_visa_mid(
     )
     assert_is_data_error(resp, loc=["body", "visa_bin"])
 
-    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
-    assert mid.visa_bin == original_visa_bin
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+    assert expected is not None
+    assert expected.visa_bin == original_visa_bin
 
 
 async def test_update_notexistent_mid(
@@ -657,11 +661,13 @@ async def test_delete_not_onboarded(
         json={"mid_refs": [str(primary_mid.pk)]},
     )
 
-    mid_status = (
+    mid = (
         await PrimaryMID.all_select(PrimaryMID.status)
         .where(PrimaryMID.pk == primary_mid.pk)
         .first()
-    )["status"]
+    )
+    assert mid is not None
+    mid_status = mid["status"]
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert mid_status == ResourceStatus.DELETED
@@ -688,11 +694,13 @@ async def test_delete_offboarded(
         json={"mid_refs": [str(primary_mid.pk)]},
     )
 
-    mid_status = (
+    mid = (
         await PrimaryMID.all_select(PrimaryMID.status)
         .where(PrimaryMID.pk == primary_mid.pk)
         .first()
-    )["status"]
+    )
+    assert mid is not None
+    mid_status = mid["status"]
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert mid_status == ResourceStatus.DELETED
@@ -719,11 +727,13 @@ async def test_delete_onboarded(
         json={"mid_refs": [str(primary_mid.pk)]},
     )
 
-    mid_status = (
+    mid = (
         await PrimaryMID.select(PrimaryMID.status)
         .where(PrimaryMID.pk == primary_mid.pk)
         .first()
-    )["status"]
+    )
+    assert mid is not None
+    mid_status = mid["status"]
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert mid_status == ResourceStatus.PENDING_DELETION
@@ -755,8 +765,9 @@ async def test_delete_with_linked_location(
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
 
-    primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert primary_mid.location is None
+    expected = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert expected.location is None
 
 
 async def test_delete_nonexistent_mid(
@@ -908,8 +919,9 @@ async def test_delete_location_link(
 
     assert resp.status_code == status.HTTP_204_NO_CONTENT
 
-    mid = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
-    assert mid.location is None
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+    assert expected is not None
+    assert expected.location is None
 
 
 async def test_delete_location_link_unlinked_mid(

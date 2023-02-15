@@ -47,8 +47,9 @@ async def test_list(
 
     assert resp.status_code == status.HTTP_200_OK
 
-    psimi = await PSIMI.objects().get(PSIMI.pk == psimi.pk)
-    assert resp.json() == [await psimi_to_json(psimi)]
+    expected = await PSIMI.objects().get(PSIMI.pk == psimi.pk)
+    assert expected is not None
+    assert resp.json() == [await psimi_to_json(expected)]
 
 
 async def test_list_deleted_psimis(
@@ -70,8 +71,9 @@ async def test_list_deleted_psimis(
 
     assert resp.status_code == status.HTTP_200_OK
 
-    psimi = await PSIMI.objects().get(PSIMI.pk == psimi.pk)
-    assert resp.json() == [await psimi_to_json(psimi)]
+    expected = await PSIMI.objects().get(PSIMI.pk == psimi.pk)
+    assert expected is not None
+    assert resp.json() == [await psimi_to_json(expected)]
 
 
 async def test_list_from_plan(
@@ -137,6 +139,7 @@ async def test_details(
 
     psimi_ref = resp.json()["psimi_ref"]
     expected = await PSIMI.objects().where(PSIMI.pk == psimi_ref).first()
+    assert expected is not None
     assert resp.json() == await psimi_to_json(expected)
 
 
@@ -207,6 +210,7 @@ async def test_create_without_onboarding(
     psimi_ref = resp.json()["psimi_ref"]
 
     expected = await PSIMI.objects().where(PSIMI.pk == psimi_ref).first()
+    assert expected is not None
     assert resp.json() == await psimi_to_json(expected)
 
     # TODO: uncomment when Harmonia supports PSIMI onboarding.
@@ -242,6 +246,7 @@ async def test_create_and_onboard(
     psimi_ref = resp.json()["psimi_ref"]
 
     expected = await PSIMI.objects().where(PSIMI.pk == psimi_ref).first()
+    assert expected is not None
     assert resp.json() == await psimi_to_json(expected)
 
     # TODO: uncomment when Harmonia supports PSIMI onboarding.
@@ -463,9 +468,9 @@ async def test_delete_not_onboarded_psimi(
         json={"psimi_refs": [str(psimi.pk)]},
     )
 
-    psimi_status = (
-        await PSIMI.all_select(PSIMI.status).where(PSIMI.pk == psimi.pk).first()
-    )["status"]
+    expected = await PSIMI.all_select(PSIMI.status).where(PSIMI.pk == psimi.pk).first()
+    assert expected is not None
+    psimi_status = expected["status"]
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert psimi_status == ResourceStatus.DELETED
@@ -492,9 +497,9 @@ async def test_delete_offboarded_psimi(
         json={"psimi_refs": [str(psimi.pk)]},
     )
 
-    psimi_status = (
-        await PSIMI.all_select(PSIMI.status).where(PSIMI.pk == psimi.pk).first()
-    )["status"]
+    expected = await PSIMI.all_select(PSIMI.status).where(PSIMI.pk == psimi.pk).first()
+    assert expected is not None
+    psimi_status = expected["status"]
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert psimi_status == ResourceStatus.DELETED
@@ -521,9 +526,9 @@ async def test_delete_onboarded_psimi(
         json={"psimi_refs": [str(psimi.pk)]},
     )
 
-    psimi_status = (
-        await PSIMI.select(PSIMI.status).where(PSIMI.pk == psimi.pk).first()
-    )["status"]
+    expected = await PSIMI.select(PSIMI.status).where(PSIMI.pk == psimi.pk).first()
+    assert expected is not None
+    psimi_status = expected["status"]
 
     assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
     assert psimi_status == ResourceStatus.PENDING_DELETION

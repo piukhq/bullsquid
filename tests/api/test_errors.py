@@ -1,6 +1,5 @@
 """Test API error handling methods."""
 import json
-from unittest.mock import patch
 
 from fastapi import status
 

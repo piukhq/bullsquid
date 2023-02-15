@@ -1,5 +1,4 @@
 from piccolo.apps.migrations.auto.migration_manager import MigrationManager
-from piccolo.table import Table
 
 ID = "2022-08-24T16:06:08:228420"
 VERSION = "0.74.4"

@@ -1,17 +1,13 @@
 """Database access layer for primary MID operations."""
 
-from datetime import datetime
-from typing import Any, TypedDict
+from typing import Any, cast
 from uuid import UUID
 
 from piccolo.columns import Column
 
 from bullsquid.db import InvalidData, NoSuchRecord, paginate
-from bullsquid.merchant_data.enums import (
-    PaymentEnrolmentStatus,
-    ResourceStatus,
-    TXMStatus,
-)
+from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
@@ -23,20 +19,6 @@ from bullsquid.merchant_data.primary_mids.models import (
     UpdatePrimaryMIDRequest,
 )
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
-
-PrimaryMIDResult = TypedDict(
-    "PrimaryMIDResult",
-    {
-        "pk": UUID,
-        "payment_scheme.slug": str,
-        "mid": str,
-        "visa_bin": str,
-        "payment_enrolment_status": PaymentEnrolmentStatus,
-        "status": ResourceStatus,
-        "date_added": datetime,
-        "txm_status": TXMStatus,
-    },
-)
 
 
 async def get_primary_mid_instance(
@@ -69,10 +51,7 @@ async def get_primary_mid(
         pk, plan_ref=plan_ref, merchant_ref=merchant_ref
     )
 
-    if mid.location:
-        location = await mid.get_related(PrimaryMID.location)
-    else:
-        location = None
+    location = cast(Location | None, await mid.get_related(PrimaryMID.location))
 
     return PrimaryMIDDetailResponse(
         mid=PrimaryMIDOverviewResponse(
@@ -98,26 +77,33 @@ async def get_primary_mid(
 
 async def list_primary_mids(
     *, plan_ref: UUID, merchant_ref: UUID, n: int, p: int
-) -> list[PrimaryMIDResult]:
+) -> list[PrimaryMIDOverviewResponse]:
     """Return a list of all primary MIDs on the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    return await paginate(
-        PrimaryMID.select(
-            PrimaryMID.pk,
-            PrimaryMID.payment_scheme.slug,
-            PrimaryMID.mid,
-            PrimaryMID.visa_bin,
-            PrimaryMID.payment_enrolment_status,
-            PrimaryMID.status,
-            PrimaryMID.date_added,
-            PrimaryMID.txm_status,
-        ).where(
+    results = await paginate(
+        PrimaryMID.objects(PrimaryMID.payment_scheme).where(
             PrimaryMID.merchant == merchant,
         ),
         n=n,
         p=p,
     )
+
+    return [
+        PrimaryMIDOverviewResponse(
+            mid_ref=result.pk,
+            mid_metadata=PrimaryMIDMetadata(
+                payment_scheme_slug=result.payment_scheme.slug,
+                mid=result.mid,
+                visa_bin=result.visa_bin,
+                payment_enrolment_status=result.payment_enrolment_status,
+            ),
+            mid_status=result.status,
+            date_added=result.date_added,
+            txm_status=result.txm_status,
+        )
+        for result in results
+    ]
 
 
 async def filter_onboarded_mid_refs(
@@ -157,7 +143,7 @@ async def create_primary_mid(
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
-) -> PrimaryMIDResult:
+) -> PrimaryMIDOverviewResponse:
     """Create a primary MID for the given merchant."""
 
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
@@ -175,23 +161,23 @@ async def create_primary_mid(
 
     await mid.save()
 
-    return {
-        "pk": mid.pk,
-        "payment_scheme.slug": payment_scheme.slug,
-        "mid": mid.mid,
-        "visa_bin": mid.visa_bin,
-        "payment_enrolment_status": PaymentEnrolmentStatus(
-            mid.payment_enrolment_status
+    return PrimaryMIDOverviewResponse(
+        mid_ref=mid.pk,
+        mid_metadata=PrimaryMIDMetadata(
+            payment_scheme_slug=mid.payment_scheme.slug,
+            mid=mid.mid,
+            visa_bin=mid.visa_bin,
+            payment_enrolment_status=mid.payment_enrolment_status,
         ),
-        "status": ResourceStatus(mid.status),
-        "date_added": mid.date_added,
-        "txm_status": TXMStatus(mid.txm_status),
-    }
+        mid_status=mid.status,
+        date_added=mid.date_added,
+        txm_status=mid.txm_status,
+    )
 
 
 async def update_primary_mid(
     pk: UUID, fields: UpdatePrimaryMIDRequest, *, plan_ref: UUID, merchant_ref: UUID
-) -> PrimaryMIDResult:
+) -> PrimaryMIDOverviewResponse:
     """Update a primary MID's editable fields."""
     mid = await get_primary_mid_instance(
         pk, plan_ref=plan_ref, merchant_ref=merchant_ref
@@ -204,18 +190,18 @@ async def update_primary_mid(
         setattr(mid, name, value)
     await mid.save()
 
-    return {
-        "pk": mid.pk,
-        "payment_scheme.slug": mid.payment_scheme.slug,
-        "mid": mid.mid,
-        "visa_bin": mid.visa_bin,
-        "payment_enrolment_status": PaymentEnrolmentStatus(
-            mid.payment_enrolment_status
+    return PrimaryMIDOverviewResponse(
+        mid_ref=mid.pk,
+        mid_metadata=PrimaryMIDMetadata(
+            payment_scheme_slug=mid.payment_scheme.slug,
+            mid=mid.mid,
+            visa_bin=mid.visa_bin,
+            payment_enrolment_status=mid.payment_enrolment_status,
         ),
-        "status": ResourceStatus(mid.status),
-        "date_added": mid.date_added,
-        "txm_status": TXMStatus(mid.txm_status),
-    }
+        mid_status=mid.status,
+        date_added=mid.date_added,
+        txm_status=mid.txm_status,
+    )
 
 
 async def update_primary_mids_status(

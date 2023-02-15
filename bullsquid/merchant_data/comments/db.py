@@ -250,7 +250,7 @@ async def edit_comment(
         raise NoSuchRecord(Comment)
 
     subjects = await find_subjects(
-        RESOURCE_TYPE_TO_TABLE[comment.subject_type],
+        RESOURCE_TYPE_TO_TABLE[ResourceType(comment.subject_type)],
         comment.subjects,
     )
 

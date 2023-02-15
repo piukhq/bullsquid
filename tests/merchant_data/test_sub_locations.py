@@ -116,8 +116,9 @@ async def test_create_sub_location(
 
     assert resp.status_code == status.HTTP_201_CREATED, resp.text
 
-    location = await Location.objects().get(Location.pk == resp.json()["location_ref"])
-    assert resp.json() == await sub_location_to_json(location, default_payment_schemes)
+    expected = await Location.objects().get(Location.pk == resp.json()["location_ref"])
+    assert expected is not None
+    assert resp.json() == await sub_location_to_json(expected, default_payment_schemes)
 
 
 @pytest.mark.usefixtures("default_payment_schemes")
@@ -172,15 +173,19 @@ async def test_list_sub_locations(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations"
     )
 
-    assert resp.status_code == status.HTTP_200_OK
-    location = await Location.objects().get(Location.pk == location.pk)
-    assert resp.json() == [
-        await sub_location_to_json(
-            await Location.objects().get(Location.pk == sub_location.pk),
-            default_payment_schemes,
+    expected = []
+    for sub_location in sub_locations:
+        instance = await Location.objects().get(Location.pk == sub_location.pk)
+        assert instance is not None
+        expected.append(
+            await sub_location_to_json(
+                instance,
+                default_payment_schemes,
+            )
         )
-        for sub_location in sub_locations
-    ]
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json() == expected
 
 
 async def test_sub_location_details(
@@ -199,11 +204,13 @@ async def test_sub_location_details(
     )
 
     assert resp.status_code == status.HTTP_200_OK, resp.text
-    sub_location = await Location.objects().get(
+
+    expected = await Location.objects().get(
         Location.pk == resp.json()["sub_location"]["location_ref"]
     )
+    assert expected is not None
     assert resp.json() == await sub_location_to_json_detail(
-        sub_location,
+        expected,
         location,
         default_payment_schemes,
     )
@@ -237,7 +244,7 @@ async def test_incorrect_location_ref_list_sub_locations(
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
-    location = await location_factory(merchant=merchant)
+    await location_factory(merchant=merchant)
 
     resp = test_client.get(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/sub_locations"
@@ -274,13 +281,14 @@ async def test_edit_sub_locations(
     )
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
-    sub_location = await Location.objects().get(Location.pk == sub_location.pk)
+    expected = await Location.objects().get(Location.pk == sub_location.pk)
+    assert expected is not None
     assert resp.json() == await sub_location_to_json_detail(
-        sub_location,
+        expected,
         location,
         default_payment_schemes,
     )
-    assert sub_location.name == new_details.name
+    assert expected.name == new_details.name
 
 
 @pytest.mark.usefixtures("default_payment_schemes")
@@ -334,8 +342,9 @@ async def test_reparent_sub_location(
 
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
-    sub_location = await Location.objects().get(Location.pk == sub_location.pk)
-    assert sub_location.parent == parent2.pk
+    expected = await Location.objects().get(Location.pk == sub_location.pk)
+    assert expected is not None
+    assert expected.parent == parent2.pk
 
 
 async def test_remove_sub_location_parent(
@@ -362,9 +371,10 @@ async def test_remove_sub_location_parent(
 
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
-    sub_location = await Location.objects().get(Location.pk == sub_location.pk)
-    assert sub_location.parent is None
-    assert sub_location.location_id == new_location_id
+    expected = await Location.objects().get(Location.pk == sub_location.pk)
+    assert expected is not None
+    assert expected.parent is None
+    assert expected.location_id == new_location_id
 
 
 async def test_remove_sub_location_parent_no_location_id(
@@ -389,9 +399,10 @@ async def test_remove_sub_location_parent_no_location_id(
 
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
-    sub_location = await Location.objects().get(Location.pk == sub_location.pk)
-    assert sub_location.parent is None
-    assert sub_location.location_id is not None
+    expected = await Location.objects().get(Location.pk == sub_location.pk)
+    assert expected is not None
+    assert expected.parent is None
+    assert expected.location_id is not None
 
 
 async def test_reparent_nonexistent_sub_location(
@@ -470,7 +481,7 @@ async def test_delete_nonexistent_parent_location(
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
-    location = await location_factory(merchant=merchant)
+    await location_factory(merchant=merchant)
 
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/sub_locations/deletion",

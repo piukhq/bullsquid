@@ -55,10 +55,9 @@ async def test_list(
 
     assert resp.status_code == status.HTTP_200_OK
 
-    secondary_mid = await SecondaryMID.objects().get(
-        SecondaryMID.pk == secondary_mid.pk
-    )
-    assert resp.json() == [await secondary_mid_to_json(secondary_mid)]
+    expected = await SecondaryMID.objects().get(SecondaryMID.pk == secondary_mid.pk)
+    assert expected is not None
+    assert resp.json() == [await secondary_mid_to_json(expected)]
 
 
 async def test_list_deleted_secondary_mids(
@@ -80,10 +79,9 @@ async def test_list_deleted_secondary_mids(
 
     assert resp.status_code == status.HTTP_200_OK
 
-    secondary_mid = await SecondaryMID.objects().get(
-        SecondaryMID.pk == secondary_mid.pk
-    )
-    assert resp.json() == [await secondary_mid_to_json(secondary_mid)]
+    expected = await SecondaryMID.objects().get(SecondaryMID.pk == secondary_mid.pk)
+    assert expected is not None
+    assert resp.json() == [await secondary_mid_to_json(expected)]
 
 
 async def test_list_on_plan(
@@ -195,10 +193,9 @@ async def test_list_excluding_unlinked_location(
 
     assert resp.status_code == 200
 
-    secondary_mid = await SecondaryMID.objects().get(
-        SecondaryMID.pk == secondary_mid.pk
-    )
-    assert resp.json() == [await secondary_mid_to_json(secondary_mid)]
+    expected = await SecondaryMID.objects().get(SecondaryMID.pk == secondary_mid.pk)
+    assert expected is not None
+    assert resp.json() == [await secondary_mid_to_json(expected)]
 
 
 async def test_list_excluding_nonexistent_location(
@@ -252,6 +249,7 @@ async def test_details(
 
     mid_ref = resp.json()["secondary_mid_ref"]
     expected = await SecondaryMID.objects().where(SecondaryMID.pk == mid_ref).first()
+    assert expected is not None
     assert resp.json() == await secondary_mid_to_json(expected)
 
 
@@ -322,6 +320,7 @@ async def test_create_without_onboarding(
 
     mid_ref = resp.json()["secondary_mid_ref"]
     expected = await SecondaryMID.objects().where(SecondaryMID.pk == mid_ref).first()
+    assert expected is not None
     assert resp.json() == await secondary_mid_to_json(expected)
 
     # TODO: uncomment when harmonia supports onboarding secondary MIOs.
@@ -359,6 +358,7 @@ async def test_create_and_onboard(
     mid_ref = resp.json()["secondary_mid_ref"]
 
     expected = await SecondaryMID.objects().where(SecondaryMID.pk == mid_ref).first()
+    assert expected is not None
     assert resp.json() == await secondary_mid_to_json(expected)
 
     # TODO: uncomment when harmonia supports secondary MID onboarding.
@@ -396,6 +396,7 @@ async def test_create_without_payment_scheme_store_name(
         .where(SecondaryMID.pk == resp.json()["secondary_mid_ref"])
         .first()
     )
+    assert expected is not None
     assert resp.json() == await secondary_mid_to_json(expected)
 
 
@@ -680,11 +681,13 @@ async def test_delete_not_onboarded(
         json={"secondary_mid_refs": [str(mid.pk)]},
     )
 
-    mid_status = (
+    expected = (
         await SecondaryMID.all_select(SecondaryMID.status)
         .where(SecondaryMID.pk == mid.pk)
         .first()
-    )["status"]
+    )
+    assert expected is not None
+    mid_status = expected["status"]
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert mid_status == ResourceStatus.DELETED
@@ -713,11 +716,13 @@ async def test_delete_offboarded(
         json={"secondary_mid_refs": [str(mid.pk)]},
     )
 
-    mid_status = (
+    expected = (
         await SecondaryMID.all_select(SecondaryMID.status)
         .where(SecondaryMID.pk == mid.pk)
         .first()
-    )["status"]
+    )
+    assert expected is not None
+    mid_status = expected["status"]
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert mid_status == ResourceStatus.DELETED
@@ -744,11 +749,13 @@ async def test_delete_onboarded(
         json={"secondary_mid_refs": [str(mid.pk)]},
     )
 
-    mid_status = (
+    expected = (
         await SecondaryMID.select(SecondaryMID.status)
         .where(SecondaryMID.pk == mid.pk)
         .first()
-    )["status"]
+    )
+    assert expected is not None
+    mid_status = expected["status"]
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert mid_status == ResourceStatus.PENDING_DELETION
@@ -778,7 +785,6 @@ async def test_delete_nonexistent_secondary_mid(
 async def test_delete_zero_secondary_mids(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
-    secondary_mid_factory: Factory[SecondaryMID],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -819,6 +825,7 @@ async def test_associate_location(
         )
         .first()
     )
+    assert link is not None
     assert resp.json() == [
         {
             "link_ref": str(link["pk"]),

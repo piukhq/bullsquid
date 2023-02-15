@@ -24,7 +24,6 @@ app = create_app()
 
 # serve up the app locally for development purposes.
 if __name__ == "__main__":
-
     import uvicorn
 
     uvicorn.run("asgi:app", reload=True, port=6502, reload_excludes=[".venv"])

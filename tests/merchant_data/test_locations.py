@@ -140,8 +140,9 @@ async def test_list(
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations")
 
     assert resp.status_code == status.HTTP_200_OK
-    location = await Location.objects().get(Location.pk == location.pk)
-    assert resp.json() == [await location_to_json(location, default_payment_schemes)]
+    expected = await Location.objects().get(Location.pk == location.pk)
+    assert expected is not None
+    assert resp.json() == [await location_to_json(expected, default_payment_schemes)]
 
 
 async def test_list_with_sub_locations(
@@ -161,10 +162,13 @@ async def test_list_with_sub_locations(
     )
 
     assert resp.status_code == status.HTTP_200_OK
-    location = await Location.objects().get(Location.pk == location.pk)
+
+    expected = await Location.objects().get(Location.pk == location.pk)
+    assert expected is not None
+
     assert resp.json() == [
         await location_to_json(
-            location, default_payment_schemes, include_sub_locations=True
+            expected, default_payment_schemes, include_sub_locations=True
         )
     ]
 
@@ -253,8 +257,9 @@ async def test_list_exclude_unlinked_secondary_mid(
 
     assert resp.status_code == 200
 
-    location = await Location.objects().get(Location.pk == location.pk)
-    assert resp.json() == [await location_to_json(location, default_payment_schemes)]
+    expected = await Location.objects().get(Location.pk == location.pk)
+    assert expected is not None
+    assert resp.json() == [await location_to_json(expected, default_payment_schemes)]
 
 
 async def test_list_exclude_nonexistent_secondary_mid(
@@ -307,9 +312,12 @@ async def test_details(
     )
 
     assert resp.status_code == status.HTTP_200_OK
-    location = await Location.objects().get(Location.pk == location.pk)
+
+    expected = await Location.objects().get(Location.pk == location.pk)
+    assert expected is not None
+
     assert resp.json() == await location_to_json_detail(
-        location, default_payment_schemes
+        expected, default_payment_schemes
     )
 
 
@@ -392,8 +400,9 @@ async def test_create(
 
     assert resp.status_code == status.HTTP_201_CREATED, resp.text
 
-    location = await Location.objects().get(Location.pk == resp.json()["location_ref"])
-    assert resp.json() == await location_to_json(location, default_payment_schemes)
+    expected = await Location.objects().get(Location.pk == resp.json()["location_ref"])
+    assert expected is not None
+    assert resp.json() == await location_to_json(expected, default_payment_schemes)
 
 
 async def test_create_withoutnexistent_plan(
@@ -714,8 +723,9 @@ async def test_delete_primary_mid_link(
 
     assert resp.status_code == status.HTTP_202_ACCEPTED
 
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert primary_mid.location is None
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert expected.location is None
 
 
 async def test_delete_secondary_mid_link(
@@ -933,6 +943,7 @@ async def test_associate_secondary_mid(
         )
         .first()
     )
+    assert link is not None
     assert resp.json() == [
         {
             "link_ref": str(link["pk"]),
@@ -1090,7 +1101,7 @@ async def test_available_mids_invalid_location(
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
-    location = await location_factory(merchant=merchant)
+    await location_factory(merchant=merchant)
 
     resp = test_client.get(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/available_mids",
@@ -1177,7 +1188,6 @@ async def test_associated_mids(
     )
 
     assert resp.status_code == status.HTTP_200_OK
-    location = await Location.objects().get(Location.pk == location.pk)
 
     assert resp.json() == [
         {
@@ -1253,7 +1263,6 @@ async def test_associated_secondary_mids(
     secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
     test_client: TestClient,
 ) -> None:
-
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
@@ -1267,7 +1276,6 @@ async def test_associated_secondary_mids(
     )
 
     assert resp.status_code == status.HTTP_200_OK
-    location = await Location.objects().get(Location.pk == location.pk)
 
     assert resp.json() == [
         {
@@ -1376,11 +1384,12 @@ async def test_edit_locations(
     )
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
-    location = await Location.objects().get(Location.pk == location.pk)
+    expected = await Location.objects().get(Location.pk == location.pk)
+    assert expected is not None
     assert resp.json() == await location_to_json_detail(
-        location, default_payment_schemes
+        expected, default_payment_schemes
     )
-    assert location.name == new_details.name
+    assert expected.name == new_details.name
 
 
 @pytest.mark.usefixtures("default_payment_schemes")

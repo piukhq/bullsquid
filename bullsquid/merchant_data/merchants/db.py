@@ -25,7 +25,7 @@ async def get_merchant(
 ) -> Merchant:
     """Return a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
 
-    query = Merchant.objects().where(Merchant.pk == pk)
+    query = Merchant.objects(Merchant.plan).where(Merchant.pk == pk)
     if validate_plan:
         if plan_ref is None:
             raise ValueError("validate_plan cannot be true if plan_ref is null")

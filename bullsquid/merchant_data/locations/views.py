@@ -260,20 +260,20 @@ async def list_available_mids(
     return [
         AvailablePrimaryMID(
             location_link=LocationLinkResponse(
-                location_ref=mid["location.pk"],
+                location_ref=mid.location.pk,
                 location_title=Location(
-                    name=mid["location.name"],
-                    address_line_1=mid["location.address_line_1"],
-                    town_city=mid["location.town_city"],
-                    postcode=mid["location.postcode"],
+                    name=mid.location.name,
+                    address_line_1=mid.location.address_line_1,
+                    town_city=mid.location.town_city,
+                    postcode=mid.location.postcode,
                 ).display_text,
             )
-            if mid["location.pk"]
+            if mid.location.pk
             else None,
             mid=PrimaryMIDLinkResponse(
-                mid_ref=mid["pk"],
-                payment_scheme_slug=mid["payment_scheme.slug"],
-                mid_value=mid["mid"],
+                mid_ref=mid.pk,
+                payment_scheme_slug=mid.payment_scheme.slug,
+                mid_value=mid.mid,
             ),
         )
         for mid in available_mids
@@ -303,9 +303,9 @@ async def list_location_primary_mids(
 
     return [
         PrimaryMIDLinkResponse(
-            mid_ref=mid["pk"],
-            payment_scheme_slug=mid["payment_scheme.slug"],
-            mid_value=mid["mid"],
+            mid_ref=mid.pk,
+            payment_scheme_slug=mid.payment_scheme.slug,
+            mid_value=mid.mid,
         )
         for mid in mids
     ]
@@ -325,7 +325,7 @@ async def list_secondary_mid_location_links(
 ) -> list[SecondaryMIDLinkResponse]:
     """List Secondary MIDs associated with location."""
     try:
-        mids = await db.list_associated_secondary_mids(
+        links = await db.list_associated_secondary_mids(
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
             location_ref=location_ref,
@@ -337,12 +337,12 @@ async def list_secondary_mid_location_links(
 
     return [
         SecondaryMIDLinkResponse(
-            link_ref=mid["pk"],
-            secondary_mid_ref=mid["secondary_mid.pk"],
-            payment_scheme_slug=mid["secondary_mid.payment_scheme.slug"],
-            secondary_mid_value=mid["secondary_mid.secondary_mid"],
+            link_ref=link.pk,
+            secondary_mid_ref=link.secondary_mid.pk,
+            payment_scheme_slug=link.secondary_mid.payment_scheme,
+            secondary_mid_value=link.secondary_mid.secondary_mid,
         )
-        for mid in mids
+        for link in links
     ]
 
 

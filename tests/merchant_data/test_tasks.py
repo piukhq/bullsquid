@@ -81,9 +81,10 @@ async def test_onboard_primary_mids(primary_mid_factory: Factory[PrimaryMID]) ->
     await queue.push(OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
     await run_worker(burst=True)
 
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert primary_mid.txm_status == TXMStatus.ONBOARDED
-    assert primary_mid.status == ResourceStatus.ACTIVE
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert expected.txm_status == TXMStatus.ONBOARDED
+    assert expected.status == ResourceStatus.ACTIVE
 
 
 async def test_offboard_primary_mids(primary_mid_factory: Factory[PrimaryMID]) -> None:
@@ -92,9 +93,10 @@ async def test_offboard_primary_mids(primary_mid_factory: Factory[PrimaryMID]) -
     await queue.push(OffboardPrimaryMIDs(mid_refs=[primary_mid.pk]))
     await run_worker(burst=True)
 
-    primary_mid = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert primary_mid.txm_status == TXMStatus.OFFBOARDED
-    assert primary_mid.status == ResourceStatus.ACTIVE
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert expected.txm_status == TXMStatus.OFFBOARDED
+    assert expected.status == ResourceStatus.ACTIVE
 
 
 async def test_offboard_delete_primary_mids(
@@ -105,9 +107,10 @@ async def test_offboard_delete_primary_mids(
     await queue.push(OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]))
     await run_worker(burst=True)
 
-    primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert primary_mid.txm_status == TXMStatus.OFFBOARDED
-    assert primary_mid.status == ResourceStatus.DELETED
+    expected = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert expected.txm_status == TXMStatus.OFFBOARDED
+    assert expected.status == ResourceStatus.DELETED
 
 
 async def test_offboard_delete_primary_mid_null_link(
@@ -124,8 +127,9 @@ async def test_offboard_delete_primary_mid_null_link(
     await queue.push(OffboardAndDeletePrimaryMIDs(mid_refs=[primary_mid.pk]))
     await run_worker(burst=True)
 
-    primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert primary_mid.location is None
+    expected = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert expected.location is None
 
 
 async def test_offboard_delete_merchant(
@@ -145,11 +149,15 @@ async def test_offboard_delete_merchant(
     await run_worker(burst=True)
     await run_worker(burst=True)
 
-    merchant = await Merchant.all_objects().get(Merchant.pk == merchant.pk)
-    primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert primary_mid.txm_status == TXMStatus.OFFBOARDED
-    assert primary_mid.status == ResourceStatus.DELETED
-    assert merchant.status == ResourceStatus.DELETED
+    expected_merchant = await Merchant.all_objects().get(Merchant.pk == merchant.pk)
+    assert expected_merchant is not None
+
+    expected = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+
+    assert expected.txm_status == TXMStatus.OFFBOARDED
+    assert expected.status == ResourceStatus.DELETED
+    assert expected_merchant.status == ResourceStatus.DELETED
 
 
 async def test_offboard_delete_plan(
@@ -170,13 +178,19 @@ async def test_offboard_delete_plan(
     # 2. OffboardAndDeleteMerchant
     # 3. OffboardAndDeletePrimaryMIDs
     # TODO: fix burst mode
-    for _i in range(3):
+    for _ in range(3):
         await run_worker(burst=True)
 
-    plan = await Plan.all_objects().get(Plan.pk == plan.pk)
-    merchant = await Merchant.all_objects().get(Merchant.pk == merchant.pk)
-    primary_mid = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
-    assert primary_mid.txm_status == TXMStatus.OFFBOARDED
-    assert primary_mid.status == ResourceStatus.DELETED
-    assert merchant.status == ResourceStatus.DELETED
-    assert plan.status == ResourceStatus.DELETED
+    expected_plan = await Plan.all_objects().get(Plan.pk == plan.pk)
+    assert expected_plan is not None
+
+    expected_merchant = await Merchant.all_objects().get(Merchant.pk == merchant.pk)
+    assert expected_merchant is not None
+
+    expected = await PrimaryMID.all_objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+
+    assert expected.txm_status == TXMStatus.OFFBOARDED
+    assert expected.status == ResourceStatus.DELETED
+    assert expected_merchant.status == ResourceStatus.DELETED
+    assert expected_plan.status == ResourceStatus.DELETED

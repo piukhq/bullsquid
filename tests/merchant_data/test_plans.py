@@ -168,10 +168,10 @@ async def test_list_with_merchants(
     ]
 
 
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_details(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -400,35 +400,48 @@ async def test_delete_no_onboarded_resources(
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert resp.json() == {"plan_status": "deleted"}
 
-    plan = await Plan.all_select(Plan.status).where(Plan.pk == plan.pk).first()
-    merchant = (
+    expected_plan = await Plan.all_select(Plan.status).where(Plan.pk == plan.pk).first()
+    assert expected_plan is not None
+
+    expected_merchant = (
         await Merchant.all_select(Merchant.status)
         .where(Merchant.pk == merchant.pk)
         .first()
     )
-    primary_mid = (
+    assert expected_merchant is not None
+
+    expected_primary_mid = (
         await PrimaryMID.all_select(PrimaryMID.status)
         .where(PrimaryMID.pk == primary_mid.pk)
         .first()
     )
-    secondary_mid = (
+    assert expected_primary_mid is not None
+
+    expected_secondary_mid = (
         await SecondaryMID.all_select(SecondaryMID.status)
         .where(SecondaryMID.pk == secondary_mid.pk)
         .first()
     )
-    psimi = await PSIMI.all_select(PSIMI.status).where(PSIMI.pk == psimi.pk).first()
-    location = (
+    assert expected_secondary_mid is not None
+
+    expected_psimi = (
+        await PSIMI.all_select(PSIMI.status).where(PSIMI.pk == psimi.pk).first()
+    )
+    assert expected_psimi is not None
+
+    expected_location = (
         await Location.all_select(Location.status)
         .where(Location.pk == location.pk)
         .first()
     )
+    assert expected_location is not None
 
-    assert plan["status"] == ResourceStatus.DELETED
-    assert merchant["status"] == ResourceStatus.DELETED
-    assert primary_mid["status"] == ResourceStatus.DELETED
-    assert secondary_mid["status"] == ResourceStatus.DELETED
-    assert psimi["status"] == ResourceStatus.DELETED
-    assert location["status"] == ResourceStatus.DELETED
+    assert expected_plan["status"] == ResourceStatus.DELETED
+    assert expected_merchant["status"] == ResourceStatus.DELETED
+    assert expected_primary_mid["status"] == ResourceStatus.DELETED
+    assert expected_secondary_mid["status"] == ResourceStatus.DELETED
+    assert expected_psimi["status"] == ResourceStatus.DELETED
+    assert expected_location["status"] == ResourceStatus.DELETED
     assert not await SecondaryMIDLocationLink.exists().where(
         SecondaryMIDLocationLink.pk == secondary_mid_location_link.pk
     )
@@ -458,8 +471,9 @@ async def test_delete_with_onboarded_resources(
         Job.message == OffboardAndDeletePlan(plan_ref=plan.pk).dict(),
     )
 
-    plan = await Plan.select(Plan.status).where(Plan.pk == plan.pk).first()
-    assert plan["status"] == ResourceStatus.PENDING_DELETION
+    expected = await Plan.select(Plan.status).where(Plan.pk == plan.pk).first()
+    assert expected is not None
+    assert expected["status"] == ResourceStatus.PENDING_DELETION
 
 
 @pytest.mark.usefixtures("database")

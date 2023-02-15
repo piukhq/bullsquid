@@ -1,66 +1,29 @@
 """Database operations for secondary MIDs."""
-from datetime import datetime
-from typing import TypedDict
 from uuid import UUID
 
 from bullsquid.db import NoSuchRecord
-from bullsquid.merchant_data.enums import (
-    PaymentEnrolmentStatus,
-    ResourceStatus,
-    TXMStatus,
-)
+from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant, paginate
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme
 from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
 )
-from bullsquid.merchant_data.secondary_mids.models import SecondaryMIDMetadata
+from bullsquid.merchant_data.secondary_mids.models import (
+    AssociatedLocationResponse,
+    SecondaryMIDMetadata,
+    SecondaryMIDResponse,
+)
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-
-SecondaryMIDResult = TypedDict(
-    "SecondaryMIDResult",
-    {
-        "pk": UUID,
-        "payment_scheme.slug": str,
-        "secondary_mid": str,
-        "payment_scheme_store_name": str,
-        "payment_enrolment_status": PaymentEnrolmentStatus,
-        "date_added": datetime,
-        "txm_status": TXMStatus,
-        "status": ResourceStatus,
-    },
-)
-
-AssociatedLocationResult = TypedDict(
-    "AssociatedLocationResult",
-    {
-        "pk": str | None,
-        "location": str | None,
-        "location.name": str,
-        "location.address_line_1": str | None,
-        "location.town_city": str | None,
-        "location.postcode": str | None,
-    },
-)
 
 
 async def list_secondary_mids(
     *, plan_ref: UUID, merchant_ref: UUID, exclude_location: UUID | None, n: int, p: int
-) -> list[SecondaryMIDResult]:
+) -> list[SecondaryMIDResponse]:
     """Return a list of all secondary MIDs on the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    query = SecondaryMID.select(
-        SecondaryMID.pk,
-        SecondaryMID.payment_scheme.slug,
-        SecondaryMID.secondary_mid,
-        SecondaryMID.payment_scheme_store_name,
-        SecondaryMID.payment_enrolment_status,
-        SecondaryMID.date_added,
-        SecondaryMID.txm_status,
-        SecondaryMID.status,
-    ).where(
+    query = SecondaryMID.objects(SecondaryMID.payment_scheme).where(
         SecondaryMID.merchant == merchant,
     )
 
@@ -80,11 +43,27 @@ async def list_secondary_mids(
         if linked_secondary_mid_pks:
             query = query.where(SecondaryMID.pk.not_in(linked_secondary_mid_pks))
 
-    return await paginate(
+    results = await paginate(
         query,
         n=n,
         p=p,
     )
+
+    return [
+        SecondaryMIDResponse(
+            secondary_mid_ref=result.pk,
+            secondary_mid_metadata=SecondaryMIDMetadata(
+                payment_scheme_slug=result.payment_scheme.slug,
+                secondary_mid=result.secondary_mid,
+                payment_scheme_store_name=result.payment_scheme_store_name,
+                payment_enrolment_status=result.payment_enrolment_status,
+            ),
+            secondary_mid_status=result.status,
+            date_added=result.date_added,
+            txm_status=result.txm_status,
+        )
+        for result in results
+    ]
 
 
 async def get_secondary_mid(
@@ -92,21 +71,12 @@ async def get_secondary_mid(
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
-) -> SecondaryMIDResult:
+) -> SecondaryMIDResponse:
     """Returns a secondary MID."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
     secondary_mid = (
-        await SecondaryMID.select(
-            SecondaryMID.pk,
-            SecondaryMID.payment_scheme.slug,
-            SecondaryMID.secondary_mid,
-            SecondaryMID.payment_scheme_store_name,
-            SecondaryMID.payment_enrolment_status,
-            SecondaryMID.date_added,
-            SecondaryMID.txm_status,
-            SecondaryMID.status,
-        )
+        await SecondaryMID.objects(SecondaryMID.payment_scheme)
         .where(
             SecondaryMID.pk == pk,
             SecondaryMID.merchant == merchant,
@@ -116,7 +86,18 @@ async def get_secondary_mid(
     if not secondary_mid:
         raise NoSuchRecord(SecondaryMID)
 
-    return secondary_mid
+    return SecondaryMIDResponse(
+        secondary_mid_ref=secondary_mid.pk,
+        secondary_mid_metadata=SecondaryMIDMetadata(
+            payment_scheme_slug=secondary_mid.payment_scheme.slug,
+            secondary_mid=secondary_mid.secondary_mid,
+            payment_scheme_store_name=secondary_mid.payment_scheme_store_name,
+            payment_enrolment_status=secondary_mid.payment_enrolment_status,
+        ),
+        secondary_mid_status=secondary_mid.status,
+        date_added=secondary_mid.date_added,
+        txm_status=secondary_mid.txm_status,
+    )
 
 
 async def filter_onboarded_secondary_mids(
@@ -159,7 +140,7 @@ async def create_secondary_mid(
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
-) -> SecondaryMIDResult:
+) -> SecondaryMIDResponse:
     """Create a secondary MID for the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
     payment_scheme = await get_payment_scheme(secondary_mid_data.payment_scheme_slug)
@@ -172,18 +153,18 @@ async def create_secondary_mid(
     )
     await secondary_mid.save()
 
-    return {
-        "pk": secondary_mid.pk,
-        "payment_scheme.slug": payment_scheme.slug,
-        "secondary_mid": secondary_mid.secondary_mid,
-        "payment_scheme_store_name": secondary_mid.payment_scheme_store_name,
-        "payment_enrolment_status": PaymentEnrolmentStatus(
-            secondary_mid.payment_enrolment_status
+    return SecondaryMIDResponse(
+        secondary_mid_ref=secondary_mid.pk,
+        secondary_mid_metadata=SecondaryMIDMetadata(
+            payment_scheme_slug=secondary_mid.payment_scheme.slug,
+            secondary_mid=secondary_mid.secondary_mid,
+            payment_scheme_store_name=secondary_mid.payment_scheme_store_name,
+            payment_enrolment_status=secondary_mid.payment_enrolment_status,
         ),
-        "date_added": secondary_mid.date_added,
-        "txm_status": TXMStatus(secondary_mid.txm_status),
-        "status": ResourceStatus(secondary_mid.status),
-    }
+        secondary_mid_status=secondary_mid.status,
+        date_added=secondary_mid.date_added,
+        txm_status=secondary_mid.txm_status,
+    )
 
 
 async def update_secondary_mids_status(
@@ -212,20 +193,29 @@ async def list_associated_locations(
     *,
     n: int,
     p: int,
-) -> list[AssociatedLocationResult]:
+) -> list[AssociatedLocationResponse]:
     """List available locations in association with a secondary MID"""
     await get_secondary_mid(
         secondary_mid_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
     )
-    return await paginate(
-        SecondaryMIDLocationLink.select(
-            SecondaryMIDLocationLink.pk,
-            SecondaryMIDLocationLink.location,
-            SecondaryMIDLocationLink.location.name,
-            SecondaryMIDLocationLink.location.address_line_1,
-            SecondaryMIDLocationLink.location.town_city,
-            SecondaryMIDLocationLink.location.postcode,
-        ).where(SecondaryMIDLocationLink.secondary_mid == secondary_mid_ref),
+    results = await paginate(
+        SecondaryMIDLocationLink.objects(SecondaryMIDLocationLink.location).where(
+            SecondaryMIDLocationLink.secondary_mid == secondary_mid_ref
+        ),
         n=n,
         p=p,
     )
+
+    return [
+        AssociatedLocationResponse(
+            link_ref=result.pk,
+            location_ref=result.location.pk,
+            location_title=Location(
+                name=result.location.name,
+                address_line_1=result.location.address_line_1,
+                town_city=result.location.town_city,
+                postcode=result.location.postcode,
+            ).display_text,
+        )
+        for result in results
+    ]

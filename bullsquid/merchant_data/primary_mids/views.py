@@ -22,31 +22,12 @@ from bullsquid.merchant_data.primary_mids.models import (
     PrimaryMIDDeletionRequest,
     PrimaryMIDDeletionResponse,
     PrimaryMIDDetailResponse,
-    PrimaryMIDMetadata,
     PrimaryMIDOverviewResponse,
     UpdatePrimaryMIDRequest,
 )
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/mids")
-
-
-async def create_primary_mid_overview_response(
-    primary_mid: db.PrimaryMIDResult,
-) -> PrimaryMIDOverviewResponse:
-    """Creates a PrimaryMIDOverviewResponse instance from the given primary MID."""
-    return PrimaryMIDOverviewResponse(
-        mid_ref=primary_mid["pk"],
-        mid_metadata=PrimaryMIDMetadata(
-            payment_scheme_slug=primary_mid["payment_scheme.slug"],
-            mid=primary_mid["mid"],
-            visa_bin=primary_mid["visa_bin"],
-            payment_enrolment_status=primary_mid["payment_enrolment_status"],
-        ),
-        mid_status=primary_mid["status"],
-        date_added=primary_mid["date_added"],
-        txm_status=primary_mid["txm_status"],
-    )
 
 
 @router.get("", response_model=list[PrimaryMIDOverviewResponse])
@@ -65,7 +46,7 @@ async def list_primary_mids(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
-    return [await create_primary_mid_overview_response(mid) for mid in mids]
+    return mids
 
 
 @router.get("/{mid_ref}", response_model=PrimaryMIDDetailResponse)
@@ -115,9 +96,9 @@ async def create_primary_mid(
         ) from ex
 
     if mid_data.onboard:
-        await tasks.queue.push(tasks.OnboardPrimaryMIDs(mid_refs=[mid["pk"]]))
+        await tasks.queue.push(tasks.OnboardPrimaryMIDs(mid_refs=[mid.mid_ref]))
 
-    return await create_primary_mid_overview_response(mid)
+    return mid
 
 
 @router.patch("/{mid_ref}", response_model=PrimaryMIDOverviewResponse)
@@ -140,7 +121,7 @@ async def update_primary_mid(
     except InvalidData as ex:
         raise DataError.from_invalid_data(ex, loc=["body", "visa_bin"]) from ex
 
-    return await create_primary_mid_overview_response(mid)
+    return mid
 
 
 @router.post(

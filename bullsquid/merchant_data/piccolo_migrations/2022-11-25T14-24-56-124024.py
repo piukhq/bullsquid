@@ -1,5 +1,4 @@
 from piccolo.apps.migrations.auto.migration_manager import MigrationManager
-from piccolo.columns.column_types import Text
 from piccolo.table import Table
 
 ID = "2022-11-25T14:24:56:124024"

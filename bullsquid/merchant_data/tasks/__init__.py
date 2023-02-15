@@ -1,5 +1,6 @@
 """Tasks to be performed off the main thread."""
 import asyncio
+from typing import cast
 from uuid import UUID
 
 import sentry_sdk
@@ -81,7 +82,10 @@ async def delete_fully_offboarded_merchants(merchant_refs: list[UUID]) -> None:
     """Delete the given merchants if they are fully offboarded."""
     for merchant_ref in merchant_refs:
         if not await merchant_has_onboarded_resources(merchant_ref):
-            merchant = await Merchant.objects().get(Merchant.pk == merchant_ref)
+            # we cast for mypy's benefit here, because we know that the merchant exists
+            merchant = cast(
+                Merchant, await Merchant.objects().get(Merchant.pk == merchant_ref)
+            )
 
             if merchant.status != ResourceStatus.PENDING_DELETION:
                 continue

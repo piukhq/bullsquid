@@ -24,30 +24,11 @@ from bullsquid.merchant_data.secondary_mids.models import (
     LocationLinkResponse,
     SecondaryMIDDeletionRequest,
     SecondaryMIDDeletionResponse,
-    SecondaryMIDMetadata,
     SecondaryMIDResponse,
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/secondary_mids")
-
-
-def create_secondary_mid_response(
-    secondary_mid: db.SecondaryMIDResult,
-) -> SecondaryMIDResponse:
-    """Creates a SecondaryMIDResponse instance from the given secondary MID."""
-    return SecondaryMIDResponse(
-        secondary_mid_ref=secondary_mid["pk"],
-        secondary_mid_metadata=SecondaryMIDMetadata(
-            payment_scheme_slug=secondary_mid["payment_scheme.slug"],
-            secondary_mid=secondary_mid["secondary_mid"],
-            payment_scheme_store_name=secondary_mid["payment_scheme_store_name"],
-            payment_enrolment_status=secondary_mid["payment_enrolment_status"],
-        ),
-        secondary_mid_status=secondary_mid["status"],
-        date_added=secondary_mid["date_added"],
-        txm_status=secondary_mid["txm_status"],
-    )
 
 
 @router.get("", response_model=list[SecondaryMIDResponse])
@@ -75,7 +56,7 @@ async def list_secondary_mids(
             ex, loc=loc, override_field_name=override_field_name
         ) from ex
 
-    return [create_secondary_mid_response(mid) for mid in secondary_mids]
+    return secondary_mids
 
 
 @router.get("/{secondary_mid_ref}", response_model=SecondaryMIDResponse)
@@ -93,7 +74,7 @@ async def get_secondary_mid_details(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
-    return create_secondary_mid_response(mid)
+    return mid
 
 
 @router.post(
@@ -139,7 +120,7 @@ async def create_secondary_mid(
         # )
         ...
 
-    return create_secondary_mid_response(secondary_mid)
+    return secondary_mid
 
 
 @router.post(
@@ -275,16 +256,4 @@ async def list_location_secondary_mids(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
-    return [
-        AssociatedLocationResponse(
-            link_ref=link["pk"],
-            location_ref=link["location"],
-            location_title=Location(
-                name=link["location.name"],
-                address_line_1=link["location.address_line_1"],
-                town_city=link["location.town_city"],
-                postcode=link["location.postcode"],
-            ).display_text,
-        )
-        for link in links
-    ]
+    return links

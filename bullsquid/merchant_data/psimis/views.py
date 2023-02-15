@@ -15,26 +15,11 @@ from bullsquid.merchant_data.psimis.models import (
     CreatePSIMIRequest,
     PSIMIDeletionRequest,
     PSIMIDeletionResponse,
-    PSIMIMetadata,
     PSIMIResponse,
 )
 from bullsquid.merchant_data.psimis.tables import PSIMI
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/psimis")
-
-
-def create_psimi_response(psimi: db.PSIMIResult) -> PSIMIResponse:
-    """Creates an PSIMIResponse instance from the given PSIMI."""
-    return PSIMIResponse(
-        psimi_ref=psimi["pk"],
-        psimi_metadata=PSIMIMetadata(
-            value=psimi["value"],
-            payment_scheme_merchant_name=psimi["payment_scheme_merchant_name"],
-            payment_scheme_slug=psimi["payment_scheme.slug"],
-        ),
-        psimi_status=psimi["status"],
-        date_added=psimi["date_added"],
-    )
 
 
 @router.get("", response_model=list[PSIMIResponse])
@@ -53,7 +38,7 @@ async def list_psimis(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
-    return [create_psimi_response(psimi) for psimi in psimis]
+    return psimis
 
 
 @router.get("/{psimi_ref}", response_model=PSIMIResponse)
@@ -65,7 +50,7 @@ async def get_psimi_details(
 ) -> PSIMIResponse:
     """Returns details of a single PSIMI."""
     try:
-        mid = await db.get_psimi(
+        psimi = await db.get_psimi(
             psimi_ref,
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
@@ -73,7 +58,7 @@ async def get_psimi_details(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"])
 
-    return create_psimi_response(mid)
+    return psimi
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=PSIMIResponse)
@@ -107,7 +92,7 @@ async def create_psimi(
         # )
         ...
 
-    return create_psimi_response(psimi)
+    return psimi
 
 
 @router.post(

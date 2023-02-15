@@ -153,6 +153,7 @@ async def _any_mids_exist(
     """
     Returns true if any of the given Visa, Amex, or Mastercard MIDs exist in the database.
     """
+
     # we could do this in a single query, but we'd need to be able to query with tuples in piccolo.
     # for example: .where(tuple_(PrimaryMID.mid, PrimaryMID.payment_scheme).is_in(...))
     # this doesn't seem to be possible yet, so we do three queries instead.

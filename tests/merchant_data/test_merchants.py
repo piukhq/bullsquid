@@ -265,13 +265,15 @@ async def test_update(
     )
     assert resp.status_code == status.HTTP_200_OK
 
-    merchant = await Merchant.objects().get(Merchant.pk == merchant.pk)
+    expected = await Merchant.objects().get(Merchant.pk == merchant.pk)
+    assert expected is not None
+
     assert resp.json() == merchant_overview_json(
-        merchant, await PaymentScheme.objects()
+        expected, await PaymentScheme.objects()
     )
-    assert merchant.name == new_details.name
-    assert merchant.icon_url == new_details.icon_url
-    assert merchant.location_label == new_details.location_label
+    assert expected.name == new_details.name
+    assert expected.icon_url == new_details.icon_url
+    assert expected.location_label == new_details.location_label
 
 
 async def test_update_without_name(
@@ -399,33 +401,44 @@ async def test_delete_with_no_onboarded_resources(
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert resp.json() == {"merchant_status": "deleted"}
 
-    merchant = (
+    expected_merchant = (
         await Merchant.all_select(Merchant.status)
         .where(Merchant.pk == merchant.pk)
         .first()
     )
-    primary_mid = (
+    assert expected_merchant is not None
+
+    expected_primary_mid = (
         await PrimaryMID.all_select(PrimaryMID.status)
         .where(PrimaryMID.pk == primary_mid.pk)
         .first()
     )
-    secondary_mid = (
+    assert expected_primary_mid is not None
+
+    expected_secondary_mid = (
         await SecondaryMID.all_select(SecondaryMID.status)
         .where(SecondaryMID.pk == secondary_mid.pk)
         .first()
     )
-    psimi = await PSIMI.all_select(PSIMI.status).where(PSIMI.pk == psimi.pk).first()
-    location = (
+    assert expected_secondary_mid is not None
+
+    expected_psimi = (
+        await PSIMI.all_select(PSIMI.status).where(PSIMI.pk == psimi.pk).first()
+    )
+    assert expected_psimi is not None
+
+    expected_location = (
         await Location.all_select(Location.status)
         .where(Location.pk == location.pk)
         .first()
     )
+    assert expected_location is not None
 
-    assert merchant["status"] == ResourceStatus.DELETED
-    assert primary_mid["status"] == ResourceStatus.DELETED
-    assert secondary_mid["status"] == ResourceStatus.DELETED
-    assert psimi["status"] == ResourceStatus.DELETED
-    assert location["status"] == ResourceStatus.DELETED
+    assert expected_merchant["status"] == ResourceStatus.DELETED
+    assert expected_primary_mid["status"] == ResourceStatus.DELETED
+    assert expected_secondary_mid["status"] == ResourceStatus.DELETED
+    assert expected_psimi["status"] == ResourceStatus.DELETED
+    assert expected_location["status"] == ResourceStatus.DELETED
     assert not await SecondaryMIDLocationLink.exists().where(
         SecondaryMIDLocationLink.pk == secondary_mid_location_link.pk
     )
@@ -455,10 +468,11 @@ async def test_delete_with_onboarded_resources(
         Job.message == OffboardAndDeleteMerchant(merchant_ref=merchant.pk).dict(),
     )
 
-    merchant = (
+    expected = (
         await Merchant.select(Merchant.status).where(Merchant.pk == merchant.pk).first()
     )
-    assert merchant["status"] == ResourceStatus.PENDING_DELETION
+    assert expected is not None
+    assert expected["status"] == ResourceStatus.PENDING_DELETION
 
 
 async def test_delete_noexistent_merchant(
@@ -471,7 +485,6 @@ async def test_delete_noexistent_merchant(
 
 
 async def test_delete_with_noexistent_plan(
-    plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     test_client: TestClient,
 ) -> None:

@@ -1,9 +1,8 @@
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from bullsquid.merchant_data.comments.models import CommentResponse, EditCommentRequest
 from bullsquid.merchant_data.comments.tables import Comment
 from bullsquid.merchant_data.enums import ResourceType
 from bullsquid.merchant_data.locations.tables import Location
@@ -13,12 +12,7 @@ from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.psimis.tables import PSIMI
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.merchant_data.tables import BaseTable
-from tests.helpers import (
-    Factory,
-    assert_is_missing_field_error,
-    assert_is_not_found_error,
-    assert_is_value_error,
-)
+from tests.helpers import Factory, assert_is_not_found_error, assert_is_value_error
 
 
 def comment_json(
@@ -62,17 +56,15 @@ async def test_list_by_subject_ref(
     )
 
     resp = test_client.get("/api/v1/directory_comments", params={"ref": str(plan.pk)})
-
     assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    expected = await Comment.objects().get(Comment.pk == comment.pk)
+    assert expected is not None
+
     assert resp.json() == {
         "entity_comments": {
             "subject_type": "plan",
-            "comments": [
-                comment_json(
-                    await Comment.objects().get(Comment.pk == comment.pk),
-                    subject=plan,
-                )
-            ],
+            "comments": [comment_json(expected, subject=plan)],
         },
         "lower_comments": [],
     }
@@ -94,19 +86,16 @@ async def test_list_by_owner_ref(
     )
 
     resp = test_client.get("/api/v1/directory_comments", params={"ref": str(plan.pk)})
-
     assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    expected = await Comment.objects().get(Comment.pk == comment.pk)
+    assert expected is not None
     assert resp.json() == {
         "entity_comments": None,
         "lower_comments": [
             {
                 "subject_type": "merchant",
-                "comments": [
-                    comment_json(
-                        await Comment.objects().get(Comment.pk == comment.pk),
-                        subject=merchant,
-                    )
-                ],
+                "comments": [comment_json(expected, subject=merchant)],
             }
         ],
     }
@@ -140,28 +129,24 @@ async def test_list_lower_comments_multiple_subject_types(
     resp = test_client.get(
         "/api/v1/directory_comments", params={"ref": str(merchant.pk)}
     )
-
     assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    expected_sm_comment = await Comment.objects().get(Comment.pk == sm_comment.pk)
+    assert expected_sm_comment is not None
+
+    expected_pm_comment = await Comment.objects().get(Comment.pk == pm_comment.pk)
+    assert expected_pm_comment is not None
+
     assert resp.json() == {
         "entity_comments": None,
         "lower_comments": [
             {
                 "subject_type": "mid",
-                "comments": [
-                    comment_json(
-                        await Comment.objects().get(Comment.pk == pm_comment.pk),
-                        subject=primary_mid,
-                    )
-                ],
+                "comments": [comment_json(expected_pm_comment, subject=primary_mid)],
             },
             {
                 "subject_type": "secondary_mid",
-                "comments": [
-                    comment_json(
-                        await Comment.objects().get(Comment.pk == sm_comment.pk),
-                        subject=secondary_mid,
-                    )
-                ],
+                "comments": [comment_json(expected_sm_comment, subject=secondary_mid)],
             },
         ],
     }
@@ -196,19 +181,17 @@ async def test_filter_lower_comments_by_subject_type(
         "/api/v1/directory_comments",
         params={"ref": str(merchant.pk), "subject_type": "secondary_mid"},
     )
-
     assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    expected = await Comment.objects().get(Comment.pk == comment.pk)
+    assert expected is not None
+
     assert resp.json() == {
         "entity_comments": None,
         "lower_comments": [
             {
                 "subject_type": "secondary_mid",
-                "comments": [
-                    comment_json(
-                        await Comment.objects().get(Comment.pk == comment.pk),
-                        subject=secondary_mid,
-                    )
-                ],
+                "comments": [comment_json(expected, subject=secondary_mid)],
             },
         ],
     }
@@ -238,10 +221,11 @@ async def test_list_with_replies(
 
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
+    expected = await Comment.objects().get(Comment.pk == reply.pk)
+    assert expected is not None
+
     responses = resp.json()["entity_comments"]["comments"][0]["responses"]
-    assert responses == [
-        comment_json(await Comment.objects().get(Comment.pk == reply.pk), subject=plan)
-    ]
+    assert responses == [comment_json(expected, subject=plan)]
 
 
 async def test_list_only_returns_top_level_comments(
@@ -272,13 +256,12 @@ async def test_list_only_returns_top_level_comments(
 
     assert resp.status_code == status.HTTP_200_OK, resp.text
 
+    expected = await Comment.objects().get(Comment.pk == reply.pk)
+    assert expected is not None
+
     assert len(resp.json()["entity_comments"]["comments"]) == 1
     responses = resp.json()["entity_comments"]["comments"][0]["responses"]
-    assert responses == [
-        comment_json(
-            await Comment.objects().get(Comment.pk == reply.pk), subject=merchant
-        )
-    ]
+    assert responses == [comment_json(expected, subject=merchant)]
 
 
 async def test_list_invalid_ref(
@@ -328,13 +311,10 @@ async def test_create_on_plan(
 
     assert resp.status_code == status.HTTP_201_CREATED
 
-    comment = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
-    assert comment is not None
+    expected = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
+    assert expected is not None
 
-    assert resp.json() == comment_json(
-        comment,
-        subject=plan,
-    )
+    assert resp.json() == comment_json(expected, subject=plan)
 
 
 async def test_create_on_merchant(
@@ -362,13 +342,10 @@ async def test_create_on_merchant(
 
     assert resp.status_code == status.HTTP_201_CREATED
 
-    comment = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
-    assert comment is not None
+    expected = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
+    assert expected is not None
 
-    assert resp.json() == comment_json(
-        comment,
-        subject=merchant,
-    )
+    assert resp.json() == comment_json(expected, subject=merchant)
 
 
 async def test_create_on_location(
@@ -398,13 +375,10 @@ async def test_create_on_location(
 
     assert resp.status_code == status.HTTP_201_CREATED
 
-    comment = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
-    assert comment is not None
+    expected = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
+    assert expected is not None
 
-    assert resp.json() == comment_json(
-        comment,
-        subject=location,
-    )
+    assert resp.json() == comment_json(expected, subject=location)
 
 
 async def test_create_on_primary_mid(
@@ -434,13 +408,10 @@ async def test_create_on_primary_mid(
 
     assert resp.status_code == status.HTTP_201_CREATED, resp.text
 
-    comment = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
-    assert comment is not None
+    expected = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
+    assert expected is not None
 
-    assert resp.json() == comment_json(
-        comment,
-        subject=primary_mid,
-    )
+    assert resp.json() == comment_json(expected, subject=primary_mid)
 
 
 async def test_create_on_secondary_mid(
@@ -470,13 +441,10 @@ async def test_create_on_secondary_mid(
 
     assert resp.status_code == status.HTTP_201_CREATED, resp.text
 
-    comment = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
-    assert comment is not None
+    expected = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
+    assert expected is not None
 
-    assert resp.json() == comment_json(
-        comment,
-        subject=secondary_mid,
-    )
+    assert resp.json() == comment_json(expected, subject=secondary_mid)
 
 
 async def test_create_on_psimi(
@@ -506,13 +474,10 @@ async def test_create_on_psimi(
 
     assert resp.status_code == status.HTTP_201_CREATED, resp.text
 
-    comment = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
-    assert comment is not None
+    expected = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
+    assert expected is not None
 
-    assert resp.json() == comment_json(
-        comment,
-        subject=psimi,
-    )
+    assert resp.json() == comment_json(expected, subject=psimi)
 
 
 async def test_create_on_nonexistent_plan(
@@ -620,14 +585,11 @@ async def test_create_reply_on_plan(
     )
     assert resp.status_code == status.HTTP_201_CREATED
 
-    comment = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
-    assert comment is not None
-    assert comment.parent == parent_comment.pk
+    expected = await Comment.objects().get(Comment.pk == resp.json()["comment_ref"])
+    assert expected is not None
+    assert expected.parent == parent_comment.pk
 
-    assert resp.json() == comment_json(
-        comment,
-        subject=plan,
-    )
+    assert resp.json() == comment_json(expected, subject=plan)
 
 
 async def test_reply_to_nonexistent_comment(
@@ -766,11 +728,12 @@ async def test_update_comment(
             "text": "test text",
         },
     )
-
-    comment = await Comment.objects().get(Comment.pk == comment.pk)
     assert resp.status_code == status.HTTP_200_OK
-    assert comment.text == "test text"
-    assert comment.is_edited == True
+
+    expected = await Comment.objects().get(Comment.pk == comment.pk)
+    assert expected is not None
+    assert expected.text == "test text"
+    assert expected.is_edited == True
 
 
 async def test_comment_with_missing_text(
@@ -797,14 +760,10 @@ async def test_comment_with_missing_text(
 
 
 async def test_edit_nonexistent_comment(
-    plan_factory: Factory[Plan],
-    merchant_factory: Factory[Merchant],
     comment_factory: Factory[Comment],
     test_client: TestClient,
 ) -> None:
-    plan = await plan_factory()
-    merchant = await merchant_factory(plan=plan)
-    comment = await comment_factory(persist=False)
+    await comment_factory(persist=False)
     resp = test_client.patch(
         f"/api/v1/directory_comments/{uuid4()}",
         json={
@@ -830,10 +789,11 @@ async def test_can_delete_comment(
         subjects=[merchant.pk],
     )
     resp = test_client.delete(f"/api/v1/directory_comments/{comment.pk}")
-
-    comment = await Comment.objects().get(Comment.pk == comment.pk)
-    assert comment.is_deleted == True
     assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+    expected = await Comment.objects().get(Comment.pk == comment.pk)
+    assert expected is not None
+    assert expected.is_deleted == True
 
 
 async def test_cant_delete_nonexistent_comment(
@@ -844,7 +804,7 @@ async def test_cant_delete_nonexistent_comment(
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
-    comment = await comment_factory(
+    await comment_factory(
         owner_type=ResourceType.PLAN,
         owner=plan.pk,
         subject_type=ResourceType.MERCHANT,
@@ -852,7 +812,6 @@ async def test_cant_delete_nonexistent_comment(
     )
     resp = test_client.delete(f"/api/v1/directory_comments/{uuid4()}")
 
-    comment = await Comment.objects().get(Comment.pk == comment.pk)
     assert_is_not_found_error(resp, loc=["path", "comment_ref"])
 
 
@@ -864,7 +823,7 @@ async def test_get_deleted_comment_by_owner_ref(
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
-    comment = await comment_factory(
+    await comment_factory(
         owner=plan.pk,
         owner_type=ResourceType.PLAN,
         subjects=[merchant.pk],
@@ -885,7 +844,7 @@ async def test_get_deleted_comment_by_subject_ref(
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
-    comment = await comment_factory(
+    await comment_factory(
         owner=plan.pk,
         owner_type=ResourceType.PLAN,
         subjects=[merchant.pk],
@@ -907,7 +866,7 @@ async def test_edit_deleted_comment(
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
-    merchant = await merchant_factory(plan=plan)
+    await merchant_factory(plan=plan)
     comment = await comment_factory(is_deleted=True)
     resp = test_client.patch(
         f"/api/v1/directory_comments/{comment.pk}",

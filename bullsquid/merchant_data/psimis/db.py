@@ -1,63 +1,49 @@
 """Database operations for PSIMIs."""
-from datetime import datetime
-from typing import TypedDict
 from uuid import UUID
 
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme
-from bullsquid.merchant_data.psimis.models import PSIMIMetadata
+from bullsquid.merchant_data.psimis.models import PSIMIMetadata, PSIMIResponse
 from bullsquid.merchant_data.psimis.tables import PSIMI
-
-PSIMIResult = TypedDict(
-    "PSIMIResult",
-    {
-        "pk": UUID,
-        "payment_scheme.slug": str,
-        "value": str,
-        "payment_scheme_merchant_name": str,
-        "date_added": datetime,
-        "status": ResourceStatus,
-    },
-)
 
 
 async def list_psimis(
     *, plan_ref: UUID, merchant_ref: UUID, n: int, p: int
-) -> list[PSIMIResult]:
+) -> list[PSIMIResponse]:
     """Return a list of all PSIMIs on the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    return await paginate(
-        PSIMI.select(
-            PSIMI.pk,
-            PSIMI.payment_scheme.slug,
-            PSIMI.value,
-            PSIMI.payment_scheme_merchant_name,
-            PSIMI.date_added,
-            PSIMI.status,
-        ).where(
+    results = await paginate(
+        PSIMI.objects(PSIMI.payment_scheme).where(
             PSIMI.merchant == merchant,
         ),
         n=n,
         p=p,
     )
 
+    return [
+        PSIMIResponse(
+            psimi_ref=result.pk,
+            psimi_metadata=PSIMIMetadata(
+                value=result.value,
+                payment_scheme_merchant_name=result.payment_scheme_merchant_name,
+                payment_scheme_slug=result.payment_scheme.slug,
+            ),
+            psimi_status=result.status,
+            date_added=result.date_added,
+        )
+        for result in results
+    ]
 
-async def get_psimi(pk: UUID, *, plan_ref: UUID, merchant_ref: UUID) -> PSIMIResult:
+
+async def get_psimi(pk: UUID, *, plan_ref: UUID, merchant_ref: UUID) -> PSIMIResponse:
     """Returns a single PSIMI by its PK."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
     psimi = (
-        await PSIMI.select(
-            PSIMI.pk,
-            PSIMI.payment_scheme.slug,
-            PSIMI.value,
-            PSIMI.payment_scheme_merchant_name,
-            PSIMI.date_added,
-            PSIMI.status,
-        )
+        await PSIMI.objects(PSIMI.payment_scheme)
         .where(
             PSIMI.pk == pk,
             PSIMI.merchant == merchant,
@@ -68,7 +54,16 @@ async def get_psimi(pk: UUID, *, plan_ref: UUID, merchant_ref: UUID) -> PSIMIRes
     if not psimi:
         raise NoSuchRecord(PSIMI)
 
-    return psimi
+    return PSIMIResponse(
+        psimi_ref=psimi.pk,
+        psimi_metadata=PSIMIMetadata(
+            value=psimi.value,
+            payment_scheme_merchant_name=psimi.payment_scheme_merchant_name,
+            payment_scheme_slug=psimi.payment_scheme.slug,
+        ),
+        psimi_status=psimi.status,
+        date_added=psimi.date_added,
+    )
 
 
 async def filter_onboarded_psimis(
@@ -108,7 +103,7 @@ async def create_psimi(
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
-) -> PSIMIResult:
+) -> PSIMIResponse:
     """Create an PSIMI for the given merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
     payment_scheme = await get_payment_scheme(psimi_data.payment_scheme_slug)
@@ -120,14 +115,16 @@ async def create_psimi(
     )
     await psimi.save()
 
-    return {
-        "pk": psimi.pk,
-        "payment_scheme.slug": payment_scheme.slug,
-        "value": psimi.value,
-        "payment_scheme_merchant_name": psimi.payment_scheme_merchant_name,
-        "date_added": psimi.date_added,
-        "status": ResourceStatus(psimi.status),
-    }
+    return PSIMIResponse(
+        psimi_ref=psimi.pk,
+        psimi_metadata=PSIMIMetadata(
+            value=psimi.value,
+            payment_scheme_merchant_name=psimi.payment_scheme_merchant_name,
+            payment_scheme_slug=psimi.payment_scheme.slug,
+        ),
+        psimi_status=psimi.status,
+        date_added=psimi.date_added,
+    )
 
 
 async def update_psimi_status(

@@ -23,7 +23,6 @@ from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.models import PlanMetadataResponse
-from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.shared.models import (
     MerchantCountsResponse,
@@ -70,18 +69,16 @@ async def create_merchant_overview_response(
     )
 
 
-async def create_merchant_detail_response(
-    merchant: Merchant, plan: Plan
-) -> MerchantDetailResponse:
+async def create_merchant_detail_response(merchant: Merchant) -> MerchantDetailResponse:
     """Creates a MerchantDetailResponse instance from the given merchant object."""
     return MerchantDetailResponse(
         merchant_ref=merchant.pk,
         merchant_status=merchant.status,
         plan_metadata=PlanMetadataResponse(
-            name=plan.name,
-            plan_id=plan.plan_id,
-            slug=plan.slug,
-            icon_url=plan.icon_url,
+            name=merchant.plan.name,
+            plan_id=merchant.plan.plan_id,
+            slug=merchant.plan.slug,
+            icon_url=merchant.plan.icon_url,
         ),
         merchant_metadata=create_merchant_metadata_response(merchant),
     )
@@ -147,8 +144,7 @@ async def get_merchant(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
-    plan = await merchant.get_related(Merchant.plan)
-    return await create_merchant_detail_response(merchant, plan)
+    return await create_merchant_detail_response(merchant)
 
 
 @router.put("/{merchant_ref}", response_model=MerchantOverviewResponse)

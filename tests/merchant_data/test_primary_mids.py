@@ -28,6 +28,7 @@ from tests.helpers import (
     assert_is_not_found_error,
     assert_is_null_error,
     assert_is_uniqueness_error,
+    assert_is_value_error,
 )
 
 
@@ -258,7 +259,7 @@ async def test_create_non_visa_mid_with_visa_bin(
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(
-        persist=False, payment_scheme=default_payment_schemes[2], visa_bin="test"
+        persist=False, payment_scheme=default_payment_schemes[2], visa_bin="650242"
     )
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
@@ -273,6 +274,36 @@ async def test_create_non_visa_mid_with_visa_bin(
         },
     )
     assert_is_data_error(resp, loc=["body", "mid_metadata", "visa_bin"])
+
+
+async def test_create_mid_with_invalid_visa_bin(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    primary_mid = await primary_mid_factory(
+        persist=False,
+        payment_scheme=default_payment_schemes[0],
+        visa_bin="these are not digits",
+    )
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
+        json={
+            "onboard": False,
+            "mid_metadata": {
+                "payment_scheme_slug": default_payment_schemes[0].slug,
+                "mid": primary_mid.mid,
+                "visa_bin": primary_mid.visa_bin,
+                "payment_enrolment_status": primary_mid.payment_enrolment_status,
+            },
+        },
+    )
+
+    assert_is_value_error(resp, loc=["body", "mid_metadata", "visa_bin"])
 
 
 async def test_create_and_onboard(
@@ -561,7 +592,7 @@ async def test_update_visa_bin(
 
     resp = test_client.patch(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}",
-        json={"visa_bin": "new-test-visa-bin"},
+        json={"visa_bin": "650242"},
     )
 
     assert resp.status_code == status.HTTP_200_OK, resp.text
@@ -589,7 +620,7 @@ async def test_update_visa_bin_on_non_visa_mid(
 
     resp = test_client.patch(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/{mid.pk}",
-        json={"visa_bin": "new-test-visa-bin"},
+        json={"visa_bin": "650242"},
     )
     assert_is_data_error(resp, loc=["body", "visa_bin"])
 

@@ -73,13 +73,21 @@ def primary_mid_factory(
     default_payment_schemes: list[PaymentScheme],
 ) -> Factory[PrimaryMID]:
     async def factory(*, persist: bool = True, **defaults: Any) -> PrimaryMID:
+        payment_scheme = random.choice(default_payment_schemes)
+        visa_bin = (
+            str(random.randint(100000, 999999))
+            if payment_scheme.slug == "visa"
+            else None
+        )
+
         return await ModelBuilder.build(
             PrimaryMID,
             defaults={
                 "status": ResourceStatus.ACTIVE,
                 "txm_status": TXMStatus.NOT_ONBOARDED,
-                "payment_scheme": random.choice(default_payment_schemes),
+                "payment_scheme": payment_scheme,
                 "location": None,
+                "visa_bin": visa_bin,
                 **defaults,  # type: ignore
             },
             persist=persist,

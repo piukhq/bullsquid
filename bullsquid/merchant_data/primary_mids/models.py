@@ -1,6 +1,5 @@
 """Request & response model definitions for merchant endpoints."""
-
-
+import string
 from datetime import datetime
 
 from pydantic import UUID4, validator
@@ -24,6 +23,15 @@ class PrimaryMIDMetadata(BaseModel):
     mid: str
     visa_bin: str | None
     payment_enrolment_status: PaymentEnrolmentStatus = PaymentEnrolmentStatus.UNKNOWN
+
+    @validator("visa_bin")
+    @classmethod
+    def visa_bin_must_be_numeric(cls, value: str | None) -> str | None:
+        """Validate that visa_bin consists soley of digits from 0-9."""
+        if value is not None and any(c not in string.digits for c in value):
+            raise ValueError("visa_bin must be numeric")
+
+        return value
 
     _ = validator(
         "payment_scheme_slug", "mid", "payment_enrolment_status", allow_reuse=True

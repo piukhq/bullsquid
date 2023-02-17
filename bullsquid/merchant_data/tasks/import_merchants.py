@@ -5,31 +5,31 @@ from uuid import UUID
 
 from pydantic import BaseModel, ValidationError
 
-from bullsquid.merchant_data.csv_upload.models import MerchantFileRecord
+from bullsquid.merchant_data.csv_upload.models import MerchantsFileRecord
 from bullsquid.merchant_data.merchants import db
 from bullsquid.merchant_data.merchants.models import CreateMerchantRequest
 
 
-class ImportMerchantFileRecord(BaseModel):
+class ImportMerchantsFileRecord(BaseModel):
     """
-    Create a location from the given MerchantFileRecord, also creating any dependent
+    Create a location from the given MerchantsFileRecord, also creating any dependent
     resources if necessary.
     """
 
     plan_ref: UUID
-    record: MerchantFileRecord
+    record: MerchantsFileRecord
 
 
-class MerchantFileRecordError(Exception):
+class MerchantsFileRecordError(Exception):
     """Base error type for all merchant file import errors."""
 
 
-class InvalidRecord(MerchantFileRecordError):
+class InvalidRecord(MerchantsFileRecordError):
     """The merchant file record is badly formed."""
 
 
 async def import_merchant_file_record(
-    record: MerchantFileRecord, *, plan_ref: UUID
+    record: MerchantsFileRecord, *, plan_ref: UUID
 ) -> None:
     """
     Import a merchant under the given merchant.

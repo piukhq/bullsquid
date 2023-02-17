@@ -99,7 +99,7 @@ class SecondaryMIDLinkResponse(BaseModel):
 
 
 class AvailablePrimaryMID(BaseModel):
-    """Response model for Populate Available Mids endpoint"""
+    """Response model for Populate Available MIDs endpoint"""
 
     location_link: LocationLinkResponse | None
     mid: PrimaryMIDLinkResponse

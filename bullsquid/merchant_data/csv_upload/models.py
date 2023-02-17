@@ -50,7 +50,7 @@ class LocationFileRecord(BaseModel):
     )(nullify_blank_strings)
 
 
-class MerchantFileRecord(BaseModel):
+class MerchantsFileRecord(BaseModel):
     """
     Models a single line of a merchants details CSV file
     """
@@ -59,3 +59,22 @@ class MerchantFileRecord(BaseModel):
     location_label: str = "stores"
 
     _ = validator("name", "location_label", allow_reuse=True)(string_must_not_be_blank)
+
+
+class IdentifiersFileRecord(BaseModel):
+    """
+    Models a single line of mids and secondary mids CSV file
+    """
+
+    merchant_name: str
+    location_id: str
+    visa_mids: str
+    mastercard_mids: str
+    amex_mids: str
+    visa_secondary_mids: str
+    mastercard_secondary_mids: str
+    secondary_mids: str
+
+    _ = validator("merchant_name", "location_id", allow_reuse=True)(
+        string_must_not_be_blank
+    )

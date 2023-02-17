@@ -15,12 +15,16 @@ from bullsquid.merchant_data.plans.db import plan_has_onboarded_resources
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.service.txm import txm
+from bullsquid.merchant_data.tasks.import_identifiers import (
+    ImportIdentifiersFileRecord,
+    import_identifiers_file_record,
+)
 from bullsquid.merchant_data.tasks.import_locations import (
     ImportLocationFileRecord,
     import_location_file_record,
 )
 from bullsquid.merchant_data.tasks.import_merchants import (
-    ImportMerchantFileRecord,
+    ImportMerchantsFileRecord,
     import_merchant_file_record,
 )
 from bullsquid.settings import settings
@@ -64,7 +68,8 @@ queue = Queue(
         OffboardAndDeleteMerchant,
         OffboardAndDeletePlan,
         ImportLocationFileRecord,
-        ImportMerchantFileRecord,
+        ImportMerchantsFileRecord,
+        ImportIdentifiersFileRecord,
     ]
 )
 
@@ -159,8 +164,14 @@ async def _run_job(message: BaseModel) -> None:
                 plan_ref=message.plan_ref,
                 merchant_ref=message.merchant_ref,
             )
-        case ImportMerchantFileRecord():
+        case ImportMerchantsFileRecord():
             await import_merchant_file_record(message.record, plan_ref=message.plan_ref)
+        case ImportIdentifiersFileRecord():
+            await import_identifiers_file_record(
+                message.record,
+                plan_ref=message.plan_ref,
+                merchant_ref=message.merchant_ref,
+            )
 
 
 async def run_worker(*, burst: bool = False) -> None:

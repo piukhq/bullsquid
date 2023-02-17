@@ -5,6 +5,7 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
+from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
@@ -80,6 +81,16 @@ def merchants_file_no_merchant_name() -> Generator[BinaryIO, None, None]:
     A merchant details file missing the name column.
     """
     with open("tests/merchant_data/fixtures/merchants_no_merchant_name.csv", "rb") as f:
+        yield f
+
+
+@pytest.fixture
+def identifiers_file() -> Generator[BinaryIO, None, None]:
+    """
+    A mids ("long") file containing several merchants with an assortment of primary and
+    secondary MIDs. Intentionally designed to hit as many code paths as possible on import.
+    """
+    with open("tests/merchant_data/fixtures/identifiers.csv", "rb") as f:
         yield f
 
 
@@ -438,14 +449,14 @@ async def test_process_invalid_merchant_file_record(
     """
 
     @dataclass(frozen=True)
-    class MerchantFileRecord:
+    class MerchantsFileRecord:
         name: str
         location_label: str = "stores"
 
     plan = await plan_factory()
 
     with pytest.raises(InvalidRecord):
-        await import_merchant_file_record(MerchantFileRecord(name=""), plan_ref=plan.pk)  # type: ignore
+        await import_merchant_file_record(MerchantsFileRecord(name=""), plan_ref=plan.pk)  # type: ignore
 
 
 @pytest.mark.usefixtures("default_payment_schemes")
@@ -471,6 +482,63 @@ async def test_load_locations_with_merchant_ref_file(
             "file_type": "locations",
             "plan_ref": str(plan.pk),
             "merchant_ref": str(merchant.pk),
+        },
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+    await run_worker(burst=True)
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
+async def test_load_identifiers_file(
+    test_client: TestClient,
+    identifiers_file: BinaryIO,
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+) -> None:
+    """Load a valid file with the correct mids in place."""
+    plan = await plan_factory()
+    merchant1 = await merchant_factory(plan=plan, name="2Wasabi")
+    merchant2 = await merchant_factory(plan=plan, name="3Wasabi")
+    await location_factory(merchant=merchant1, location_id="A037")
+    await location_factory(merchant=merchant2, location_id="A038")
+    resp = test_client.post(
+        "/api/v1/plans/csv_upload",
+        files={
+            "file": identifiers_file,
+        },
+        data={
+            "file_type": "identifiers",
+            "plan_ref": str(plan.pk),
+        },
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+    await run_worker(burst=True)
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
+async def test_load_identifiers_file_missing_location(
+    test_client: TestClient,
+    identifiers_file: BinaryIO,
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+) -> None:
+    """Load a valid file with the correct mids in place."""
+    plan = await plan_factory()
+    await merchant_factory(plan=plan, name="2Wasabi")
+    merchant2 = await merchant_factory(plan=plan, name="3Wasabi")
+    await location_factory(merchant=merchant2, location_id="A038")
+    resp = test_client.post(
+        "/api/v1/plans/csv_upload",
+        files={
+            "file": identifiers_file,
+        },
+        data={
+            "file_type": "identifiers",
+            "plan_ref": str(plan.pk),
         },
     )
 

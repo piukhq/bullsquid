@@ -36,6 +36,11 @@ async def create_plan_overview_response(
     plan: Plan, payment_schemes: list[PaymentScheme]
 ) -> PlanOverviewResponse:
     """Creates a PlanOverviewResponse instance from the given plan object."""
+    merchant_refs = (
+        await Merchant.select(Merchant.pk)
+        .where(Merchant.plan == plan)
+        .output(as_list=True)
+    )
     return PlanOverviewResponse(
         plan_ref=plan.pk,
         plan_status=plan.status,
@@ -46,7 +51,7 @@ async def create_plan_overview_response(
             icon_url=plan.icon_url,
         ),
         plan_counts=PlanCountsResponse(
-            merchants=await Merchant.count().where(Merchant.plan == plan),
+            merchants=len(merchant_refs),
             locations=await Location.count().where(Location.merchant.plan == plan),
             payment_schemes=[
                 PlanPaymentSchemeCountResponse(
@@ -59,6 +64,7 @@ async def create_plan_overview_response(
                 for payment_scheme in payment_schemes
             ],
         ),
+        merchant_refs=merchant_refs,
     )
 
 

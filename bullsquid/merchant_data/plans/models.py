@@ -52,6 +52,7 @@ class PlanOverviewResponse(BaseModel):
     plan_status: ResourceStatus
     plan_metadata: PlanMetadataResponse
     plan_counts: PlanCountsResponse
+    merchant_refs: list[UUID4]
 
     _ = validator("plan_status", allow_reuse=True)(string_must_not_be_blank)
 

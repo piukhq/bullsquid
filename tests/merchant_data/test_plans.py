@@ -1,7 +1,7 @@
 """Test merchant data API endpoints that operate on plans."""
 
 import random
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
@@ -27,7 +27,7 @@ from tests.helpers import Factory, assert_is_not_found_error, assert_is_uniquene
 async def plan_overview_json(
     plan: Plan,
     payment_schemes: list[PaymentScheme],
-    merchants: int = 0,
+    merchant_refs: list[str],
     locations: int = 0,
     visa_mids: int = 0,
     mastercard_mids: int = 0,
@@ -44,7 +44,7 @@ async def plan_overview_json(
             "icon_url": plan.icon_url,
         },
         "plan_counts": {
-            "merchants": merchants,
+            "merchants": len(merchant_refs),
             "locations": locations,
             "payment_schemes": [
                 {
@@ -58,6 +58,7 @@ async def plan_overview_json(
                 for payment_scheme in payment_schemes
             ],
         },
+        "merchant_refs": merchant_refs,
     }
 
 
@@ -111,7 +112,8 @@ async def test_list_no_merchants(
     resp = test_client.get("/api/v1/plans")
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == [
-        await plan_overview_json(plan, default_payment_schemes) for plan in plans
+        await plan_overview_json(plan, default_payment_schemes, merchant_refs=[])
+        for plan in plans
     ]
 
 
@@ -124,9 +126,9 @@ async def test_list_with_merchants(
     test_client: TestClient,
 ) -> None:
     plans = [await plan_factory() for _ in range(3)]
+    merchant_refs: dict[UUID, list[str]] = {}
     counts = {
         plan.pk: {
-            "merchants": 0,
             "locations": 0,
             "visa": 0,
             "amex": 0,
@@ -136,9 +138,10 @@ async def test_list_with_merchants(
     }
     for plan in plans:
         c = counts[plan.pk]
+        merchant_refs[plan.pk] = []
         for _ in range(random.randint(1, 3)):
             merchant = await merchant_factory(plan=plan)
-            c["merchants"] += 1
+            merchant_refs[plan.pk].append(str(merchant.pk))
 
             # add some other resources to check the counts are working
             for _ in range(random.randint(1, 3)):
@@ -158,7 +161,7 @@ async def test_list_with_merchants(
         await plan_overview_json(
             plan,
             default_payment_schemes,
-            merchants=counts[plan.pk]["merchants"],
+            merchant_refs[plan.pk],
             locations=counts[plan.pk]["locations"],
             visa_mids=counts[plan.pk]["visa"],
             mastercard_mids=counts[plan.pk]["mastercard"],
@@ -204,7 +207,9 @@ async def test_create(
     )
     assert resp.status_code == status.HTTP_201_CREATED
     plan = await get_plan(resp.json()["plan_ref"])
-    assert resp.json() == await plan_overview_json(plan, default_payment_schemes)
+    assert resp.json() == await plan_overview_json(
+        plan, default_payment_schemes, merchant_refs=[]
+    )
 
 
 async def test_create_with_blank_slug(
@@ -224,7 +229,9 @@ async def test_create_with_blank_slug(
     )
     assert resp.status_code == status.HTTP_201_CREATED
     plan = await get_plan(resp.json()["plan_ref"])
-    assert resp.json() == await plan_overview_json(plan, default_payment_schemes)
+    assert resp.json() == await plan_overview_json(
+        plan, default_payment_schemes, merchant_refs=[]
+    )
     assert resp.json()["plan_metadata"]["slug"] is None
 
 
@@ -300,7 +307,9 @@ async def test_update(
     )
     assert resp.status_code == status.HTTP_200_OK
     plan = await get_plan(plan.pk)
-    assert resp.json() == await plan_overview_json(plan, default_payment_schemes)
+    assert resp.json() == await plan_overview_json(
+        plan, default_payment_schemes, merchant_refs=[]
+    )
     assert plan.name == new_details.name
     assert plan.plan_id == new_details.plan_id
     assert plan.slug == new_details.slug

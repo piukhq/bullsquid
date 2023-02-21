@@ -7,13 +7,6 @@ from bullsquid.api.auth import JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError
 from bullsquid.db import NoSuchRecord
 from bullsquid.merchant_data.auth import AccessLevel, require_access_level
-from bullsquid.merchant_data.enums import ResourceStatus
-from bullsquid.merchant_data.locations import db as locations_db
-from bullsquid.merchant_data.locations.models import (
-    LocationDeletionRequest,
-    LocationDeletionResponse,
-)
-from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.locations_common.models import SubLocationOverviewResponse
 from bullsquid.merchant_data.sub_locations import db
 from bullsquid.merchant_data.sub_locations.models import (
@@ -170,50 +163,3 @@ async def reparent_sublocation(
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return sub_location
-
-
-@router.post(
-    "/{location_ref}/sub_locations/deletion",
-    status_code=status.HTTP_202_ACCEPTED,
-    response_model=list[LocationDeletionResponse],
-)
-async def delete_sub_locations(
-    plan_ref: UUID,
-    merchant_ref: UUID,
-    location_ref: UUID,
-    deletion: LocationDeletionRequest,
-    _credentials: JWTCredentials = Depends(
-        require_access_level(AccessLevel.READ_WRITE_DELETE)
-    ),
-) -> list[LocationDeletionResponse]:
-    """Remove a number of sub-locations from a merchant."""
-
-    if not deletion.location_refs:
-        return []
-
-    try:
-        await locations_db.confirm_locations_exist(
-            deletion.location_refs,
-            plan_ref=plan_ref,
-            merchant_ref=merchant_ref,
-        )
-    except NoSuchRecord as ex:
-        loc = ["body"] if ex.table == Location else ["path"]
-        plural = ex.table == Location
-        raise ResourceNotFoundError.from_no_such_record(
-            ex, loc=loc, plural=plural
-        ) from ex
-
-    await locations_db.update_locations_status(
-        deletion.location_refs,
-        status=ResourceStatus.DELETED,
-        plan_ref=plan_ref,
-        merchant_ref=merchant_ref,
-    )
-
-    return [
-        LocationDeletionResponse(
-            location_ref=location_ref, location_status=ResourceStatus.DELETED
-        )
-        for location_ref in deletion.location_refs
-    ]

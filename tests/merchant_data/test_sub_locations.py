@@ -443,7 +443,7 @@ async def test_delete_sub_location(
     ]
 
     resp = test_client.post(
-        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/deletion",
         json={"location_refs": [str(location.pk) for location in sub_locations]},
     )
 
@@ -465,27 +465,9 @@ async def test_delete_sub_location_no_refs(
     location = await location_factory(merchant=merchant)
 
     resp = test_client.post(
-        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/sub_locations/deletion",
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/deletion",
         json={"location_refs": []},
     )
 
     assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
     assert resp.json() == []
-
-
-async def test_delete_nonexistent_parent_location(
-    plan_factory: Factory[Plan],
-    merchant_factory: Factory[Merchant],
-    test_client: TestClient,
-    location_factory: Factory[Location],
-) -> None:
-    plan = await plan_factory()
-    merchant = await merchant_factory(plan=plan)
-    await location_factory(merchant=merchant)
-
-    resp = test_client.post(
-        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{uuid4()}/sub_locations/deletion",
-        json={"location_refs": [str(uuid4()) for _ in range(3)]},
-    )
-
-    assert_is_not_found_error(resp, loc=["body", "location_refs"])

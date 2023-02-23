@@ -13,6 +13,7 @@ from bullsquid.merchant_data.secondary_mids.models import (
     AssociatedLocationResponse,
     SecondaryMIDMetadata,
     SecondaryMIDResponse,
+    UpdateSecondaryMIDRequest,
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
@@ -64,6 +65,27 @@ async def list_secondary_mids(
         )
         for result in results
     ]
+
+
+async def get_secondary_mid_instance(
+    pk: UUID,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> SecondaryMID:
+    """Returns a secondary MID."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    secondary_mid = (
+        await SecondaryMID.objects(SecondaryMID.payment_scheme)
+        .where(
+            SecondaryMID.pk == pk,
+            SecondaryMID.merchant == merchant,
+        )
+        .first()
+    )
+    if not secondary_mid:
+        raise NoSuchRecord(SecondaryMID)
+    return secondary_mid
 
 
 async def get_secondary_mid(
@@ -219,3 +241,29 @@ async def list_associated_locations(
         )
         for result in results
     ]
+
+
+async def update_secondary_mid(
+    pk: UUID, fields: UpdateSecondaryMIDRequest, *, plan_ref: UUID, merchant_ref: UUID
+) -> SecondaryMIDResponse:
+    """Update a secondary MID's editable fields."""
+    secondary_mid = await get_secondary_mid_instance(
+        pk, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+
+    for name, value in fields.dict(exclude_unset=True).items():
+        setattr(secondary_mid, name, value)
+    await secondary_mid.save()
+
+    return SecondaryMIDResponse(
+        secondary_mid_ref=secondary_mid.pk,
+        secondary_mid_metadata=SecondaryMIDMetadata(
+            payment_scheme_slug=secondary_mid.payment_scheme.slug,
+            secondary_mid=secondary_mid.secondary_mid,
+            payment_enrolment_status=secondary_mid.payment_enrolment_status,
+            payment_scheme_store_name=secondary_mid.payment_scheme_store_name,
+        ),
+        secondary_mid_status=secondary_mid.status,
+        date_added=secondary_mid.date_added,
+        txm_status=secondary_mid.txm_status,
+    )

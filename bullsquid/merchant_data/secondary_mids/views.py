@@ -25,6 +25,7 @@ from bullsquid.merchant_data.secondary_mids.models import (
     SecondaryMIDDeletionRequest,
     SecondaryMIDDeletionResponse,
     SecondaryMIDResponse,
+    UpdateSecondaryMIDRequest,
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
@@ -257,3 +258,27 @@ async def list_location_secondary_mids(
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     return links
+
+
+@router.patch("/{secondary_mid_ref}", response_model=SecondaryMIDResponse)
+async def update_secondary_mid(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    secondary_mid_ref: UUID,
+    secondary_mid_data: UpdateSecondaryMIDRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> SecondaryMIDResponse:
+    """Update a primary MID's editable fields."""
+    try:
+        mid = await db.update_secondary_mid(
+            secondary_mid_ref,
+            secondary_mid_data,
+            merchant_ref=merchant_ref,
+            plan_ref=plan_ref,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
+
+    return mid

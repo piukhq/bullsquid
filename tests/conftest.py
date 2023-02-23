@@ -1,23 +1,24 @@
 import os
 
-from piccolo.table import create_db_tables_sync, drop_db_tables_sync
-
 os.environ["PICCOLO_CONF"] = "piccolo_conf_test"
 os.environ["debug"] = "true"
 os.environ.pop("txm_base_url", None)
 os.environ.pop("txm_api_key", None)
 
-from typing import Generator
 
-import pytest
-from aioresponses import aioresponses
-from asyncpg import DuplicateTableError
-from fastapi.testclient import TestClient
-from piccolo.conf.apps import Finder
-from piccolo.table import create_db_tables_sync, drop_db_tables_sync
-from piccolo.utils.warnings import colored_warning
+from typing import Generator  # noqa: E402
 
-from bullsquid.api.app import create_app
+import pytest  # noqa: E402
+from aioresponses import aioresponses  # noqa: E402
+from asyncpg import DuplicateTableError  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from piccolo.conf.apps import Finder  # noqa: E402
+from piccolo.table import create_db_tables_sync, drop_db_tables_sync  # noqa: E402
+from piccolo.utils.warnings import (  # noqa: E402
+    colored_warning,
+)
+
+from bullsquid.api.app import create_app  # noqa: E402
 
 
 @pytest.fixture()
@@ -34,7 +35,8 @@ def database() -> Generator[None, None, None]:
         colored_warning(
             "\n\n"
             "The test database already contains tables. "
-            "This could be due to a previous test run that did not exit cleanly. "
+            "This could be due to a previous test run that did not exit "
+            " cleanly. "
             "Please ensure that the test database is empty, "
             "and the tests are not connecting to a non-test database."
             "\n\n"

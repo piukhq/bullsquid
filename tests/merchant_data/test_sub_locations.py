@@ -485,7 +485,7 @@ async def test_delete_sub_location_no_refs(
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
-    location = await location_factory(merchant=merchant)
+    await location_factory(merchant=merchant)
 
     resp = test_client.post(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/deletion",

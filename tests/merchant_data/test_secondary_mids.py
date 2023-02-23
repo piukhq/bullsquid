@@ -368,7 +368,8 @@ async def test_create_and_onboard(
     # TODO: uncomment when harmonia supports secondary MID onboarding.
     # assert await Job.exists().where(
     #     Job.message_type == OnboardSecondaryMIDs.__name__,
-    #     Job.message == OnboardSecondaryMIDs(secondary_mid_refs=[secondary_mid_ref]).dict(),
+    #     Job.message
+    #     == OnboardSecondaryMIDs(secondary_mid_refs=[secondary_mid_ref]).dict(),
     # )
 
 
@@ -699,7 +700,10 @@ async def test_delete_not_onboarded(
     # TODO: uncomment once harmonia supports secondary MID offboarding.
     # assert not await Job.exists().where(
     #     Job.message_type == OffboardAndDeleteSecondaryMIDs.__name__,
-    #     Job.message == OffboardAndDeleteSecondaryMIDs(secondary_mid_refs=[secondary_mid.pk]).dict(),
+    #     Job.message
+    #     == OffboardAndDeleteSecondaryMIDs(
+    #         secondary_mid_refs=[secondary_mid.pk],
+    #     ).dict(),
     # )
 
 
@@ -734,7 +738,10 @@ async def test_delete_offboarded(
     # TODO: uncomment once harmonia supports secondary MID offboarding.
     # assert not await Job.exists().where(
     #     Job.message_type == OffboardAndDeleteSecondaryMIDs.__name__,
-    #     Job.message == OffboardAndDeleteSecondaryMIDs(secondary_mid_refs=[secondary_mid.pk]).dict(),
+    #     Job.message
+    #     == OffboardAndDeleteSecondaryMIDs(
+    #         secondary_mid_refs=[secondary_mid.pk],
+    #     ).dict(),
     # )
 
 
@@ -767,7 +774,10 @@ async def test_delete_onboarded(
     # TODO: uncomment once harmonia supports secondary MID onboarding.
     # assert await Job.exists().where(
     #     Job.message_type == OffboardAndDeleteSecondaryMIDs.__name__,
-    #     Job.message == OffboardAndDeleteSecondaryMIDs(secondary_mid_refs=[secondary_mid.pk]).dict(),
+    #     Job.message
+    #     == OffboardAndDeleteSecondaryMIDs(
+    #         secondary_mid_refs=[secondary_mid.pk],
+    #     ).dict(),
     # )
 
 
@@ -931,7 +941,10 @@ async def test_associate_same_location_twice(
     secondary_mid = await secondary_mid_factory(merchant=merchant)
     location = await location_factory(merchant=merchant)
 
-    url = f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links"
+    url = (
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}"
+        f"/secondary_mids/{secondary_mid.pk}/secondary_mid_location_links"
+    )
     json = {"location_refs": [str(location.pk)]}
 
     resp1 = test_client.post(url, json=json)

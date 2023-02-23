@@ -1,8 +1,8 @@
 #!/bin/sh
 . scripts/_common
 
-info 'isort'
-isort .
+info 'ruff'
+ruff --fix-only .
 
 info 'black'
 black .

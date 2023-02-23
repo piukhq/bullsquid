@@ -16,7 +16,8 @@ async def forwards():
             "ALTER TABLE secondary_mid DROP CONSTRAINT secondary_mid_secondary_mid_key"
         )
         await Table.raw(
-            "CREATE UNIQUE INDEX unique_secondary_mid_payment_scheme ON secondary_mid(secondary_mid, payment_scheme)"
+            "CREATE UNIQUE INDEX unique_secondary_mid_payment_scheme "
+            "ON secondary_mid(secondary_mid, payment_scheme)"
         )
 
     manager.add_raw(modify_unique_constraint)

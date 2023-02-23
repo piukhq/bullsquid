@@ -56,7 +56,10 @@ def create_app() -> FastAPI:
         return error_response(
             ex,
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            message="Unable to process request due to connection failure to another service.",
+            message=(
+                "Unable to process request due to connection failure to another "
+                "service."
+            ),
         )
 
     @app.exception_handler(PostgresError)

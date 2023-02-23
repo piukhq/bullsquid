@@ -160,7 +160,9 @@ async def delete_secondary_mids(
             merchant_ref=merchant_ref,
         )
         # TODO: implement once Harmonia has secondary MID support.
-        # await tasks.queue.push(tasks.OffboardAndDeleteSecondaryMIDs(secondary_mid_refs=onboarded))
+        # await tasks.queue.push(
+        #     tasks.OffboardAndDeleteSecondaryMIDs(secondary_mid_refs=onboarded)
+        # )
 
     if not_onboarded:
         await db.update_secondary_mids_status(

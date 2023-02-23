@@ -22,11 +22,9 @@ def main() -> None:
     docopt(__doc__, version=f"bullsquid-worker {__version__}")
 
     # importing these here allows --help and --version to finish a little quicker
-    import asyncio  # pylint: disable=import-outside-toplevel
+    import asyncio
 
-    from bullsquid.merchant_data.tasks import (  # pylint: disable=import-outside-toplevel
-        run_worker,
-    )
+    from bullsquid.merchant_data.tasks import run_worker
 
     try:
         asyncio.run(run_worker())

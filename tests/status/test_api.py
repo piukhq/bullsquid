@@ -22,7 +22,9 @@ def latest_migrations() -> Generator[None, None, None]:
 
 @pytest.fixture
 def unused_migrations() -> Generator[None, None, None]:
-    """Mocks the Piccolo migrations check manager to pretend one migration hasn't run yet."""
+    """
+    Mocks the Piccolo migrations check manager to pretend one migration hasn't run yet.
+    """
     result: Future[list[MigrationStatus]] = Future()
     status = MigrationStatus(
         app_name="merchant_data",

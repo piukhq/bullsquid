@@ -43,7 +43,8 @@ class LocationOverviewMetadataBase(BaseModel):
             address = [values.get("address_line_1"), values.get("postcode")]
             if not all(address):
                 raise ValueError(
-                    "address_line_1 and postcode must be provided when is_physical_location is true"
+                    "address_line_1 and postcode must be provided when "
+                    "is_physical_location is true"
                 )
         return values
 

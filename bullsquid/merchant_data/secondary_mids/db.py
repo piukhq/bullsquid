@@ -129,11 +129,12 @@ async def filter_onboarded_secondary_mids(
     merchant_ref: UUID,
 ) -> tuple[list[UUID], list[UUID]]:
     """
-    Split the given list of secondary MID refs into onboarded and not onboarded/offboarded.
+    Split the given list of secondary MID refs into onboarded and not.
     """
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    # remove duplicates to ensure count mismatches are not caused by duplicate secondary MIDs
+    # remove duplicates to ensure count mismatches are not caused by duplicate
+    # secondary MIDs
     secondary_mid_refs = list(set(secondary_mid_refs))
 
     count = await SecondaryMID.count().where(SecondaryMID.pk.is_in(secondary_mid_refs))

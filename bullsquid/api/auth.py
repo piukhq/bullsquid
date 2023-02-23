@@ -75,7 +75,8 @@ def decode_jwt(token: str) -> dict:
     if settings.api_key is not None:
         logger.warning(
             "Falling back on legacy token authentication. "
-            "This is much less secure than OAuth2 and should not be relied upon in production!"
+            "This is much less secure than OAuth2 and should not be relied upon "
+            "in production!"
         )
 
         if token != settings.api_key:
@@ -172,7 +173,8 @@ def require_access_level(
     level: AccessLevel, *, app_name: str
 ) -> Callable[[], JWTCredentials]:
     """
-    FastAPI dependency that ensures a given access level exists in the client's access token.
+    FastAPI dependency that ensures a given access level exists in the client's
+    access token.
     """
 
     def check_credentials(

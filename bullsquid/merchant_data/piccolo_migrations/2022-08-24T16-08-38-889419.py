@@ -16,7 +16,10 @@ async def forwards():
     )
 
     async def run():
-        q = "CREATE UNIQUE INDEX unique_location_secondary_mid ON location_secondary_mid_link(location, secondary_mid)"
+        q = (
+            "CREATE UNIQUE INDEX unique_location_secondary_mid "
+            "ON location_secondary_mid_link(location, secondary_mid)"
+        )
         await LocationSecondaryMIDLink.raw(q)
 
     manager.add_raw(run)

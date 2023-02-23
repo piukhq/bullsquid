@@ -79,3 +79,12 @@ class AssociatedLocationResponse(BaseModel):
     link_ref: UUID4
     location_ref: UUID4
     location_title: str
+
+
+class UpdateSecondaryMIDRequest(BaseModel):
+    """Request model for updating a secondary MID."""
+
+    payment_scheme_store_name: str | None
+    payment_enrolment_status: PaymentEnrolmentStatus | None
+
+    _ = validator("payment_scheme_store_name", allow_reuse=True)(nullify_blank_strings)

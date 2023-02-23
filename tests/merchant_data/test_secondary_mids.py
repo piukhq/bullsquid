@@ -5,7 +5,11 @@ from uuid import uuid4
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.enums import (
+    PaymentEnrolmentStatus,
+    ResourceStatus,
+    TXMStatus,
+)
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
@@ -1037,3 +1041,77 @@ async def test_associated_locations_with_nonexistent_plan(
     )
 
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+async def test_update_notexistent_mid(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/{uuid4()}",
+        json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLING},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "secondary_mid_ref"])
+
+
+async def test_update_with_nonexistent_merchant(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[SecondaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await primary_mid_factory(merchant=merchant)
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{uuid4()}/secondary_mids/{secondary_mid.pk}",
+        json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLING},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "merchant_ref"])
+
+
+async def test_update_with_nonexistent_plan(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[SecondaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await primary_mid_factory(merchant=merchant)
+    resp = test_client.patch(
+        f"/api/v1/plans/{uuid4()}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}",
+        json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLING},
+    )
+
+    assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+async def test_update_enrolment_status(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    secondary_mid_factory: Factory[SecondaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory(
+        merchant=merchant, payment_enrolment_status=PaymentEnrolmentStatus.UNKNOWN
+    )
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/{secondary_mid.pk}",
+        json={"payment_enrolment_status": PaymentEnrolmentStatus.ENROLLED},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+
+    expected = await SecondaryMID.objects().get(SecondaryMID.pk == secondary_mid.pk)
+    assert expected is not None
+
+    assert resp.json() == await secondary_mid_to_json(expected)

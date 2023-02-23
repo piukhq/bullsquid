@@ -1,7 +1,7 @@
 """Piccolo ORM configuration."""
 from piccolo.engine.postgres import PostgresEngine
 
-from bullsquid.piccolo_conf import APP_REGISTRY  # pylint: disable=unused-import
+from bullsquid.piccolo_conf import APP_REGISTRY  # noqa: F401
 from bullsquid.settings import settings
 
 DB = PostgresEngine(

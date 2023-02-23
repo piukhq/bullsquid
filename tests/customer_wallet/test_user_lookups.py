@@ -12,7 +12,10 @@ from tests.customer_wallet.conftest import Factory
 
 
 def user_json(user_lookup: UserLookup) -> dict[str, Any]:
-    """Return the JSON representation of the `user` section of a user lookup request/response."""
+    """
+    Return the JSON representation of the `user` section of a user lookup
+    request/response.
+    """
     return {
         "user_id": user_lookup.user_id,
         "channel": user_lookup.channel,

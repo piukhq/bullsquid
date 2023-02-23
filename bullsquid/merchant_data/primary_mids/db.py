@@ -110,7 +110,7 @@ async def filter_onboarded_mid_refs(
     mid_refs: list[UUID], *, plan_ref: UUID, merchant_ref: UUID
 ) -> tuple[list[UUID], list[UUID]]:
     """
-    Split the given list of primary MID refs into onboarded and not onboarded/offboarded.
+    Split the given list of primary MID refs into onboarded and not.
     """
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 

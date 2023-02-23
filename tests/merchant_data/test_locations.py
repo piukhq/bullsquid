@@ -1048,7 +1048,10 @@ async def test_associate_secondary_mid_twice(
     secondary_mid = await secondary_mid_factory(merchant=merchant)
     location = await location_factory(merchant=merchant)
 
-    url = f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}/secondary_mid_location_links"
+    url = (
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}"
+        f"/locations/{location.pk}/secondary_mid_location_links"
+    )
     json = {"secondary_mid_refs": [str(secondary_mid.pk)]}
 
     resp1 = test_client.post(url, json=json)

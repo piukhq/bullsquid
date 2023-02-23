@@ -12,7 +12,8 @@ from bullsquid.merchant_data.enums import ResourceStatus
 
 class BaseTable(Table):
     """
-    Base table with a UUID primary key, status, and objects/select overrides for soft deletion.
+    Base table with a UUID primary key, status, and objects/select overrides
+    for soft deletion.
     """
 
     pk = UUID(primary_key=True)

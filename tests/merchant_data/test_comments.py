@@ -733,7 +733,7 @@ async def test_update_comment(
     expected = await Comment.objects().get(Comment.pk == comment.pk)
     assert expected is not None
     assert expected.text == "test text"
-    assert expected.is_edited == True
+    assert expected.is_edited is True
 
 
 async def test_comment_with_missing_text(
@@ -793,7 +793,7 @@ async def test_can_delete_comment(
 
     expected = await Comment.objects().get(Comment.pk == comment.pk)
     assert expected is not None
-    assert expected.is_deleted == True
+    assert expected.is_deleted is True
 
 
 async def test_cant_delete_nonexistent_comment(
@@ -832,7 +832,7 @@ async def test_get_deleted_comment_by_owner_ref(
         text="Test text",
     )
 
-    resp = test_client.get(f"/api/v1/directory_comments/", params={"ref": str(plan.pk)})
+    resp = test_client.get("/api/v1/directory_comments/", params={"ref": str(plan.pk)})
     assert resp.json()["lower_comments"][0]["comments"][0]["metadata"]["text"] is None
 
 
@@ -854,7 +854,7 @@ async def test_get_deleted_comment_by_subject_ref(
     )
 
     resp = test_client.get(
-        f"/api/v1/directory_comments/", params={"ref": str(merchant.pk)}
+        "/api/v1/directory_comments/", params={"ref": str(merchant.pk)}
     )
     assert resp.json()["entity_comments"]["comments"][0]["metadata"]["text"] is None
 

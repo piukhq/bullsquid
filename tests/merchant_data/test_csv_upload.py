@@ -21,8 +21,9 @@ from tests.helpers import Factory
 @pytest.fixture
 def locations_file() -> Generator[BinaryIO, None, None]:
     """
-    A locations ("long") file containing several merchants with an assortment of primary and
-    secondary MIDs. Intentionally designed to hit as many code paths as possible on import.
+    A locations ("long") file containing several merchants with an assortment
+    of primary and secondary MIDs. Intentionally designed to hit as many code
+    paths as possible on import.
     """
     with open("tests/merchant_data/fixtures/locations.csv", "rb") as f:
         yield f
@@ -49,8 +50,8 @@ def locations_file_no_merchant_name() -> Generator[BinaryIO, None, None]:
 @pytest.fixture
 def locations_file_physical_no_address() -> Generator[BinaryIO, None, None]:
     """
-    A locations ("long") file containing a location marked as `is_physical`, but with no address
-    fields populated.
+    A locations ("long") file containing a location marked as `is_physical`,
+    but with no address fields populated.
     """
     with open(
         "tests/merchant_data/fixtures/locations_physical_no_address.csv", "rb"
@@ -88,8 +89,9 @@ def merchants_file_no_merchant_name() -> Generator[BinaryIO, None, None]:
 @pytest.fixture
 def identifiers_file() -> Generator[BinaryIO, None, None]:
     """
-    A mids ("long") file containing several merchants with an assortment of primary and
-    secondary MIDs. Intentionally designed to hit as many code paths as possible on import.
+    A mids ("long") file containing several merchants with an assortment of
+    primary and secondary MIDs. Intentionally designed to hit as many code
+    paths as possible on import.
     """
     with open("tests/merchant_data/fixtures/identifiers.csv", "rb") as f:
         yield f
@@ -148,7 +150,9 @@ async def test_load_locations_file_clean(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
 ) -> None:
-    """Load a valid file with no byte-order mark and with the correct merchants in place."""
+    """
+    Load a valid file with no byte-order mark and with the correct merchants in place.
+    """
     plan = await plan_factory()
     await merchant_factory(plan=plan, name="The Chester Mayfair")
     await merchant_factory(plan=plan, name="The Rubens at the Palace")
@@ -225,7 +229,9 @@ async def test_load_locations_file_no_merchants(
     locations_file: BinaryIO,
     plan_factory: Factory[Plan],
 ) -> None:
-    """Test loading a valid file without any of the required merchants in the database."""
+    """
+    Test loading a valid file without any of the required merchants in the database.
+    """
     plan = await plan_factory()
     resp = test_client.post(
         "/api/v1/plans/csv_upload",
@@ -464,10 +470,11 @@ async def test_process_invalid_merchant_file_record(
     plan_factory: Factory[Plan],
 ) -> None:
     """
-    Ensure that the merchant file import task correctly validates the incoming data.
-    We can't send a file to the API with these problems as it would be rejected outright.
-    We can't put a bad record on the queue for the same reason.
-    This uses a mock record to bypass pydantic's validation, and sends it directly to the task method.
+    Ensure that the merchant file import task correctly validates the incoming
+    data. We can't send a file to the API with these problems as it would be
+    rejected outright. We can't put a bad record on the queue for the same
+    reason. This uses a mock record to bypass pydantic's validation, and sends
+    it directly to the task method.
     """
 
     @dataclass(frozen=True)
@@ -478,7 +485,10 @@ async def test_process_invalid_merchant_file_record(
     plan = await plan_factory()
 
     with pytest.raises(InvalidRecord):
-        await import_merchant_file_record(MerchantsFileRecord(name=""), plan_ref=plan.pk)  # type: ignore
+        await import_merchant_file_record(
+            MerchantsFileRecord(name=""),  # type: ignore
+            plan_ref=plan.pk,
+        )
 
 
 @pytest.mark.usefixtures("default_payment_schemes")

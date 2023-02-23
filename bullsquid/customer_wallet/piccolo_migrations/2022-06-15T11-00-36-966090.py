@@ -27,7 +27,10 @@ async def forwards():
     )
 
     async def run():
-        q = "CREATE UNIQUE INDEX unique_auth_id_user_id ON user_lookup(auth_id, user_id)"
+        q = (
+            "CREATE UNIQUE INDEX unique_auth_id_user_id "
+            "ON user_lookup(auth_id, user_id)"
+        )
         await UserLookup.raw(q)
 
     manager.add_raw(run)

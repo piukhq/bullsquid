@@ -22,7 +22,7 @@ class PrimaryMIDMetadata(BaseModel):
     payment_scheme_slug: str
     mid: str
     visa_bin: str | None
-    payment_enrolment_status: PaymentEnrolmentStatus = PaymentEnrolmentStatus.UNKNOWN
+    payment_enrolment_status = PaymentEnrolmentStatus.UNKNOWN
 
     @validator("visa_bin")
     @classmethod
@@ -34,7 +34,10 @@ class PrimaryMIDMetadata(BaseModel):
         return value
 
     _ = validator(
-        "payment_scheme_slug", "mid", "payment_enrolment_status", allow_reuse=True
+        "payment_scheme_slug",
+        "mid",
+        "payment_enrolment_status",
+        allow_reuse=True,
     )(string_must_not_be_blank)
     _ = validator("visa_bin", allow_reuse=True)(nullify_blank_strings)
 

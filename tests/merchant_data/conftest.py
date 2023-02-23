@@ -165,7 +165,11 @@ def comment_factory(database: None) -> Factory[Comment]:
             "is_deleted": False,
             **defaults,
         }
-        return await ModelBuilder.build(Comment, defaults=defaults, persist=persist)  # type: ignore
+        return await ModelBuilder.build(
+            Comment,
+            defaults=defaults,  # type: ignore
+            persist=persist,
+        )
 
     return factory
 

@@ -85,7 +85,8 @@ async def find_merchant(
     if merchant is None:
         raise InvalidMerchant("No such merchant")
 
-    # if uploading to a merchant, reject records with a non-null & different merchant name
+    # if uploading to a merchant, reject records with a non-null & different
+    # merchant name
     if (
         merchant_ref
         and merchant_name is not None
@@ -148,10 +149,12 @@ async def _any_mids_exist(
     mastercard_mids: list[str],
 ) -> bool:
     """
-    Returns true if any of the given Visa, Amex, or Mastercard MIDs exist in the database.
+    Returns true if any of the given Visa, Amex, or Mastercard MIDs exist in
+    the database.
     """
 
-    # we could do this in a single query, but we'd need to be able to query with tuples in piccolo.
+    # we could do this in a single query, but we'd need to be able to query with
+    # tuples in piccolo.
     # for example: .where(tuple_(PrimaryMID.mid, PrimaryMID.payment_scheme).is_in(...))
     # this doesn't seem to be possible yet, so we do three queries instead.
     async def exists(name: str, mids: list[str]) -> bool:
@@ -174,7 +177,8 @@ async def _any_secondary_mids_exist(
     mastercard_mids: list[str],
 ) -> bool:
     """
-    Returns true if any of the given Visa or Mastercard secondary MIDs exist in the database.
+    Returns true if any of the given Visa or Mastercard secondary MIDs exist in
+    the database.
     """
 
     async def exists(name: str, mids: list[str]) -> bool:
@@ -232,7 +236,8 @@ async def import_secondary_mids(
     location: Location,
 ) -> None:
     """
-    Import a set of Visa and Mastercard secondary MIDs and link them to the given location.
+    Import a set of Visa and Mastercard secondary MIDs and link them to the
+    given location.
     Raises DuplicateSecondaryMID if any of the secondary MIDs already exist.
     """
     if await _any_secondary_mids_exist(

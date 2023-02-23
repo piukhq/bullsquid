@@ -23,7 +23,10 @@ from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 async def get_merchant(
     pk: UUID, *, plan_ref: UUID | None, validate_plan: bool = True
 ) -> Merchant:
-    """Return a merchant by its primary key. Raises NoSuchRecord if `pk` is not found."""
+    """
+    Return a merchant by its primary key.
+    Raises NoSuchRecord if `pk` is not found.
+    """
 
     query = Merchant.objects(Merchant.plan).where(Merchant.pk == pk)
     if validate_plan:

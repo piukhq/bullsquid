@@ -20,7 +20,8 @@ def error_response(
 ) -> JSONResponse:
     """
     Logs the given exception to stdout (debug mode only), and sentry (if configured.)
-    Returns a JSONResponse with the given status code and message, plus the sentry event ID.
+    Returns a JSONResponse with the given status code and message, plus the
+    sentry event ID.
     """
     if settings.debug:
         logger.exception(ex)

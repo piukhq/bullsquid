@@ -59,7 +59,8 @@ async def create_comment(
     try:
         comment = await db.create_comment(comment_data, parent=None)
     except NoSuchRecord as ex:
-        # TODO: we can't yet distinguish between body.metadata.comment_owner and body.subjects
+        # TODO: we can't yet distinguish between body.metadata.comment_owner and
+        # body.subjects
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["body"]) from ex
 
     return comment

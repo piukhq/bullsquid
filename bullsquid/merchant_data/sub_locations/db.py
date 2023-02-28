@@ -1,5 +1,5 @@
 """Database access layer for operations on locations"""
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.locations.db import get_location, get_location_instance
@@ -217,8 +217,9 @@ async def reparent_sub_location(
         raise NoSuchRecord(Location)
 
     location.parent = fields.parent_ref
+
     if fields.parent_ref is None:
-        location.location_id = fields.new_location_id or str(uuid4())
+        location.location_id = fields.new_location_id
 
     await location.save()
 

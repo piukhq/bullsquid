@@ -1,5 +1,5 @@
 """Request & response model definitions for location endpoints."""
-from pydantic import UUID4, validator
+from pydantic import UUID4, root_validator, validator
 
 from bullsquid.merchant_data.locations_common.models import (
     LocationOverviewBase,
@@ -56,6 +56,19 @@ class SubLocationReparentRequest(BaseModel):
 
     parent_ref: UUID4 | None
     new_location_id: str | None
+
+    @root_validator
+    @classmethod
+    def sub_locations_must_have_location_id(cls, values: dict) -> dict:
+        """
+        Validate that sub_location is either populated with parent_ref or new_location_id
+
+        """
+        if values.get("parent_ref") is values.get("new_location_id") is None:
+            raise ValueError("Either parent_ref or new_location_id must be provided")
+        return values
+
+    _ = validator("new_location_id", allow_reuse=True)(nullify_blank_strings)
 
 
 class SubLocationReparentResponse(BaseModel):

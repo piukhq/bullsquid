@@ -9,7 +9,7 @@ from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
-from tests.helpers import Factory, assert_is_not_found_error
+from tests.helpers import Factory, assert_is_not_found_error, assert_is_value_error
 
 
 async def sub_location_to_json(
@@ -397,12 +397,7 @@ async def test_remove_sub_location_parent_no_location_id(
         },
     )
 
-    assert resp.status_code == status.HTTP_200_OK, resp.text
-
-    expected = await Location.objects().get(Location.pk == sub_location.pk)
-    assert expected is not None
-    assert expected.parent is None
-    assert expected.location_id is not None
+    assert_is_value_error(resp, loc=["body", "__root__"])
 
 
 async def test_reparent_nonexistent_sub_location(

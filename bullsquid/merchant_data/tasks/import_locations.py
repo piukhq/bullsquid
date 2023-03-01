@@ -13,6 +13,7 @@ from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from bullsquid.merchant_data.tasks.errors import SkipRecord
 
 
 class ImportLocationFileRecord(BaseModel):
@@ -28,10 +29,6 @@ class ImportLocationFileRecord(BaseModel):
 
 class LocationFileRecordError(Exception):
     """Base error type for all location file import errors."""
-
-
-class SkipRecord(LocationFileRecordError):
-    """Indicates that a record was intentionally skipped."""
 
 
 class InvalidRecord(LocationFileRecordError):
@@ -291,6 +288,10 @@ async def import_location_file_record(
             mastercard_mids=record.mastercard_secondary_mids.strip().split(),
             merchant=merchant,
             location=location,
+        )
+    except SkipRecord:
+        logger.warning(
+            "record was intentionally skipped, this should be sent to the action log"
         )
     except LocationFileRecordError as ex:
         logger.error(f"location file import raised error: {ex!r}")

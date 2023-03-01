@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import BinaryIO, Generator
+from uuid import uuid4
 
 import pytest
 from fastapi import status
@@ -438,6 +439,27 @@ async def test_load_merchants_file_with_no_merchant_name(
 
 
 @pytest.mark.usefixtures("default_payment_schemes")
+async def test_load_merchants_file_missing_plan(
+    test_client: TestClient,
+    merchants_file: BinaryIO,
+) -> None:
+    """Attempt to load a merchants file with a fake plan ref."""
+    resp = test_client.post(
+        "/api/v1/plans/csv_upload",
+        files={
+            "file": merchants_file,
+        },
+        data={
+            "file_type": "merchant_details",
+            "plan_ref": str(uuid4()),
+        },
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+    await run_worker(burst=True)
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
 async def test_process_invalid_merchant_file_record(
     plan_factory: Factory[Plan],
 ) -> None:
@@ -511,6 +533,36 @@ async def test_load_identifiers_file(
         data={
             "file_type": "identifiers",
             "plan_ref": str(plan.pk),
+        },
+    )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+    await run_worker(burst=True)
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
+async def test_load_identifiers_file_with_merchant_ref(
+    test_client: TestClient,
+    identifiers_file: BinaryIO,
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+) -> None:
+    """Load a valid file with the correct mids in place."""
+    plan = await plan_factory()
+    merchant1 = await merchant_factory(plan=plan, name="2Wasabi")
+    merchant2 = await merchant_factory(plan=plan, name="3Wasabi")
+    await location_factory(merchant=merchant1, location_id="A037")
+    await location_factory(merchant=merchant2, location_id="A038")
+    resp = test_client.post(
+        "/api/v1/plans/csv_upload",
+        files={
+            "file": identifiers_file,
+        },
+        data={
+            "file_type": "identifiers",
+            "plan_ref": str(plan.pk),
+            "merchant_ref": str(merchant1.pk),
         },
     )
 

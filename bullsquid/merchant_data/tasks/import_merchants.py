@@ -3,6 +3,7 @@ Task functions for importing merchants records from CSV files.
 """
 from uuid import UUID
 
+from loguru import logger
 from pydantic import BaseModel, ValidationError
 
 from bullsquid.merchant_data.csv_upload.models import MerchantsFileRecord
@@ -44,5 +45,9 @@ async def import_merchant_file_record(
     except ValidationError as ex:
         raise InvalidRecord(str(ex)) from ex
 
-    plan = await db.get_plan(plan_ref)
-    await db.create_merchant(merchant_data.dict(), plan=plan)
+    try:
+        plan = await db.get_plan(plan_ref)
+        await db.create_merchant(merchant_data.dict(), plan=plan)
+    except Exception as ex:  # pylint: disable=broad-except
+        logger.error(f"merchants file import raised error: {ex!r}")
+        logger.warning("this should be sent to the action log")

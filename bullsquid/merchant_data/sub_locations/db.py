@@ -219,7 +219,7 @@ async def reparent_sub_location(
     location.parent = fields.parent_ref
 
     if fields.parent_ref is None:
-        location.location_id = fields.new_location_id
+        location.location_id = fields.location_id
 
     await location.save()
 

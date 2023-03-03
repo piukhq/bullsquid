@@ -9,7 +9,12 @@ from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
-from tests.helpers import Factory, assert_is_not_found_error, assert_is_value_error
+from tests.helpers import (
+    Factory,
+    assert_is_not_found_error,
+    assert_is_uniqueness_error,
+    assert_is_value_error,
+)
 
 
 async def sub_location_to_json(
@@ -347,6 +352,29 @@ async def test_reparent_sub_location(
     assert expected.parent == parent2.pk
 
 
+async def test_reparent_sub_location_duplicate_location_id(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    parent1 = await location_factory(merchant=merchant)
+    parent2 = await location_factory(merchant=merchant)
+    sub_location = await location_factory(parent=parent1, merchant=merchant)
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{parent1.pk}/sub_locations/{sub_location.pk}",
+        json={
+            "parent_ref": str(parent2.pk),
+            "location_id": str(parent1.location_id),
+        },
+    )
+
+    assert_is_uniqueness_error(resp, loc=["body", "location_id"])
+
+
 async def test_remove_sub_location_parent(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
@@ -359,13 +387,13 @@ async def test_remove_sub_location_parent(
     sub_location = await location_factory(
         parent=parent, merchant=merchant, location_id=None
     )
-    new_location_id = str(uuid4())
+    location_id = str(uuid4())
 
     resp = test_client.patch(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{parent.pk}/sub_locations/{sub_location.pk}",
         json={
             "parent_ref": None,
-            "new_location_id": new_location_id,
+            "location_id": location_id,
         },
     )
 
@@ -374,7 +402,7 @@ async def test_remove_sub_location_parent(
     expected = await Location.objects().get(Location.pk == sub_location.pk)
     assert expected is not None
     assert expected.parent is None
-    assert expected.location_id == new_location_id
+    assert expected.location_id == location_id
 
 
 async def test_remove_sub_location_parent_no_location_id(

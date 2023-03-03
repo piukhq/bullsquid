@@ -55,20 +55,20 @@ class SubLocationReparentRequest(BaseModel):
     """Request model for reparenting a sub-location."""
 
     parent_ref: UUID4 | None
-    new_location_id: str | None
+    location_id: str | None
 
     @root_validator
     @classmethod
     def sub_locations_must_have_location_id(cls, values: dict) -> dict:
         """
-        Validate that sub_location is either populated with parent_ref or new_location_id
+        Validate that sub_location is either populated with parent_ref or location_id
 
         """
-        if values.get("parent_ref") is values.get("new_location_id") is None:
-            raise ValueError("Either parent_ref or new_location_id must be provided")
+        if values.get("parent_ref") is values.get("location_id") is None:
+            raise ValueError("Either parent_ref or location_id must be provided")
         return values
 
-    _ = validator("new_location_id", allow_reuse=True)(nullify_blank_strings)
+    _ = validator("location_id", allow_reuse=True)(nullify_blank_strings)
 
 
 class SubLocationReparentResponse(BaseModel):

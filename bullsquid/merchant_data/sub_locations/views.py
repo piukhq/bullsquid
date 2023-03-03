@@ -4,9 +4,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from bullsquid.api.auth import JWTCredentials
-from bullsquid.api.errors import ResourceNotFoundError
-from bullsquid.db import NoSuchRecord
+from bullsquid.api.errors import ResourceNotFoundError, UniqueError
+from bullsquid.db import NoSuchRecord, field_is_unique
 from bullsquid.merchant_data.auth import AccessLevel, require_access_level
+from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.locations_common.models import SubLocationOverviewResponse
 from bullsquid.merchant_data.sub_locations import db
 from bullsquid.merchant_data.sub_locations.models import (
@@ -150,6 +151,10 @@ async def reparent_sublocation(
     ),
 ) -> SubLocationReparentResponse:
     """Change or remove a sub-location's parent location."""
+
+    if location_id := fields.location_id:
+        if not await field_is_unique(Location, "location_id", location_id):
+            raise UniqueError(loc=["body", "location_id"])
 
     try:
         sub_location = await db.reparent_sub_location(

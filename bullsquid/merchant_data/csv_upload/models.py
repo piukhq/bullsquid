@@ -69,11 +69,10 @@ class IdentifiersFileRecord(BaseModel):
     merchant_name: str
     location_id: str
     visa_mids: str
-    mastercard_mids: str
     amex_mids: str
+    mastercard_mids: str
     visa_secondary_mids: str
     mastercard_secondary_mids: str
-    secondary_mids: str
 
     _ = validator("merchant_name", "location_id", allow_reuse=True)(
         string_must_not_be_blank

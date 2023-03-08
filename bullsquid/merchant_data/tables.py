@@ -2,7 +2,7 @@
 Base merchant data tables.
 """
 
-from piccolo.columns import UUID, ForeignKey, Selectable, Text
+from piccolo.columns import UUID, ForeignKey, Selectable, Text, Timestamptz
 from piccolo.query import Count, Objects, Select
 from piccolo.query.methods.exists import Exists
 from piccolo.table import Table
@@ -17,6 +17,7 @@ class BaseTable(Table):
 
     pk = UUID(primary_key=True)
     status = Text(choices=ResourceStatus, default=ResourceStatus.ACTIVE)
+    created = Timestamptz()
 
     @property
     def display_text(self) -> str:
@@ -27,14 +28,19 @@ class BaseTable(Table):
 
     @classmethod
     def objects(cls, *prefetch: ForeignKey | list[ForeignKey]) -> Objects:
-        return super().objects(*prefetch).where(cls.status != ResourceStatus.DELETED)
+        return (
+            super()
+            .objects(*prefetch)
+            .where(cls.status != ResourceStatus.DELETED)
+            .order_by(cls.created, ascending=False)
+        )
 
     @classmethod
     def all_objects(cls, *prefetch: ForeignKey | list[ForeignKey]) -> Objects:
         """
         Passes through to super().objects() without filtering deleted items.
         """
-        return super().objects(*prefetch)
+        return super().objects(*prefetch).order_by(cls.created, ascending=False)
 
     @classmethod
     def select(
@@ -44,6 +50,7 @@ class BaseTable(Table):
             super()
             .select(*columns, exclude_secrets=exclude_secrets)
             .where(cls.status != ResourceStatus.DELETED)
+            .order_by(cls.created, ascending=False)
         )
 
     @classmethod
@@ -53,7 +60,11 @@ class BaseTable(Table):
         """
         Passes through to super().select() without filtering deleted items.
         """
-        return super().select(*columns, exclude_secrets=exclude_secrets)
+        return (
+            super()
+            .select(*columns, exclude_secrets=exclude_secrets)
+            .order_by(cls.created, ascending=False)
+        )
 
     @classmethod
     def count(cls) -> Count:

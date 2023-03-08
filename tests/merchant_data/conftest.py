@@ -1,5 +1,6 @@
 """Fixtures & factory functions for building merchant data objects."""
 import random
+from datetime import datetime
 from typing import Any
 
 import pytest
@@ -19,6 +20,8 @@ from bullsquid.merchant_data.secondary_mid_location_links.tables import (
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from tests.helpers import Factory
 
+current = datetime.now()
+
 
 @pytest.fixture
 def plan_factory(database: None) -> Factory[Plan]:
@@ -28,6 +31,7 @@ def plan_factory(database: None) -> Factory[Plan]:
             defaults={
                 "status": ResourceStatus.ACTIVE,
                 "icon_url": "https://example.com/icon.png",
+                "created": current,
                 **defaults,  # type: ignore
             },
             persist=persist,
@@ -44,6 +48,7 @@ def merchant_factory(database: None) -> Factory[Merchant]:
             defaults={
                 "status": ResourceStatus.ACTIVE,
                 "icon_url": "https://example.com/icon.png",
+                "created": current,
                 **defaults,  # type: ignore
             },
             persist=persist,
@@ -60,6 +65,7 @@ def location_factory(database: None) -> Factory[Location]:
             defaults={
                 "parent": None,
                 "status": ResourceStatus.ACTIVE,
+                "created": current,
                 **defaults,  # type: ignore
             },
             persist=persist,
@@ -88,6 +94,7 @@ def primary_mid_factory(
                 "payment_scheme": payment_scheme,
                 "location": None,
                 "visa_bin": visa_bin,
+                "created": current,
                 **defaults,  # type: ignore
             },
             persist=persist,
@@ -107,6 +114,7 @@ def secondary_mid_factory(
                 "status": ResourceStatus.ACTIVE,
                 "txm_status": TXMStatus.NOT_ONBOARDED,
                 "payment_scheme": random.choice(default_payment_schemes),
+                "created": current,
                 **defaults,  # type: ignore
             },
             persist=persist,
@@ -123,6 +131,7 @@ def psimi_factory(database: None) -> Factory[PSIMI]:
             defaults={
                 "status": ResourceStatus.ACTIVE,
                 "txm_status": TXMStatus.NOT_ONBOARDED,
+                "created": current,
                 **defaults,  # type: ignore
             },
             persist=persist,

@@ -1,5 +1,6 @@
 """Test merchant data API endpoints that operate on primary MIDs."""
 import random
+from datetime import datetime
 from typing import cast
 from uuid import uuid4
 
@@ -1021,3 +1022,38 @@ async def test_delete_location_link_nonexistent_plan(
     )
 
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
+
+
+async def test_sort_dates_latest_first(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    mid1_date = datetime(2023, 3, 9, 10, 15)
+    mid2_date = datetime(2023, 3, 9, 9, 32)
+    mid3_date = datetime(2021, 5, 12, 14, 42)
+
+    mid1 = await primary_mid_factory(merchant=merchant, created=mid1_date)
+    mid2 = await primary_mid_factory(merchant=merchant, created=mid2_date)
+    mid3 = await primary_mid_factory(merchant=merchant, created=mid3_date)
+
+    resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids")
+
+    expected1 = await PrimaryMID.objects().get(PrimaryMID.pk == mid1.pk)
+    assert expected1 is not None
+
+    expected2 = await PrimaryMID.objects().get(PrimaryMID.pk == mid2.pk)
+    assert expected2 is not None
+
+    expected3 = await PrimaryMID.objects().get(PrimaryMID.pk == mid3.pk)
+    assert expected3 is not None
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json()[0] == await primary_mid_overview_json(expected1)
+    assert resp.json()[1] == await primary_mid_overview_json(expected2)
+    assert resp.json()[2] == await primary_mid_overview_json(expected3)

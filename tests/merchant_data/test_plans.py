@@ -64,12 +64,20 @@ async def plan_overview_json(
 
 async def plan_detail_json(
     plan: Plan,
+    payment_schemes: list[PaymentScheme],
     *,
     locations: int = 0,
-    visa_mids: int = 0,
-    mastercard_mids: int = 0,
-    amex_mids: int = 0,
+    sub_locations: int = 0,
+    mids: dict[str, int] | None = None,
+    secondary_mids: dict[str, int] | None = None,
+    psimis: dict[str, int] | None = None,
 ) -> dict:
+    if mids is None:
+        mids = {}
+    if secondary_mids is None:
+        secondary_mids = {}
+    if psimis is None:
+        psimis = {}
     merchants = await Merchant.objects().where(Merchant.plan == plan)
     return {
         "plan_ref": str(plan.pk),
@@ -91,10 +99,18 @@ async def plan_detail_json(
                 },
                 "merchant_counts": {
                     "locations": locations,
+                    "sub_locations": sub_locations,
+                    "total_locations": locations + sub_locations,
                     "payment_schemes": [
-                        {"scheme_slug": "visa", "count": visa_mids},
-                        {"scheme_slug": "mastercard", "count": mastercard_mids},
-                        {"scheme_slug": "amex", "count": amex_mids},
+                        {
+                            "slug": payment_scheme.slug,
+                            "mids": mids.get(payment_scheme.slug, 0),
+                            "secondary_mids": secondary_mids.get(
+                                payment_scheme.slug, 0
+                            ),
+                            "psimis": psimis.get(payment_scheme.slug, 0),
+                        }
+                        for payment_scheme in payment_schemes
                     ],
                 },
             }
@@ -175,13 +191,14 @@ async def test_list_with_merchants(
 async def test_details(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
+    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     await merchant_factory(plan=plan)
     resp = test_client.get(f"/api/v1/plans/{plan.pk}")
     assert resp.status_code == status.HTTP_200_OK, resp.text
-    assert resp.json() == await plan_detail_json(plan)
+    assert resp.json() == await plan_detail_json(plan, default_payment_schemes)
 
 
 @pytest.mark.usefixtures("database")

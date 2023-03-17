@@ -4,6 +4,7 @@ from pydantic import UUID4, validator
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.models import BaseModel
 from bullsquid.merchant_data.shared.models import (
+    MerchantCountsResponse,
     MerchantMetadataResponse,
     PlanMetadataResponse,
 )
@@ -27,6 +28,7 @@ class MerchantDetailResponse(BaseModel):
     merchant_status: ResourceStatus
     plan_metadata: PlanMetadataResponse
     merchant_metadata: MerchantMetadataResponse
+    merchant_counts: MerchantCountsResponse
 
 
 class MerchantDeletionResponse(BaseModel):

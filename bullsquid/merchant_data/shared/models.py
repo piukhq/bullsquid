@@ -38,16 +38,20 @@ class MerchantMetadataResponse(BaseModel):
 class MerchantPaymentSchemeCountResponse(BaseModel):
     """Counts of MIDs by payment scheme on a merchant."""
 
-    scheme_slug: str
-    count: int
+    slug: str
+    mids: int
+    secondary_mids: int
+    psimis: int
 
-    _ = validator("scheme_slug", allow_reuse=True)(string_must_not_be_blank)
+    _ = validator("slug", allow_reuse=True)(string_must_not_be_blank)
 
 
 class MerchantCountsResponse(BaseModel):
     """Counts of merchants, locations, and MIDs on a merchant."""
 
     locations: int
+    sub_locations: int
+    total_locations: int
     payment_schemes: list[MerchantPaymentSchemeCountResponse]
 
 

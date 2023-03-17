@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from piccolo.query.methods.select import Count
 
 from bullsquid.api.auth import JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
@@ -24,6 +25,8 @@ from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.db import get_plan
 from bullsquid.merchant_data.plans.models import PlanMetadataResponse
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.psimis.tables import PSIMI
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.merchant_data.shared.models import (
     MerchantCountsResponse,
     MerchantOverviewResponse,
@@ -42,6 +45,75 @@ def create_merchant_metadata_response(merchant: Merchant) -> MerchantMetadataRes
     )
 
 
+async def create_merchant_counts_response(
+    merchant: Merchant, payment_schemes: list[PaymentScheme]
+) -> MerchantCountsResponse:
+    """
+    Creates a MerchantCountsResponse for the given merchant and payment schemes.
+    """
+    location_counts = (
+        await Location.all_select(Location.parent, Count())
+        .where(Location.merchant == merchant, Location.status != ResourceStatus.DELETED)
+        .group_by(Location.parent)
+    )
+    locations: int = next(
+        (
+            location_count["count"]
+            for location_count in location_counts
+            if location_count["parent"] is None
+        ),
+        0,
+    )
+    sub_locations: int = sum(
+        location_count["count"]
+        for location_count in location_counts
+        if location_count["parent"] is not None
+    )
+
+    mids = {
+        mid_count["payment_scheme"]: mid_count["count"]
+        for mid_count in await PrimaryMID.all_select(PrimaryMID.payment_scheme, Count())
+        .where(
+            PrimaryMID.merchant == merchant, PrimaryMID.status != ResourceStatus.DELETED
+        )
+        .group_by(PrimaryMID.payment_scheme)
+    }
+
+    secondary_mids = {
+        secondary_mid_count["payment_scheme"]: secondary_mid_count["count"]
+        for secondary_mid_count in await SecondaryMID.all_select(
+            SecondaryMID.payment_scheme, Count()
+        )
+        .where(
+            SecondaryMID.merchant == merchant,
+            SecondaryMID.status != ResourceStatus.DELETED,
+        )
+        .group_by(SecondaryMID.payment_scheme)
+    }
+
+    psimis = {
+        psimi_count["payment_scheme"]: psimi_count["count"]
+        for psimi_count in await PSIMI.all_select(PSIMI.payment_scheme, Count())
+        .where(PSIMI.merchant == merchant, PSIMI.status != ResourceStatus.DELETED)
+        .group_by(PSIMI.payment_scheme)
+    }
+
+    return MerchantCountsResponse(
+        locations=locations,
+        sub_locations=sub_locations,
+        total_locations=locations + sub_locations,
+        payment_schemes=[
+            MerchantPaymentSchemeCountResponse(
+                slug=payment_scheme.slug,
+                mids=mids.get(payment_scheme.slug, 0),
+                secondary_mids=secondary_mids.get(payment_scheme.slug, 0),
+                psimis=psimis.get(payment_scheme.slug, 0),
+            )
+            for payment_scheme in payment_schemes
+        ],
+    )
+
+
 async def create_merchant_overview_response(
     merchant: Merchant, payment_schemes: list[PaymentScheme]
 ) -> MerchantOverviewResponse:
@@ -50,26 +122,15 @@ async def create_merchant_overview_response(
         merchant_ref=merchant.pk,
         merchant_status=merchant.status,
         merchant_metadata=create_merchant_metadata_response(merchant),
-        merchant_counts=MerchantCountsResponse(
-            locations=await Location.count().where(
-                Location.merchant == merchant, Location.status != ResourceStatus.DELETED
-            ),
-            payment_schemes=[
-                MerchantPaymentSchemeCountResponse(
-                    scheme_slug=payment_scheme.slug,
-                    count=await PrimaryMID.count().where(
-                        PrimaryMID.merchant == merchant,
-                        PrimaryMID.payment_scheme == payment_scheme,
-                        PrimaryMID.status != ResourceStatus.DELETED,
-                    ),
-                )
-                for payment_scheme in payment_schemes
-            ],
+        merchant_counts=await create_merchant_counts_response(
+            merchant, payment_schemes
         ),
     )
 
 
-async def create_merchant_detail_response(merchant: Merchant) -> MerchantDetailResponse:
+async def create_merchant_detail_response(
+    merchant: Merchant, payment_schemes: list[PaymentScheme]
+) -> MerchantDetailResponse:
     """Creates a MerchantDetailResponse instance from the given merchant object."""
     return MerchantDetailResponse(
         merchant_ref=merchant.pk,
@@ -81,6 +142,9 @@ async def create_merchant_detail_response(merchant: Merchant) -> MerchantDetailR
             icon_url=merchant.plan.icon_url,
         ),
         merchant_metadata=create_merchant_metadata_response(merchant),
+        merchant_counts=await create_merchant_counts_response(
+            merchant, payment_schemes
+        ),
     )
 
 
@@ -98,10 +162,12 @@ async def list_merchants(
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
     payment_schemes = await list_payment_schemes()
-    return [
+    data = [
         await create_merchant_overview_response(merchant, payment_schemes)
         for merchant in merchants
     ]
+
+    return data
 
 
 @router.post(
@@ -144,7 +210,7 @@ async def get_merchant(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
-    return await create_merchant_detail_response(merchant)
+    return await create_merchant_detail_response(merchant, await list_payment_schemes())
 
 
 @router.put("/{merchant_ref}", response_model=MerchantOverviewResponse)

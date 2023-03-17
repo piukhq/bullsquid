@@ -40,7 +40,7 @@ class BaseTable(Table):
         """
         Passes through to super().objects() without filtering deleted items.
         """
-        return super().objects(*prefetch).order_by(cls.created, ascending=False)
+        return super().objects(*prefetch)
 
     @classmethod
     def select(
@@ -60,11 +60,7 @@ class BaseTable(Table):
         """
         Passes through to super().select() without filtering deleted items.
         """
-        return (
-            super()
-            .select(*columns, exclude_secrets=exclude_secrets)
-            .order_by(cls.created, ascending=False)
-        )
+        return super().select(*columns, exclude_secrets=exclude_secrets)
 
     @classmethod
     def count(cls) -> Count:

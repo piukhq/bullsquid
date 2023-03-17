@@ -36,11 +36,19 @@ def merchant_overview_json(
     payment_schemes: list[PaymentScheme],
     *,
     locations: int = 0,
-    visa_mids: int = 0,
-    mastercard_mids: int = 0,
-    amex_mids: int = 0,
+    sub_locations: int = 0,
+    mids: dict[str, int] | None = None,
+    secondary_mids: dict[str, int] | None = None,
+    psimis: dict[str, int] | None = None,
 ) -> dict:
     """Convert a merchant to its expected list JSON representation."""
+    if mids is None:
+        mids = {}
+    if secondary_mids is None:
+        secondary_mids = {}
+    if psimis is None:
+        psimis = {}
+
     return {
         "merchant_ref": str(merchant.pk),
         "merchant_status": ResourceStatus(merchant.status).value,
@@ -51,14 +59,14 @@ def merchant_overview_json(
         },
         "merchant_counts": {
             "locations": locations,
+            "sub_locations": sub_locations,
+            "total_locations": locations + sub_locations,
             "payment_schemes": [
                 {
-                    "scheme_slug": payment_scheme.slug,
-                    "count": {
-                        "visa": visa_mids,
-                        "mastercard": mastercard_mids,
-                        "amex": amex_mids,
-                    }[payment_scheme.slug],
+                    "slug": payment_scheme.slug,
+                    "mids": mids.get(payment_scheme.slug, 0),
+                    "secondary_mids": secondary_mids.get(payment_scheme.slug, 0),
+                    "psimis": psimis.get(payment_scheme.slug, 0),
                 }
                 for payment_scheme in payment_schemes
             ],
@@ -66,11 +74,42 @@ def merchant_overview_json(
     }
 
 
-def merchant_detail_json(merchant: Merchant, plan: Plan) -> dict:
+def merchant_detail_json(
+    merchant: Merchant,
+    plan: Plan,
+    payment_schemes: list[PaymentScheme],
+    *,
+    locations: int = 0,
+    sub_locations: int = 0,
+    mids: dict[str, int] | None = None,
+    secondary_mids: dict[str, int] | None = None,
+    psimis: dict[str, int] | None = None,
+) -> dict:
     """Convert a merchant to its expected detail JSON representation."""
+    if mids is None:
+        mids = {}
+    if secondary_mids is None:
+        secondary_mids = {}
+    if psimis is None:
+        psimis = {}
+
     return {
         "merchant_ref": str(merchant.pk),
         "merchant_status": ResourceStatus(merchant.status).value,
+        "merchant_counts": {
+            "locations": locations,
+            "sub_locations": sub_locations,
+            "total_locations": locations + sub_locations,
+            "payment_schemes": [
+                {
+                    "slug": payment_scheme.slug,
+                    "mids": mids.get(payment_scheme.slug, 0),
+                    "secondary_mids": secondary_mids.get(payment_scheme.slug, 0),
+                    "psimis": psimis.get(payment_scheme.slug, 0),
+                }
+                for payment_scheme in payment_schemes
+            ],
+        },
         "plan_metadata": {
             "name": plan.name,
             "plan_id": plan.plan_id,
@@ -113,7 +152,7 @@ async def test_list(
             merchant,
             default_payment_schemes,
             locations=3,
-            visa_mids=3,
+            mids={"visa": 3},
         )
         for merchant in merchants
     ]
@@ -128,13 +167,16 @@ async def test_list_nonexistent_plan(test_client: TestClient) -> None:
 async def test_details(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
+    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     resp = test_client.get(f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}")
     assert resp.status_code == status.HTTP_200_OK
-    assert resp.json() == merchant_detail_json(merchant, plan)
+    assert resp.json() == merchant_detail_json(
+        merchant, plan, payment_schemes=default_payment_schemes
+    )
 
 
 async def test_details_with_nonexistent_plan(

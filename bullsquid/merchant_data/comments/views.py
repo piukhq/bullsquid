@@ -19,6 +19,7 @@ from bullsquid.merchant_data.comments.models import (
 )
 from bullsquid.merchant_data.comments.tables import Comment
 from bullsquid.merchant_data.enums import FilterSubjectType
+from bullsquid.settings import settings
 
 router = APIRouter(prefix="/directory_comments")
 
@@ -27,7 +28,7 @@ router = APIRouter(prefix="/directory_comments")
 async def list_comments(
     ref: UUID = Query(),
     subject_type: FilterSubjectType | None = Query(default=None),
-    n: int = Query(default=10),
+    n: int = Query(default=settings.default_page_size),
     p: int = Query(default=1),
     _credentials: dict = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> ListCommentsResponse:

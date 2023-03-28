@@ -18,6 +18,7 @@ from bullsquid.merchant_data.psimis.models import (
     PSIMIResponse,
 )
 from bullsquid.merchant_data.psimis.tables import PSIMI
+from bullsquid.settings import settings
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/psimis")
 
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/psimis")
 async def list_psimis(
     plan_ref: UUID,
     merchant_ref: UUID,
-    n: int = Query(default=10),
+    n: int = Query(default=settings.default_page_size),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[PSIMIResponse]:

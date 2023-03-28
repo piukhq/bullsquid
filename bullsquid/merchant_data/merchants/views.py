@@ -32,6 +32,7 @@ from bullsquid.merchant_data.shared.models import (
     MerchantOverviewResponse,
     MerchantPaymentSchemeCountResponse,
 )
+from bullsquid.settings import settings
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants")
 
@@ -151,7 +152,7 @@ async def create_merchant_detail_response(
 @router.get("", response_model=list[MerchantOverviewResponse])
 async def list_merchants(
     plan_ref: UUID,
-    n: int = Query(default=10),
+    n: int = Query(default=settings.default_page_size),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[MerchantOverviewResponse]:

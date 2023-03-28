@@ -28,6 +28,7 @@ from bullsquid.merchant_data.secondary_mids.models import (
     UpdateSecondaryMIDRequest,
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from bullsquid.settings import settings
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/secondary_mids")
 
@@ -37,7 +38,7 @@ async def list_secondary_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
     exclude_location: UUID | None = Query(default=None),
-    n: int = Query(default=10),
+    n: int = Query(default=settings.default_page_size),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[SecondaryMIDResponse]:
@@ -241,7 +242,7 @@ async def list_location_secondary_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
     secondary_mid_ref: UUID,
-    n: int = Query(default=10),
+    n: int = Query(default=settings.default_page_size),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[AssociatedLocationResponse]:

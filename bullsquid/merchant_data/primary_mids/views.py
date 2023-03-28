@@ -26,6 +26,7 @@ from bullsquid.merchant_data.primary_mids.models import (
     UpdatePrimaryMIDRequest,
 )
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.settings import settings
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/mids")
 
@@ -34,7 +35,7 @@ router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/mids")
 async def list_primary_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
-    n: int = Query(default=10),
+    n: int = Query(default=settings.default_page_size),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[PrimaryMIDOverviewResponse]:

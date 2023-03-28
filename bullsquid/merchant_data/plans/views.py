@@ -28,6 +28,7 @@ from bullsquid.merchant_data.plans.models import (
 )
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.settings import settings
 
 router = APIRouter(prefix="/plans")
 
@@ -88,7 +89,7 @@ async def create_plan_detail_response(plan: Plan) -> PlanDetailResponse:
 
 @router.get("", response_model=list[PlanOverviewResponse])
 async def list_plans(
-    n: int = Query(default=10),
+    n: int = Query(default=settings.default_page_size),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[PlanOverviewResponse]:

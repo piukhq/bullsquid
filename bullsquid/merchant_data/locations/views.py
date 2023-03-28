@@ -31,6 +31,7 @@ from bullsquid.merchant_data.secondary_mid_location_links.db import (
     create_secondary_mid_location_links,
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from bullsquid.settings import settings
 
 router = APIRouter(prefix="/plans/{plan_ref}/merchants/{merchant_ref}/locations")
 
@@ -41,7 +42,7 @@ async def list_locations(  # pylint: disable=too-many-arguments
     merchant_ref: UUID,
     exclude_secondary_mid: UUID | None = Query(default=None),
     include_sub_locations: bool = Query(default=False),
-    n: int = Query(default=10),
+    n: int = Query(default=settings.default_page_size),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[LocationOverviewResponse]:
@@ -285,7 +286,7 @@ async def list_location_primary_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
     location_ref: UUID,
-    n: int = Query(default=10),
+    n: int = Query(default=settings.default_page_size),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[PrimaryMIDLinkResponse]:
@@ -319,7 +320,7 @@ async def list_secondary_mid_location_links(
     plan_ref: UUID,
     merchant_ref: UUID,
     location_ref: UUID,
-    n: int = Query(default=10),
+    n: int = Query(default=settings.default_page_size),
     p: int = Query(default=1),
     _credentials: JWTCredentials = Depends(require_access_level(AccessLevel.READ_ONLY)),
 ) -> list[SecondaryMIDLinkResponse]:

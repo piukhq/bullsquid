@@ -158,5 +158,8 @@ class Settings(BaseSettings):
     # better per-worker performance.
     worker_concurrency: int = 50
 
+    # Number of results for each page
+    default_page_size = 20
+
 
 settings = Settings()

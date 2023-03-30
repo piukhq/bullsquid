@@ -431,7 +431,7 @@ async def test_create_with_duplicate_mid(
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
-    existing_mid = await primary_mid_factory()
+    existing_mid = await primary_mid_factory(payment_scheme=default_payment_schemes[0])
     merchant = await merchant_factory(plan=plan)
     new_mid = await primary_mid_factory(persist=False)
     resp = test_client.post(
@@ -1057,3 +1057,35 @@ async def test_sort_dates_latest_first(
     assert resp.json()[0] == await primary_mid_overview_json(expected1)
     assert resp.json()[1] == await primary_mid_overview_json(expected2)
     assert resp.json()[2] == await primary_mid_overview_json(expected3)
+
+
+async def test_create_with_duplicate_mid_on_different_payment_scheme(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    default_payment_schemes: list[PaymentScheme],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    mastercard_mid = await primary_mid_factory(
+        persist=False, payment_scheme=default_payment_schemes[0]
+    )
+    visa_mid = await primary_mid_factory(
+        payment_scheme=default_payment_schemes[1], mid=mastercard_mid.mid
+    )
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
+        json={
+            "onboard": False,
+            "mid_metadata": {
+                "payment_scheme_slug": default_payment_schemes[0].slug,
+                "mid": visa_mid.mid,
+                "visa_bin": visa_mid.visa_bin,
+                "payment_enrolment_status": visa_mid.payment_enrolment_status,
+            },
+        },
+    )
+
+    assert resp.status_code == status.HTTP_201_CREATED
+    assert visa_mid.mid == mastercard_mid.mid

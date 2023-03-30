@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, status
 
 from bullsquid.api.auth import AccessLevel, JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
-from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.db import NoSuchRecord, fields_are_unique
 from bullsquid.merchant_data.auth import require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
@@ -73,7 +73,7 @@ async def create_psimi(
 ) -> PSIMIResponse:
     """Create an PSIMI for a merchant."""
 
-    if not await field_is_unique(PSIMI, "value", psimi_data.psimi_metadata.value):
+    if not await fields_are_unique(PSIMI, value=psimi_data.psimi_metadata.value):
         raise UniqueError(loc=["body", "psimi_metadata", "value"])
 
     try:

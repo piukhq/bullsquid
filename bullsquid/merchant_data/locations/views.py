@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from bullsquid.api.auth import JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
-from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.db import NoSuchRecord, fields_are_unique
 from bullsquid.merchant_data.auth import AccessLevel, require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.locations import db
@@ -99,7 +99,7 @@ async def create_location(
     ),
 ) -> LocationOverviewResponse:
     """Create a location for the given merchant."""
-    if not await field_is_unique(Location, "location_id", location_data.location_id):
+    if not await fields_are_unique(Location, location_id=location_data.location_id):
         raise UniqueError(loc=["body", "location_id"])
 
     try:

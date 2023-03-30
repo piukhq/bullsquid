@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query, status
 
 from bullsquid.api.auth import AccessLevel, JWTCredentials
 from bullsquid.api.errors import DataError, ResourceNotFoundError, UniqueError
-from bullsquid.db import InvalidData, NoSuchRecord, field_is_unique
+from bullsquid.db import InvalidData, NoSuchRecord, fields_are_unique
 from bullsquid.merchant_data import tasks
 from bullsquid.merchant_data.auth import require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
@@ -81,7 +81,7 @@ async def create_primary_mid(
 ) -> PrimaryMIDOverviewResponse:
     """Create a primary MID for a merchant."""
 
-    if not await field_is_unique(PrimaryMID, "mid", mid_data.mid_metadata.mid):
+    if not await fields_are_unique(PrimaryMID, mid=mid_data.mid_metadata.mid):
         raise UniqueError(loc=["body", "mid_metadata", "mid"])
 
     try:

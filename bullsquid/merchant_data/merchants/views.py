@@ -7,7 +7,7 @@ from piccolo.query.methods.select import Count
 
 from bullsquid.api.auth import JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
-from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.db import NoSuchRecord, fields_are_unique
 from bullsquid.merchant_data import tasks
 from bullsquid.merchant_data.auth import AccessLevel, require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
@@ -189,7 +189,7 @@ async def create_merchant(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
-    if not await field_is_unique(Merchant, "name", merchant_data.name):
+    if not await fields_are_unique(Merchant, name=merchant_data.name):
         raise UniqueError(loc=["body", "name"])
 
     merchant = await db.create_merchant(merchant_data.dict(), plan=plan)
@@ -225,7 +225,9 @@ async def update_merchant(
 ) -> MerchantOverviewResponse:
     """Update a merchant with new details."""
 
-    if not await field_is_unique(Merchant, "name", merchant_data.name, pk=merchant_ref):
+    if not await fields_are_unique(
+        Merchant, name=merchant_data.name, exclude_pk=merchant_ref
+    ):
         raise UniqueError(loc=["body", "name"])
 
     try:

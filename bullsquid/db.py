@@ -24,19 +24,26 @@ class InvalidData(Exception):
         self.table = table
 
 
-async def field_is_unique(
-    model: Type[BaseTable], field: str, value: Any, *, pk: UUID | None = None
+async def fields_are_unique(
+    model: Type[BaseTable],
+    *,
+    exclude_pk: UUID | None = None,
+    **fields: Any,
 ) -> bool:
     """Returns true if the given field on the given table is unique, false otherwise."""
-    if value is None:
+    if any(v is None for v in fields.values()):
         # null values are always unique
         return True
 
-    field = getattr(model, field)
-    if pk:
-        pk_field = getattr(model, "pk")
-        return not await model.all_exists().where(pk_field != pk, field == value)
-    return not await model.all_exists().where(field == value)
+    duplicates_exist = model.all_exists()
+
+    for field, value in fields.items():
+        duplicates_exist = duplicates_exist.where(getattr(model, field) == value)
+
+    if exclude_pk:
+        duplicates_exist = duplicates_exist.where(getattr(model, "pk") != exclude_pk)
+
+    return not await duplicates_exist
 
 
 Paginatable = TypeVar("Paginatable", Select, Objects)

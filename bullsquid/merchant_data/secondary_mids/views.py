@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from bullsquid.api.auth import AccessLevel, JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
-from bullsquid.db import NoSuchRecord, field_is_unique
+from bullsquid.db import NoSuchRecord, fields_are_unique
 from bullsquid.merchant_data.auth import require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.locations.tables import Location
@@ -94,10 +94,9 @@ async def create_secondary_mid(
 ) -> SecondaryMIDResponse:
     """Create a secondary MID for a merchant."""
 
-    if not await field_is_unique(
+    if not await fields_are_unique(
         SecondaryMID,
-        "secondary_mid",
-        secondary_mid_data.secondary_mid_metadata.secondary_mid,
+        secondary_mid=secondary_mid_data.secondary_mid_metadata.secondary_mid,
     ):
         raise UniqueError(loc=["body", "secondary_mid_metadata", "secondary_mid"])
 

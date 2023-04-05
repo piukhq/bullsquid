@@ -1,5 +1,5 @@
 from piccolo.apps.migrations.auto.migration_manager import MigrationManager
-from piccolo.columns.column_types import Text, Timestamptz
+from piccolo.columns.column_types import Timestamptz
 from piccolo.columns.defaults.timestamptz import TimestamptzNow
 from piccolo.columns.indexes import IndexMethod
 

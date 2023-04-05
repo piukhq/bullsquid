@@ -1033,7 +1033,7 @@ async def test_sort_dates_latest_first(
 ) -> None:
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
-    location = await location_factory(merchant=merchant)
+    await location_factory(merchant=merchant)
     mid1_date = datetime(2023, 3, 9, 10, 15)
     mid2_date = datetime(2023, 3, 9, 9, 32)
     mid3_date = datetime(2021, 5, 12, 14, 42)

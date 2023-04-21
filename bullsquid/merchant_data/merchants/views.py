@@ -189,7 +189,7 @@ async def create_merchant(
     except NoSuchRecord as ex:
         raise ResourceNotFoundError.from_no_such_record(ex, loc=["path"]) from ex
 
-    if not await fields_are_unique(Merchant, name=merchant_data.name):
+    if not await fields_are_unique(Merchant, {Merchant.name: merchant_data.name}):
         raise UniqueError(loc=["body", "name"])
 
     merchant = await db.create_merchant(merchant_data.dict(), plan=plan)
@@ -226,7 +226,7 @@ async def update_merchant(
     """Update a merchant with new details."""
 
     if not await fields_are_unique(
-        Merchant, name=merchant_data.name, exclude_pk=merchant_ref
+        Merchant, {Merchant.name: merchant_data.name}, exclude_pk=merchant_ref
     ):
         raise UniqueError(loc=["body", "name"])
 

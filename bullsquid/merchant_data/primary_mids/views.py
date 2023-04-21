@@ -83,8 +83,11 @@ async def create_primary_mid(
 
     if not await fields_are_unique(
         PrimaryMID,
-        mid=mid_data.mid_metadata.mid,
-        payment_scheme=mid_data.mid_metadata.payment_scheme_slug,
+        {
+            PrimaryMID.mid: mid_data.mid_metadata.mid,
+            PrimaryMID.payment_scheme: mid_data.mid_metadata.payment_scheme_slug,
+            PrimaryMID.merchant.plan: plan_ref,
+        },
     ):
         raise UniqueError(loc=["body", "mid_metadata", "mid"])
 

@@ -2,6 +2,7 @@
 from typing import Any, Type, TypeVar
 from uuid import UUID
 
+from piccolo.columns import Column
 from piccolo.query import Objects, Select
 from piccolo.table import Table
 
@@ -26,9 +27,9 @@ class InvalidData(Exception):
 
 async def fields_are_unique(
     model: Type[BaseTable],
+    fields: dict[Column, Any],
     *,
     exclude_pk: UUID | None = None,
-    **fields: Any,
 ) -> bool:
     """Returns true if the given field on the given table is unique, false otherwise."""
     if any(v is None for v in fields.values()):
@@ -37,8 +38,8 @@ async def fields_are_unique(
 
     duplicates_exist = model.all_exists()
 
-    for field, value in fields.items():
-        duplicates_exist = duplicates_exist.where(getattr(model, field) == value)
+    for column, value in fields.items():
+        duplicates_exist = duplicates_exist.where(column == value)
 
     if exclude_pk:
         duplicates_exist = duplicates_exist.where(getattr(model, "pk") != exclude_pk)

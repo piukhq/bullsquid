@@ -115,7 +115,7 @@ async def create_plan(
     if errors := [
         UniqueError(loc=["body", field])
         for field in ("name", "slug", "plan_id")
-        if not await fields_are_unique(Plan, **{field: plan_fields[field]})
+        if not await fields_are_unique(Plan, {getattr(Plan, field): plan_fields[field]})
     ]:
         raise APIMultiError(errors)
 
@@ -150,7 +150,7 @@ async def update_plan(
         UniqueError(loc=["body", field])
         for field in ("name", "slug", "plan_id")
         if not await fields_are_unique(
-            Plan, **{field: plan_fields[field]}, exclude_pk=plan_ref
+            Plan, {getattr(Plan, field): plan_fields[field]}, exclude_pk=plan_ref
         )
     ]:
         raise APIMultiError(errors)

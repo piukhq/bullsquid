@@ -154,7 +154,7 @@ async def reparent_sublocation(
     """Change or remove a sub-location's parent location."""
 
     if location_id := fields.location_id:
-        if not await fields_are_unique(Location, location_id=location_id):
+        if not await fields_are_unique(Location, {Location.location_id: location_id}):
             raise UniqueError(loc=["body", "location_id"])
 
     try:

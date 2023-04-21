@@ -73,7 +73,9 @@ async def create_psimi(
 ) -> PSIMIResponse:
     """Create an PSIMI for a merchant."""
 
-    if not await fields_are_unique(PSIMI, value=psimi_data.psimi_metadata.value):
+    if not await fields_are_unique(
+        PSIMI, {PSIMI.value: psimi_data.psimi_metadata.value}
+    ):
         raise UniqueError(loc=["body", "psimi_metadata", "value"])
 
     try:

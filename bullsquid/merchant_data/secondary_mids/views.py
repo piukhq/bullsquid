@@ -93,10 +93,10 @@ async def create_secondary_mid(
     ),
 ) -> SecondaryMIDResponse:
     """Create a secondary MID for a merchant."""
-
+    value = secondary_mid_data.secondary_mid_metadata.secondary_mid
     if not await fields_are_unique(
         SecondaryMID,
-        secondary_mid=secondary_mid_data.secondary_mid_metadata.secondary_mid,
+        {SecondaryMID.secondary_mid: value},
     ):
         raise UniqueError(loc=["body", "secondary_mid_metadata", "secondary_mid"])
 

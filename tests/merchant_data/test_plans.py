@@ -29,11 +29,17 @@ async def plan_overview_json(
     payment_schemes: list[PaymentScheme],
     merchant_refs: list[str],
     locations: int = 0,
-    visa_mids: int = 0,
-    mastercard_mids: int = 0,
-    amex_mids: int = 0,
+    mids: dict[str,int] | None = None,
+    secondary_mids: dict[str,int] | None = None,
+    psimis: dict[str,int] | None = None,
 ) -> dict:
     """Convert a plan to its expected JSON representation."""
+    if mids is None:
+        mids = {}
+    if secondary_mids is None:
+        secondary_mids = {}
+    if psimis is None:
+        psimis = {}
     return {
         "plan_ref": str(plan.pk),
         "plan_status": ResourceStatus(plan.status).value,
@@ -48,12 +54,11 @@ async def plan_overview_json(
             "locations": locations,
             "payment_schemes": [
                 {
-                    "scheme_slug": payment_scheme.slug,
-                    "count": {
-                        "visa": visa_mids,
-                        "mastercard": mastercard_mids,
-                        "amex": amex_mids,
-                    }[payment_scheme.slug],
+                    "slug": payment_scheme.slug,
+                    "mids": plan.mids,
+                    "secondary_mids": plan.secondary_mids,
+                    "psimis": plan.psimis,
+                    "total_mids": mids + secondary_mids + psimis,
                 }
                 for payment_scheme in payment_schemes
             ],
@@ -109,6 +114,7 @@ async def plan_detail_json(
                                 payment_scheme.slug, 0
                             ),
                             "psimis": psimis.get(payment_scheme.slug, 0),
+                            "total_mids": mids + secondary_mids + psimis,
                         }
                         for payment_scheme in payment_schemes
                     ],
@@ -146,8 +152,8 @@ async def test_list_with_merchants(
     counts = {
         plan.pk: {
             "locations": 0,
-            "visa": 0,
-            "amex": 0,
+            "mids": 0,
+            "secondary_mids": 0,
             "mastercard": 0,
         }
         for plan in plans

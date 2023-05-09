@@ -1,6 +1,7 @@
 """Endpoints that operate on plans."""
 
 from uuid import UUID
+from piccolo.query.methods.select import Count
 
 from fastapi import APIRouter, Depends, Query, status
 
@@ -28,10 +29,89 @@ from bullsquid.merchant_data.plans.models import (
 )
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.psimis.tables import PSIMI
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.settings import settings
 
 router = APIRouter(prefix="/plans")
 
+
+async def create_plan_counts_response(
+    plan: Plan, merchant: Merchant, payment_schemes: list[PaymentScheme]
+) -> PlanCountsResponse:
+    """
+    Creates a PlanCountResponse for the given plan and payment schemes
+    """
+    payment_schemes=await list_payment_schemes()
+    merchant_counts: int = next(
+        (
+            merchant_count["count"]
+            for merchant_count in merchant_counts
+            if merchant.plan == plan
+            )
+            
+        )
+    
+    location_counts = (
+        await Location.all_select(Location.parent, Count())
+        .where(Location.merchant.plan == plan, Location.status != ResourceStatus.DELETED)
+        .group_by(Location.parent)
+    )
+    locations: int = next(
+        (
+            location_count["count"]
+            for location_count in location_counts
+            if location_count["parent"] in None
+        ),
+        0,
+    )
+    sub_locations: int = sum(
+        location_count["count"]
+        for location_count in location_counts
+        if location_count["parent"] is not None
+    )
+    
+    mids = {
+        mid_count["payment_scheme"]: mid_count["count"]
+        for mid_count in await PrimaryMID.all_select(PrimaryMID.payment_scheme, Count())
+        .where(
+            PrimaryMID.merchant.plan == plan, PrimaryMID.status != ResourceStatus != ResourceStatus.DELETED
+        )
+    }
+    
+    secondary_mids = {
+        secondary_mid_count["payment_scheme"]: secondary_mid_count["count"]
+        for secondary_mid_count in await SecondaryMID.all_select(
+            SecondaryMID.payment_scheme, Count()
+        )
+        .where(
+            SecondaryMID.merchant.plan == plan,
+            SecondaryMID.status != ResourceStatus.DELETED
+        ).group_by(SecondaryMID.payment_scheme)
+    }
+    
+    psimis = {
+        psimi_count["payment_scheme"]: psimi_count["count"]
+        for psimi_count in await PSIMI.all_select(PSIMI.payment_scheme, Count())
+        .where(PSIMI.merchant.plan == plan, PSIMI.status != ResourceStatus.DELETED)
+        .group_by(PSIMI.payment_scheme)
+    }
+    
+    return PlanCountsResponse(
+        merchants=merchant,
+        locations=locations + sub_locations,
+        payment_schemes=[
+            PlanPaymentSchemeCountResponse(
+                slug=plan.slug,
+                mids=mids.get(payment_scheme.slug, 0),
+                secondary_mids=secondary_mids.get(payment_scheme.slug, 0),
+                psimis=psimis.get(payment_scheme.slug, 0),
+                total_mids=mids + psimis + secondary_mids,
+            )
+            for payment_scheme in payment_schemes
+        ]
+        
+    )
 
 async def create_plan_overview_response(
     plan: Plan, payment_schemes: list[PaymentScheme]
@@ -51,24 +131,8 @@ async def create_plan_overview_response(
             slug=plan.slug,
             icon_url=plan.icon_url,
         ),
-        plan_counts=PlanCountsResponse(
-            merchants=len(merchant_refs),
-            locations=await Location.count().where(Location.merchant.plan == plan),
-            payment_schemes=[
-                PlanPaymentSchemeCountResponse(
-                    scheme_slug=payment_scheme.slug,
-                    count=await PrimaryMID.count().where(
-                        PrimaryMID.merchant.plan == plan,
-                        PrimaryMID.payment_scheme == payment_scheme,
-                    ),
-                )
-                for payment_scheme in payment_schemes
-            ],
-        ),
-        merchant_refs=merchant_refs,
+        plan_counts=create_plan_counts_response(plan, payment_schemes)
     )
-
-
 async def create_plan_detail_response(plan: Plan) -> PlanDetailResponse:
     """Creates a PlanDetailResponse instance from the given plan object."""
     # TODO: a way to disable pagination rather than this hack?

@@ -109,7 +109,8 @@ async def plan_detail_json(
                             "secondary_mids": secondary_mids.get(
                                 payment_scheme.slug, 0
                             ),
-                            "psimis": psimis.get(payment_scheme.slug, 0),                        }
+                            "psimis": psimis.get(payment_scheme.slug, 0),
+                        }
                         for payment_scheme in payment_schemes
                     ],
                 },
@@ -182,7 +183,6 @@ async def test_list_with_merchants(
             visa_identifiers=counts[plan.pk]["visa"],
             mastercard_identifiers=counts[plan.pk]["mastercard"],
             amex_identifiers=counts[plan.pk]["amex"],
-
         )
         for plan in plans
     ]

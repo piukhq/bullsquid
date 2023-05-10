@@ -34,7 +34,6 @@ class PlanPaymentSchemeCountResponse(BaseModel):
     slug: str
     count: int
 
-
     _ = validator("slug", allow_reuse=True)(string_must_not_be_blank)
 
 

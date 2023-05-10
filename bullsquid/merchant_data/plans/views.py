@@ -1,7 +1,6 @@
 """Endpoints that operate on plans."""
 
 from uuid import UUID
-from piccolo.query.methods.select import Count
 
 from fastapi import APIRouter, Depends, Query, status
 
@@ -35,20 +34,21 @@ from bullsquid.settings import settings
 
 router = APIRouter(prefix="/plans")
 
-async def plan_counts(plan:Plan, payment_scheme: PaymentScheme) -> int:
+
+async def plan_counts(plan: Plan, payment_scheme: PaymentScheme) -> int:
     primary_mids = await PrimaryMID.count().where(
         PrimaryMID.merchant.plan == plan,
         PrimaryMID.payment_scheme == payment_scheme,
     )
     secondary_mids = await SecondaryMID.count().where(
         SecondaryMID.merchant.plan == plan,
-        SecondaryMID.payment_scheme == payment_scheme
+        SecondaryMID.payment_scheme == payment_scheme,
     )
     psimis = await PSIMI.count().where(
-        PSIMI.merchant.plan == plan,
-        PSIMI.payment_scheme == payment_scheme
+        PSIMI.merchant.plan == plan, PSIMI.payment_scheme == payment_scheme
     )
     return primary_mids + secondary_mids + psimis
+
 
 async def create_plan_overview_response(
     plan: Plan, payment_schemes: list[PaymentScheme]
@@ -74,12 +74,15 @@ async def create_plan_overview_response(
             payment_schemes=[
                 PlanPaymentSchemeCountResponse(
                     slug=payment_scheme.slug,
-                    count=await plan_counts(plan, payment_scheme)
+                    count=await plan_counts(plan, payment_scheme),
                 )
                 for payment_scheme in payment_schemes
             ],
         ),
-        merchant_refs=merchant_refs,    )
+        merchant_refs=merchant_refs,
+    )
+
+
 async def create_plan_detail_response(plan: Plan) -> PlanDetailResponse:
     """Creates a PlanDetailResponse instance from the given plan object."""
     # TODO: a way to disable pagination rather than this hack?

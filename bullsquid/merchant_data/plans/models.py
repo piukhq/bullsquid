@@ -32,10 +32,8 @@ class PlanPaymentSchemeCountResponse(BaseModel):
     """Counts of MIDs by payment scheme on a plan."""
 
     slug: str
-    mids: int
-    secondary_mids: int
-    psimis: int
-    total_mids: int
+    count: int
+
 
     _ = validator("slug", allow_reuse=True)(string_must_not_be_blank)
 

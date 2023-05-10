@@ -29,12 +29,9 @@ async def plan_overview_json(
     payment_schemes: list[PaymentScheme],
     merchant_refs: list[str],
     locations: int = 0,
-    visa_mids: int = 0,
-    mastercard_mids: int = 0,
-    primary_mids: int = 0,
-    secondary_mids: int = 0,
-    psimis: int = 0,
-    amex_mids: int = 0,
+    visa_identifiers: int = 0,
+    mastercard_identifiers: int = 0,
+    amex_identifiers: int = 0,
 ) -> dict:
     """Convert a plan to its expected JSON representation."""
 
@@ -54,12 +51,9 @@ async def plan_overview_json(
                 {
                     "slug": payment_scheme.slug,
                     "count": {
-                        "visa": visa_mids,
-                        "mastercard": mastercard_mids,
-                        "amex": amex_mids,
-                        "primary_mids": primary_mids,
-                        "secondary_mids": secondary_mids,
-                        "psimis": psimis,
+                        "visa": visa_identifiers,
+                        "mastercard": mastercard_identifiers,
+                        "amex": amex_identifiers,
                     }[payment_scheme.slug],
                 }
                 for payment_scheme in payment_schemes
@@ -115,9 +109,7 @@ async def plan_detail_json(
                             "secondary_mids": secondary_mids.get(
                                 payment_scheme.slug, 0
                             ),
-                            "psimis": psimis.get(payment_scheme.slug, 0),
-                            "total_mids": mids + secondary_mids + psimis,
-                        }
+                            "psimis": psimis.get(payment_scheme.slug, 0),                        }
                         for payment_scheme in payment_schemes
                     ],
                 },
@@ -157,9 +149,6 @@ async def test_list_with_merchants(
             "visa": 0,
             "mastercard": 0,
             "amex": 0,
-            "primary_mids": 0,
-            "secondary_mids": 0,
-            "psimis": 0,
         }
         for plan in plans
     }
@@ -190,12 +179,10 @@ async def test_list_with_merchants(
             default_payment_schemes,
             merchant_refs[plan.pk],
             locations=counts[plan.pk]["locations"],
-            visa=counts[plan.pk]["visa"],
-            mastercard=counts[plan.pk]["mastercard"],
-            amex=counts[plan.pk]["amex"],
-            primary_mids=counts[plan.pk]["primary_mids"],
-            secondary_mids=counts[plan.pk]["secondary_mids"],
-            psimis=counts[plan.pk]["psimis"],
+            visa_identifiers=counts[plan.pk]["visa"],
+            mastercard_identifiers=counts[plan.pk]["mastercard"],
+            amex_identifiers=counts[plan.pk]["amex"],
+
         )
         for plan in plans
     ]

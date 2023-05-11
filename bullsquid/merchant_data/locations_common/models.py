@@ -52,10 +52,10 @@ class LocationOverviewMetadataBase(BaseModel):
 class LocationPaymentSchemeCountResponse(BaseModel):
     """Counts of MIDs by payment scheme on a location."""
 
-    scheme_slug: str
+    slug: str
     count: int
 
-    _ = validator("scheme_slug", allow_reuse=True)(string_must_not_be_blank)
+    _ = validator("slug", allow_reuse=True)(string_must_not_be_blank)
 
 
 class LocationOverviewBase(BaseModel):

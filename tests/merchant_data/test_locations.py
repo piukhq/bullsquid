@@ -45,7 +45,7 @@ async def location_to_json(
         "date_added": location.date_added.isoformat(),
         "payment_schemes": [
             {
-                "scheme_slug": payment_scheme.slug,
+                "slug": payment_scheme.slug,
                 "count": 0,
             }
             for payment_scheme in payment_schemes
@@ -98,7 +98,7 @@ async def location_to_json_detail(
         "linked_secondary_mids_count": 0,
         "payment_schemes": [
             {
-                "scheme_slug": payment_scheme.slug,
+                "slug": payment_scheme.slug,
                 "count": 0,
             }
             for payment_scheme in payment_schemes

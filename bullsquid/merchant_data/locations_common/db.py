@@ -37,7 +37,7 @@ async def create_sub_location_overview_response(
         location_metadata=create_location_overview_metadata_base(location),
         payment_schemes=[
             LocationPaymentSchemeCountResponse(
-                scheme_slug=payment_scheme.slug,
+                slug=payment_scheme.slug,
                 count=0,
             )
             for payment_scheme in payment_schemes

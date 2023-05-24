@@ -9,6 +9,19 @@ from bullsquid.merchant_data.psimis.models import PSIMIMetadata, PSIMIResponse
 from bullsquid.merchant_data.psimis.tables import PSIMI
 
 
+def make_response(psimi: PSIMI) -> PSIMIResponse:
+    return PSIMIResponse(
+        psimi_ref=psimi.pk,
+        psimi_metadata=PSIMIMetadata(
+            value=psimi.value,
+            payment_scheme_merchant_name=psimi.payment_scheme_merchant_name,
+            payment_scheme_slug=psimi.payment_scheme.slug,
+        ),
+        psimi_status=psimi.status,
+        date_added=psimi.date_added,
+    )
+
+
 async def list_psimis(
     *, plan_ref: UUID, merchant_ref: UUID, n: int, p: int
 ) -> list[PSIMIResponse]:
@@ -23,19 +36,7 @@ async def list_psimis(
         p=p,
     )
 
-    return [
-        PSIMIResponse(
-            psimi_ref=result.pk,
-            psimi_metadata=PSIMIMetadata(
-                value=result.value,
-                payment_scheme_merchant_name=result.payment_scheme_merchant_name,
-                payment_scheme_slug=result.payment_scheme.slug,
-            ),
-            psimi_status=result.status,
-            date_added=result.date_added,
-        )
-        for result in results
-    ]
+    return [make_response(result) for result in results]
 
 
 async def get_psimi(pk: UUID, *, plan_ref: UUID, merchant_ref: UUID) -> PSIMIResponse:
@@ -54,48 +55,56 @@ async def get_psimi(pk: UUID, *, plan_ref: UUID, merchant_ref: UUID) -> PSIMIRes
     if not psimi:
         raise NoSuchRecord(PSIMI)
 
-    return PSIMIResponse(
-        psimi_ref=psimi.pk,
-        psimi_metadata=PSIMIMetadata(
-            value=psimi.value,
-            payment_scheme_merchant_name=psimi.payment_scheme_merchant_name,
-            payment_scheme_slug=psimi.payment_scheme.slug,
-        ),
-        psimi_status=psimi.status,
-        date_added=psimi.date_added,
+    return make_response(psimi)
+
+
+async def get_psimis(
+    pks: set[UUID],
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> list[PSIMIResponse]:
+    """Get a number of PSIMIS by their primary keys."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    psimis = await PSIMI.objects(PSIMI.payment_scheme).where(
+        PSIMI.pk.is_in(list(pks)),
+        PSIMI.merchant == merchant,
     )
+
+    if len(psimis) != len(pks):
+        raise NoSuchRecord(PSIMI)
+
+    return [make_response(psimi) for psimi in psimis]
 
 
 async def filter_onboarded_psimis(
-    psimi_refs: list[UUID], *, plan_ref: UUID, merchant_ref: UUID
-) -> tuple[list[UUID], list[UUID]]:
+    psimi_refs: set[UUID], *, plan_ref: UUID, merchant_ref: UUID
+) -> tuple[set[UUID], set[UUID]]:
     """
     Split the given list of PSIMI refs into onboarded and not onboarded/offboarded.
     """
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    q_psimi_refs = list(psimi_refs)
 
-    # remove duplicates to ensure count mismatches are not caused by duplicate PSIMIs
-    psimi_refs = list(set(psimi_refs))
-
-    count = await PSIMI.count().where(PSIMI.pk.is_in(psimi_refs))
+    count = await PSIMI.count().where(PSIMI.pk.is_in(q_psimi_refs))
     if count != len(psimi_refs):
         raise NoSuchRecord(PSIMI)
 
-    return [
+    return {
         result["pk"]
         for result in await PSIMI.select(PSIMI.pk).where(
-            PSIMI.pk.is_in(psimi_refs),
+            PSIMI.pk.is_in(q_psimi_refs),
             PSIMI.merchant == merchant,
             PSIMI.txm_status == TXMStatus.ONBOARDED,
         )
-    ], [
+    }, {
         result["pk"]
         for result in await PSIMI.select(PSIMI.pk).where(
-            PSIMI.pk.is_in(psimi_refs),
+            PSIMI.pk.is_in(q_psimi_refs),
             PSIMI.merchant == merchant,
             PSIMI.txm_status != TXMStatus.ONBOARDED,
         )
-    ]
+    }
 
 
 async def create_psimi(
@@ -115,20 +124,11 @@ async def create_psimi(
     )
     await psimi.save()
 
-    return PSIMIResponse(
-        psimi_ref=psimi.pk,
-        psimi_metadata=PSIMIMetadata(
-            value=psimi.value,
-            payment_scheme_merchant_name=psimi.payment_scheme_merchant_name,
-            payment_scheme_slug=psimi.payment_scheme.slug,
-        ),
-        psimi_status=psimi.status,
-        date_added=psimi.date_added,
-    )
+    return make_response(psimi)
 
 
 async def update_psimi_status(
-    psimi_refs: list[UUID],
+    psimi_refs: set[UUID],
     *,
     status: ResourceStatus,
     plan_ref: UUID,
@@ -137,5 +137,5 @@ async def update_psimi_status(
     """Updates the status for a list of PSIMIs on a merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
     await PSIMI.update({PSIMI.status: status}).where(
-        PSIMI.pk.is_in(psimi_refs), PSIMI.merchant == merchant
+        PSIMI.pk.is_in(list(psimi_refs)), PSIMI.merchant == merchant
     )

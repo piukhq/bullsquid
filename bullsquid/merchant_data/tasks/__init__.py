@@ -14,6 +14,11 @@ from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.plans.db import plan_has_onboarded_resources
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
+from bullsquid.merchant_data.psimis.tables import PSIMI
+from bullsquid.merchant_data.secondary_mid_location_links.tables import (
+    SecondaryMIDLocationLink,
+)
+from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.merchant_data.service.txm import txm
 from bullsquid.merchant_data.tasks.import_identifiers import (
     ImportIdentifiersFileRecord,
@@ -36,16 +41,52 @@ class OnboardPrimaryMIDs(BaseModel):
     mid_refs: list[UUID]
 
 
+class OnboardSecondaryMIDs(BaseModel):
+    """Onboard Secondary MIDs into Harmonia."""
+
+    secondary_mid_refs: list[UUID]
+
+
+class OnboardPSIMIs(BaseModel):
+    """Onboard PSIMIs into Harmonia."""
+
+    psimi_refs: list[UUID]
+
+
 class OffboardPrimaryMIDs(BaseModel):
     """Offboard MIDs from Harmonia."""
 
     mid_refs: list[UUID]
 
 
+class OffboardSecondaryMIDs(BaseModel):
+    """Offboard Secondary MIDs from Harmonia."""
+
+    secondary_mid_refs: list[UUID]
+
+
+class OffboardPSIMIs(BaseModel):
+    """Offboard PSIMIs from Harmonia."""
+
+    psimi_refs: list[UUID]
+
+
 class OffboardAndDeletePrimaryMIDs(BaseModel):
     """Offboard MIDs from Harmonia, then mark them as deleted."""
 
     mid_refs: list[UUID]
+
+
+class OffboardAndDeleteSecondaryMIDs(BaseModel):
+    """Offboard Secondary MIDs from Harmonia, then mark them as deleted."""
+
+    secondary_mid_refs: list[UUID]
+
+
+class OffboardAndDeletePSIMIs(BaseModel):
+    """Offboard PSIMIs from Harmonia, then mark them as deleted."""
+
+    psimi_refs: list[UUID]
 
 
 class OffboardAndDeleteMerchant(BaseModel):
@@ -63,8 +104,14 @@ class OffboardAndDeletePlan(BaseModel):
 queue = Queue(
     [
         OnboardPrimaryMIDs,
+        OnboardSecondaryMIDs,
+        OnboardPSIMIs,
         OffboardPrimaryMIDs,
+        OffboardSecondaryMIDs,
+        OffboardPSIMIs,
         OffboardAndDeletePrimaryMIDs,
+        OffboardAndDeleteSecondaryMIDs,
+        OffboardAndDeletePSIMIs,
         OffboardAndDeleteMerchant,
         OffboardAndDeletePlan,
         ImportLocationFileRecord,
@@ -83,7 +130,7 @@ async def delete_fully_offboarded_plan(plan_ref: UUID) -> None:
         )
 
 
-async def delete_fully_offboarded_merchants(merchant_refs: list[UUID]) -> None:
+async def delete_fully_offboarded_merchants(merchant_refs: set[UUID]) -> None:
     """Delete the given merchants if they are fully offboarded."""
     for merchant_ref in merchant_refs:
         if not await merchant_has_onboarded_resources(merchant_ref):
@@ -104,19 +151,44 @@ async def delete_fully_offboarded_merchants(merchant_refs: list[UUID]) -> None:
 async def _run_job(message: BaseModel) -> None:
     match message:
         case OnboardPrimaryMIDs():
-            await txm.onboard_mids(message.mid_refs)
+            await txm.onboard_mids(set(message.mid_refs))
             await PrimaryMID.update({PrimaryMID.txm_status: TXMStatus.ONBOARDED}).where(
                 PrimaryMID.pk.is_in(message.mid_refs)
             )
 
+        case OnboardSecondaryMIDs():
+            await txm.onboard_secondary_mids(set(message.secondary_mid_refs))
+            await SecondaryMID.update(
+                {SecondaryMID.txm_status: TXMStatus.ONBOARDED}
+            ).where(SecondaryMID.pk.is_in(message.secondary_mid_refs))
+
+        case OnboardPSIMIs():
+            await txm.onboard_psimis(set(message.psimi_refs))
+            await PSIMI.update({PSIMI.txm_status: TXMStatus.ONBOARDED}).where(
+                PSIMI.pk.is_in(message.psimi_refs)
+            )
+
         case OffboardPrimaryMIDs():
-            await txm.offboard_mids(message.mid_refs)
+            await txm.offboard_mids(set(message.mid_refs))
             await PrimaryMID.update(
                 {PrimaryMID.txm_status: TXMStatus.OFFBOARDED}
             ).where(PrimaryMID.pk.is_in(message.mid_refs))
 
+        case OffboardSecondaryMIDs():
+            await txm.offboard_mids(set(message.secondary_mid_refs))
+            await SecondaryMID.update(
+                {SecondaryMID.txm_status: TXMStatus.OFFBOARDED}
+            ).where(SecondaryMID.pk.is_in(message.secondary_mid_refs))
+
+        case OffboardPSIMIs():
+            await txm.offboard_psimis(set(message.psimi_refs))
+            await PSIMI.update({PSIMI.txm_status: TXMStatus.OFFBOARDED}).where(
+                PSIMI.pk.is_in(message.psimi_refs)
+            )
+
         case OffboardAndDeletePrimaryMIDs():
-            await txm.offboard_mids(message.mid_refs)
+            await txm.offboard_mids(set(message.mid_refs))
+
             await PrimaryMID.update(
                 {
                     PrimaryMID.txm_status: TXMStatus.OFFBOARDED,
@@ -126,12 +198,54 @@ async def _run_job(message: BaseModel) -> None:
             ).where(PrimaryMID.pk.is_in(message.mid_refs))
 
             await delete_fully_offboarded_merchants(
-                await PrimaryMID.all_select(PrimaryMID.merchant)
-                .where(PrimaryMID.pk.is_in(message.mid_refs))
-                .output(as_list=True)
+                set(
+                    await PrimaryMID.all_select(PrimaryMID.merchant)
+                    .where(PrimaryMID.pk.is_in(message.mid_refs))
+                    .output(as_list=True)
+                )
             )
 
+        case OffboardAndDeleteSecondaryMIDs():
+            await txm.offboard_secondary_mids(set(message.secondary_mid_refs))
+            await SecondaryMID.update(
+                {
+                    SecondaryMID.txm_status: TXMStatus.OFFBOARDED,
+                    SecondaryMID.status: ResourceStatus.DELETED,
+                }
+            ).where(SecondaryMID.pk.is_in(message.secondary_mid_refs))
+            await SecondaryMIDLocationLink.delete().where(
+                SecondaryMIDLocationLink.secondary_mid.is_in(message.secondary_mid_refs)
+            )
+
+            await delete_fully_offboarded_merchants(
+                set(
+                    await SecondaryMID.all_select(SecondaryMID.merchant)
+                    .where(SecondaryMID.pk.is_in(message.secondary_mid_refs))
+                    .output(as_list=True)
+                )
+            )
+
+        case OffboardAndDeletePSIMIs():
+            await txm.offboard_psimis(set(message.psimi_refs))
+
+            await PSIMI.update(
+                {
+                    PSIMI.txm_status: TXMStatus.OFFBOARDED,
+                    PSIMI.status: ResourceStatus.DELETED,
+                }
+            ).where(PSIMI.pk.is_in(message.psimi_refs))
+
+            await delete_fully_offboarded_merchants(
+                set(
+                    await PSIMI.all_select(PSIMI.merchant)
+                    .where(PSIMI.pk.is_in(message.psimi_refs))
+                    .output(as_list=True)
+                )
+            )
         case OffboardAndDeleteMerchant():
+            # TODO: split these into separate functions
+
+            # primary mids
             onboarded_primary_mids = (
                 await PrimaryMID.select(PrimaryMID.pk)
                 .where(
@@ -140,15 +254,44 @@ async def _run_job(message: BaseModel) -> None:
                 )
                 .output(as_list=True)
             )
-
             await PrimaryMID.update(
                 {PrimaryMID.status: ResourceStatus.PENDING_DELETION}
             ).where(PrimaryMID.pk.is_in(onboarded_primary_mids))
-
             await queue.push(
                 OffboardAndDeletePrimaryMIDs(mid_refs=onboarded_primary_mids)
             )
-            # TODO: also offboard & delete secondary MIDs and PSIMIs
+
+            # secondary mids
+            onboarded_secondary_mids = (
+                await SecondaryMID.select(SecondaryMID.pk)
+                .where(
+                    SecondaryMID.merchant == message.merchant_ref,
+                    SecondaryMID.txm_status == TXMStatus.ONBOARDED,
+                )
+                .output(as_list=True)
+            )
+            await SecondaryMID.update(
+                {SecondaryMID.status: ResourceStatus.PENDING_DELETION}
+            ).where(SecondaryMID.pk.is_in(onboarded_secondary_mids))
+            await queue.push(
+                OffboardAndDeleteSecondaryMIDs(
+                    secondary_mid_refs=onboarded_secondary_mids
+                )
+            )
+
+            # psimis
+            onboarded_psimis = (
+                await PSIMI.select(PSIMI.pk)
+                .where(
+                    PSIMI.merchant == message.merchant_ref,
+                    PSIMI.txm_status == TXMStatus.ONBOARDED,
+                )
+                .output(as_list=True)
+            )
+            await PSIMI.update({PSIMI.status: ResourceStatus.PENDING_DELETION}).where(
+                PSIMI.pk.is_in(onboarded_psimis)
+            )
+            await queue.push(OffboardAndDeletePSIMIs(psimi_refs=onboarded_psimis))
 
         case OffboardAndDeletePlan():
             merchants = await Merchant.objects().where(

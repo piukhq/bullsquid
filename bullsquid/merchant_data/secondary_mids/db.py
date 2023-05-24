@@ -18,6 +18,21 @@ from bullsquid.merchant_data.secondary_mids.models import (
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 
+def make_response(secondary_mid: SecondaryMID) -> SecondaryMIDResponse:
+    return SecondaryMIDResponse(
+        secondary_mid_ref=secondary_mid.pk,
+        secondary_mid_metadata=SecondaryMIDMetadata(
+            payment_scheme_slug=secondary_mid.payment_scheme.slug,
+            secondary_mid=secondary_mid.secondary_mid,
+            payment_scheme_store_name=secondary_mid.payment_scheme_store_name,
+            payment_enrolment_status=secondary_mid.payment_enrolment_status,
+        ),
+        secondary_mid_status=secondary_mid.status,
+        date_added=secondary_mid.date_added,
+        txm_status=secondary_mid.txm_status,
+    )
+
+
 async def list_secondary_mids(
     *, plan_ref: UUID, merchant_ref: UUID, exclude_location: UUID | None, n: int, p: int
 ) -> list[SecondaryMIDResponse]:
@@ -50,21 +65,7 @@ async def list_secondary_mids(
         p=p,
     )
 
-    return [
-        SecondaryMIDResponse(
-            secondary_mid_ref=result.pk,
-            secondary_mid_metadata=SecondaryMIDMetadata(
-                payment_scheme_slug=result.payment_scheme.slug,
-                secondary_mid=result.secondary_mid,
-                payment_scheme_store_name=result.payment_scheme_store_name,
-                payment_enrolment_status=result.payment_enrolment_status,
-            ),
-            secondary_mid_status=result.status,
-            date_added=result.date_added,
-            txm_status=result.txm_status,
-        )
-        for result in results
-    ]
+    return [make_response(result) for result in results]
 
 
 async def get_secondary_mid_instance(
@@ -108,54 +109,61 @@ async def get_secondary_mid(
     if not secondary_mid:
         raise NoSuchRecord(SecondaryMID)
 
-    return SecondaryMIDResponse(
-        secondary_mid_ref=secondary_mid.pk,
-        secondary_mid_metadata=SecondaryMIDMetadata(
-            payment_scheme_slug=secondary_mid.payment_scheme.slug,
-            secondary_mid=secondary_mid.secondary_mid,
-            payment_scheme_store_name=secondary_mid.payment_scheme_store_name,
-            payment_enrolment_status=secondary_mid.payment_enrolment_status,
-        ),
-        secondary_mid_status=secondary_mid.status,
-        date_added=secondary_mid.date_added,
-        txm_status=secondary_mid.txm_status,
-    )
+    return make_response(secondary_mid)
 
 
-async def filter_onboarded_secondary_mids(
-    secondary_mid_refs: list[UUID],
+async def get_secondary_mids(
+    pks: set[UUID],
     *,
     plan_ref: UUID,
     merchant_ref: UUID,
-) -> tuple[list[UUID], list[UUID]]:
+) -> list[SecondaryMIDResponse]:
+    """Get a number of primary MIDs by their primary keys."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    secondary_mids = await SecondaryMID.objects(SecondaryMID.payment_scheme).where(
+        SecondaryMID.pk.is_in(list(pks)),
+        SecondaryMID.merchant == merchant,
+    )
+
+    if len(secondary_mids) != len(pks):
+        raise NoSuchRecord(SecondaryMID)
+
+    return [make_response(mid) for mid in secondary_mids]
+
+
+async def filter_onboarded_secondary_mids(
+    secondary_mid_refs: set[UUID],
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> tuple[set[UUID], set[UUID]]:
     """
     Split the given list of secondary MID refs into onboarded and not.
     """
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    q_secondary_mid_refs = list(secondary_mid_refs)
 
-    # remove duplicates to ensure count mismatches are not caused by duplicate
-    # secondary MIDs
-    secondary_mid_refs = list(set(secondary_mid_refs))
-
-    count = await SecondaryMID.count().where(SecondaryMID.pk.is_in(secondary_mid_refs))
+    count = await SecondaryMID.count().where(
+        SecondaryMID.pk.is_in(q_secondary_mid_refs)
+    )
     if count != len(secondary_mid_refs):
         raise NoSuchRecord(SecondaryMID)
 
-    return [
+    return {
         result["pk"]
         for result in await SecondaryMID.select(SecondaryMID.pk).where(
-            SecondaryMID.pk.is_in(secondary_mid_refs),
+            SecondaryMID.pk.is_in(q_secondary_mid_refs),
             SecondaryMID.merchant == merchant,
             SecondaryMID.txm_status == TXMStatus.ONBOARDED,
         )
-    ], [
+    }, {
         result["pk"]
         for result in await SecondaryMID.select(SecondaryMID.pk).where(
-            SecondaryMID.pk.is_in(secondary_mid_refs),
+            SecondaryMID.pk.is_in(q_secondary_mid_refs),
             SecondaryMID.merchant == merchant,
             SecondaryMID.txm_status != TXMStatus.ONBOARDED,
         )
-    ]
+    }
 
 
 async def create_secondary_mid(
@@ -176,22 +184,11 @@ async def create_secondary_mid(
     )
     await secondary_mid.save()
 
-    return SecondaryMIDResponse(
-        secondary_mid_ref=secondary_mid.pk,
-        secondary_mid_metadata=SecondaryMIDMetadata(
-            payment_scheme_slug=secondary_mid.payment_scheme.slug,
-            secondary_mid=secondary_mid.secondary_mid,
-            payment_scheme_store_name=secondary_mid.payment_scheme_store_name,
-            payment_enrolment_status=secondary_mid.payment_enrolment_status,
-        ),
-        secondary_mid_status=secondary_mid.status,
-        date_added=secondary_mid.date_added,
-        txm_status=secondary_mid.txm_status,
-    )
+    return make_response(secondary_mid)
 
 
 async def update_secondary_mids_status(
-    secondary_mid_refs: list[UUID],
+    secondary_mid_refs: set[UUID],
     *,
     status: ResourceStatus,
     plan_ref: UUID,
@@ -199,13 +196,14 @@ async def update_secondary_mids_status(
 ) -> None:
     """Updates the status for a list of secondary MIDs on a merchant."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    q_secondary_mid_refs = list(secondary_mid_refs)
     await SecondaryMID.update({SecondaryMID.status: status}).where(
-        SecondaryMID.pk.is_in(secondary_mid_refs), SecondaryMID.merchant == merchant
+        SecondaryMID.pk.is_in(q_secondary_mid_refs), SecondaryMID.merchant == merchant
     )
 
     if status == ResourceStatus.DELETED:
         await SecondaryMIDLocationLink.delete().where(
-            SecondaryMIDLocationLink.secondary_mid.is_in(secondary_mid_refs)
+            SecondaryMIDLocationLink.secondary_mid.is_in(q_secondary_mid_refs)
         )
 
 
@@ -256,15 +254,4 @@ async def update_secondary_mid(
         setattr(secondary_mid, name, value)
     await secondary_mid.save()
 
-    return SecondaryMIDResponse(
-        secondary_mid_ref=secondary_mid.pk,
-        secondary_mid_metadata=SecondaryMIDMetadata(
-            payment_scheme_slug=secondary_mid.payment_scheme.slug,
-            secondary_mid=secondary_mid.secondary_mid,
-            payment_enrolment_status=secondary_mid.payment_enrolment_status,
-            payment_scheme_store_name=secondary_mid.payment_scheme_store_name,
-        ),
-        secondary_mid_status=secondary_mid.status,
-        date_added=secondary_mid.date_added,
-        txm_status=secondary_mid.txm_status,
-    )
+    return make_response(secondary_mid)

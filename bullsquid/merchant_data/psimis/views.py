@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query, status
 from bullsquid.api.auth import AccessLevel, JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, fields_are_unique
+from bullsquid.merchant_data import tasks
 from bullsquid.merchant_data.auth import require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
@@ -13,7 +14,7 @@ from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.psimis import db
 from bullsquid.merchant_data.psimis.models import (
     CreatePSIMIRequest,
-    PSIMIDeletionRequest,
+    PSIMIRefsRequest,
     PSIMIDeletionResponse,
     PSIMIResponse,
 )
@@ -89,13 +90,71 @@ async def create_psimi(
         raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
 
     if psimi_data.onboard:
-        # TODO: implement once harmonia has support for PSIMI onboarding.
-        # await tasks.queue.push(
-        #     tasks.OnboardPSIMIs(psimi_refs=[psimi["pk"]])
-        # )
-        ...
+        await tasks.queue.push(tasks.OnboardPSIMIs(psimi_refs=[psimi.psimi_ref]))
 
     return psimi
+
+
+@router.post("/onboarding", response_model=list[PSIMIResponse])
+async def onboard_psimis(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    data: PSIMIRefsRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> list[PSIMIResponse]:
+    """Onboard a number of PSIMIs into Harmonia."""
+    if not data.psimi_refs:
+        return []
+
+    try:
+        psimis = await db.get_psimis(
+            set(data.psimi_refs),
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=["body"], plural=True
+        ) from ex
+
+    await tasks.queue.push(
+        tasks.OnboardPSIMIs(psimi_refs=[psimi.psimi_ref for psimi in psimis])
+    )
+
+    return psimis
+
+
+@router.post("/offboarding", response_model=list[PSIMIResponse])
+async def offboard_psimis(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    data: PSIMIRefsRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> list[PSIMIResponse]:
+    """Offboard a number of PSIMIs from Harmonia."""
+    if not data.psimi_refs:
+        return []
+
+    try:
+        psimis = await db.get_psimis(
+            set(data.psimi_refs),
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=["body"], plural=True
+        ) from ex
+
+    await tasks.queue.push(
+        tasks.OffboardPSIMIs(psimi_refs=[psimi.psimi_ref for psimi in psimis])
+    )
+
+    return psimis
 
 
 @router.post(
@@ -106,7 +165,7 @@ async def create_psimi(
 async def delete_psimis(
     plan_ref: UUID,
     merchant_ref: UUID,
-    deletion: PSIMIDeletionRequest,
+    deletion: PSIMIRefsRequest,
     _credentials: JWTCredentials = Depends(
         require_access_level(AccessLevel.READ_WRITE_DELETE)
     ),
@@ -117,7 +176,7 @@ async def delete_psimis(
 
     try:
         onboarded, not_onboarded = await db.filter_onboarded_psimis(
-            deletion.psimi_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+            set(deletion.psimi_refs), plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
         plural = ex.table == PSIMI
@@ -131,8 +190,8 @@ async def delete_psimis(
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
         )
-        # TODO: implement once Harmonia has PSIMI support.
-        # await tasks.queue.push(tasks.OffboardAndDeletePSIMIs(psimi_refs=onboarded))
+
+        await tasks.queue.push(tasks.OffboardAndDeletePSIMIs(psimi_refs=onboarded))
 
     if not_onboarded:
         await db.update_psimi_status(

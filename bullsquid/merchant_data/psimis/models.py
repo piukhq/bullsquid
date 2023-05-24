@@ -40,7 +40,7 @@ class PSIMIResponse(BaseModel):
     date_added: datetime
 
 
-class PSIMIDeletionRequest(BaseModel):
+class PSIMIRefsRequest(BaseModel):
     """Request model for deletion of PSIMIs."""
 
     psimi_refs: list[UUID4]

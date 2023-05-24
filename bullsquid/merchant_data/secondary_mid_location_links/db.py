@@ -18,7 +18,7 @@ from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 async def create_location_primary_mid_links(
     *,
     location_ref: UUID,
-    primary_mid_refs: list[UUID],
+    primary_mid_refs: set[UUID],
     plan_ref: UUID,
     merchant_ref: UUID,
 ) -> list[PrimaryMID]:
@@ -29,9 +29,8 @@ async def create_location_primary_mid_links(
         location_ref, plan_ref=plan_ref, merchant_ref=merchant_ref
     )
 
-    primary_mid_refs = list(set(primary_mid_refs))
     where = (
-        PrimaryMID.pk.is_in(primary_mid_refs),
+        PrimaryMID.pk.is_in(list(primary_mid_refs)),
         PrimaryMID.merchant == merchant_ref,
     )
     primary_mids = await PrimaryMID.objects().where(*where)

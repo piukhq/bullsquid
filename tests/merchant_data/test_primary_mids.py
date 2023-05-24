@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
+import pytest
 from qbert.tables import Job
 
 from bullsquid.merchant_data.enums import (
@@ -17,10 +18,13 @@ from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
+from bullsquid.merchant_data.primary_mids.db import detail_response, overview_response
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.tasks import (
     OffboardAndDeletePrimaryMIDs,
+    OffboardPrimaryMIDs,
     OnboardPrimaryMIDs,
+    run_worker,
 )
 from tests.helpers import (
     Factory,
@@ -679,6 +683,140 @@ async def test_update_with_nonexistent_plan(
     assert_is_not_found_error(resp, loc=["path", "plan_ref"])
 
 
+async def test_onboard(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    primary_mid = await primary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
+    )
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/onboarding",
+        json={"mid_refs": [str(primary_mid.pk)]},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert resp.json() == [await primary_mid_overview_json(expected)]
+
+    assert await Job.exists().where(
+        Job.message_type == OnboardPrimaryMIDs.__name__,
+        Job.message == OnboardPrimaryMIDs(mid_refs=[primary_mid.pk]).dict(),
+    )
+
+    await run_worker(burst=True)
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert expected.txm_status == TXMStatus.ONBOARDED
+
+
+async def test_onboard_no_mids(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/onboarding",
+        json={"mid_refs": []},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+    assert resp.json() == []
+    print(await Job.select())
+    assert not await Job.exists().where(Job.message_type == OnboardPrimaryMIDs.__name__)
+
+
+async def test_onboard_nonexistent_mids(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/onboarding",
+        json={"mid_refs": [str(uuid4())]},
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "mid_refs"])
+
+
+async def test_offboard(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    primary_mid = await primary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.ONBOARDED
+    )
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/offboarding",
+        json={"mid_refs": [str(primary_mid.pk)]},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert resp.json() == [await primary_mid_overview_json(expected)]
+
+    assert await Job.exists().where(
+        Job.message_type == OffboardPrimaryMIDs.__name__,
+        Job.message == OffboardPrimaryMIDs(mid_refs=[primary_mid.pk]).dict(),
+    )
+
+    await run_worker(burst=True)
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == primary_mid.pk)
+    assert expected is not None
+    assert expected.txm_status == TXMStatus.OFFBOARDED
+
+
+async def test_offboard_no_mids(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/offboarding",
+        json={"mid_refs": []},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+    assert resp.json() == []
+    print(await Job.select())
+    assert not await Job.exists().where(
+        Job.message_type == OffboardPrimaryMIDs.__name__
+    )
+
+
+async def test_offboard_nonexistent_mids(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids/offboarding",
+        json={"mid_refs": [str(uuid4())]},
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "mid_refs"])
+
+
 async def test_delete_not_onboarded(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
@@ -1118,3 +1256,52 @@ async def test_create_with_duplicate_mid_on_different_plan(
     )
 
     assert resp.status_code == status.HTTP_201_CREATED
+
+
+async def test_overview_response_without_payment_scheme(
+    primary_mid_factory: Factory[PrimaryMID],
+) -> None:
+    mid = await primary_mid_factory()
+
+    # reload from db without payment scheme
+    db_mid = await PrimaryMID.objects(PrimaryMID.location).get(PrimaryMID.pk == mid.pk)
+    assert db_mid is not None
+
+    with pytest.raises(ValueError) as ex:
+        overview_response(db_mid)
+
+    assert "payment_scheme" in str(ex.value)
+
+
+async def test_detail_response_without_payment_scheme(
+    primary_mid_factory: Factory[PrimaryMID],
+) -> None:
+    mid = await primary_mid_factory()
+
+    # reload from db without payment scheme
+    db_mid = await PrimaryMID.objects(PrimaryMID.location).get(PrimaryMID.pk == mid.pk)
+    assert db_mid is not None
+
+    with pytest.raises(ValueError) as ex:
+        detail_response(db_mid)
+
+    assert "payment_scheme" in str(ex.value)
+
+
+async def test_detail_response_without_location(
+    location_factory: Factory[Location],
+    primary_mid_factory: Factory[PrimaryMID],
+) -> None:
+    location = await location_factory()
+    mid = await primary_mid_factory(location=location)
+
+    # reload from db without location
+    db_mid = await PrimaryMID.objects(PrimaryMID.payment_scheme).get(
+        PrimaryMID.pk == mid.pk
+    )
+    assert db_mid is not None
+
+    with pytest.raises(ValueError) as ex:
+        detail_response(db_mid)
+
+    assert "location" in str(ex.value)

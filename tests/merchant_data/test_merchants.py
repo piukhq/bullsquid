@@ -1,6 +1,4 @@
 """Test merchant data API endpoints that operate on merchants."""
-
-
 import itertools
 from uuid import uuid4
 
@@ -21,7 +19,7 @@ from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
-from bullsquid.merchant_data.tasks import OffboardAndDeleteMerchant
+from bullsquid.merchant_data.tasks import OffboardAndDeleteMerchant, run_worker
 from tests.helpers import (
     Factory,
     assert_is_missing_field_error,
@@ -515,6 +513,10 @@ async def test_delete_with_onboarded_resources(
     )
     assert expected is not None
     assert expected["status"] == ResourceStatus.PENDING_DELETION
+
+    # 4 tasks: delete primary mid, delete secondary mid, delete psimi, delete merchant
+    for _ in range(4):
+        await run_worker(burst=True)
 
 
 async def test_delete_noexistent_merchant(

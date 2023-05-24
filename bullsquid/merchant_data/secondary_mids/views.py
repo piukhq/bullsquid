@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from bullsquid.api.auth import AccessLevel, JWTCredentials
 from bullsquid.api.errors import ResourceNotFoundError, UniqueError
 from bullsquid.db import NoSuchRecord, fields_are_unique
+from bullsquid.merchant_data import tasks
 from bullsquid.merchant_data.auth import require_access_level
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.locations.tables import Location
@@ -22,7 +23,7 @@ from bullsquid.merchant_data.secondary_mids.models import (
     CreateSecondaryMIDRequest,
     LocationLinkRequest,
     LocationLinkResponse,
-    SecondaryMIDDeletionRequest,
+    SecondaryMIDRefsRequest,
     SecondaryMIDDeletionResponse,
     SecondaryMIDResponse,
     UpdateSecondaryMIDRequest,
@@ -115,13 +116,83 @@ async def create_secondary_mid(
         raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
 
     if secondary_mid_data.onboard:
-        # TODO: implement once harmonia has support for secondary MID onboarding.
-        # await tasks.queue.push(
-        #     tasks.OnboardSecondaryMIDs(secondary_mid_refs=[secondary_mid["pk"]])
-        # )
-        ...
+        await tasks.queue.push(
+            tasks.OnboardSecondaryMIDs(
+                secondary_mid_refs=[secondary_mid.secondary_mid_ref]
+            )
+        )
 
     return secondary_mid
+
+
+@router.post("/onboarding", response_model=list[SecondaryMIDResponse])
+async def onboard_secondary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    data: SecondaryMIDRefsRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> list[SecondaryMIDResponse]:
+    """Onboard a number of secondary MIDs into Harmonia."""
+    if not data.secondary_mid_refs:
+        return []
+
+    try:
+        secondary_mids = await db.get_secondary_mids(
+            set(data.secondary_mid_refs),
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=["body"], plural=True
+        ) from ex
+
+    await tasks.queue.push(
+        tasks.OnboardSecondaryMIDs(
+            secondary_mid_refs=[
+                secondary_mid.secondary_mid_ref for secondary_mid in secondary_mids
+            ]
+        )
+    )
+
+    return secondary_mids
+
+
+@router.post("/offboarding", response_model=list[SecondaryMIDResponse])
+async def offboard_secondary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    data: SecondaryMIDRefsRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> list[SecondaryMIDResponse]:
+    """Offboard a number of secondary MIDs from Harmonia."""
+    if not data.secondary_mid_refs:
+        return []
+
+    try:
+        secondary_mids = await db.get_secondary_mids(
+            set(data.secondary_mid_refs),
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=["body"], plural=True
+        ) from ex
+
+    await tasks.queue.push(
+        tasks.OffboardSecondaryMIDs(
+            secondary_mid_refs=[
+                secondary_mid.secondary_mid_ref for secondary_mid in secondary_mids
+            ]
+        )
+    )
+
+    return secondary_mids
 
 
 @router.post(
@@ -132,7 +203,7 @@ async def create_secondary_mid(
 async def delete_secondary_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
-    deletion: SecondaryMIDDeletionRequest,
+    deletion: SecondaryMIDRefsRequest,
     _credentials: JWTCredentials = Depends(
         require_access_level(AccessLevel.READ_WRITE_DELETE)
     ),
@@ -143,7 +214,9 @@ async def delete_secondary_mids(
 
     try:
         onboarded, not_onboarded = await db.filter_onboarded_secondary_mids(
-            deletion.secondary_mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+            set(deletion.secondary_mid_refs),
+            plan_ref=plan_ref,
+            merchant_ref=merchant_ref,
         )
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == SecondaryMID else ["path"]
@@ -159,10 +232,10 @@ async def delete_secondary_mids(
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
         )
-        # TODO: implement once Harmonia has secondary MID support.
-        # await tasks.queue.push(
-        #     tasks.OffboardAndDeleteSecondaryMIDs(secondary_mid_refs=onboarded)
-        # )
+
+        await tasks.queue.push(
+            tasks.OffboardAndDeleteSecondaryMIDs(secondary_mid_refs=onboarded)
+        )
 
     if not_onboarded:
         await db.update_secondary_mids_status(

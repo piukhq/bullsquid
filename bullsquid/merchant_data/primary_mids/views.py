@@ -19,7 +19,7 @@ from bullsquid.merchant_data.primary_mids.models import (
     CreatePrimaryMIDRequest,
     LocationLinkRequest,
     LocationLinkResponse,
-    PrimaryMIDDeletionRequest,
+    PrimaryMIDRefsRequest,
     PrimaryMIDDeletionResponse,
     PrimaryMIDDetailResponse,
     PrimaryMIDOverviewResponse,
@@ -132,6 +132,64 @@ async def update_primary_mid(
     return mid
 
 
+@router.post("/onboarding", response_model=list[PrimaryMIDOverviewResponse])
+async def onboard_primary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    data: PrimaryMIDRefsRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> list[PrimaryMIDOverviewResponse]:
+    """Onboard a number of primary MIDs into Harmonia."""
+    if not data.mid_refs:
+        return []
+
+    try:
+        mids = await db.get_primary_mids(
+            set(data.mid_refs), plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=["body"], plural=True
+        ) from ex
+
+    await tasks.queue.push(
+        tasks.OnboardPrimaryMIDs(mid_refs=[mid.mid_ref for mid in mids])
+    )
+
+    return mids
+
+
+@router.post("/offboarding", response_model=list[PrimaryMIDOverviewResponse])
+async def offboard_primary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    data: PrimaryMIDRefsRequest,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> list[PrimaryMIDOverviewResponse]:
+    """Offboard a number of primary MIDs from Harmonia."""
+    if not data.mid_refs:
+        return []
+
+    try:
+        mids = await db.get_primary_mids(
+            set(data.mid_refs), plan_ref=plan_ref, merchant_ref=merchant_ref
+        )
+    except NoSuchRecord as ex:
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=["body"], plural=True
+        ) from ex
+
+    await tasks.queue.push(
+        tasks.OffboardPrimaryMIDs(mid_refs=[mid.mid_ref for mid in mids])
+    )
+
+    return mids
+
+
 @router.post(
     "/deletion",
     status_code=status.HTTP_202_ACCEPTED,
@@ -140,7 +198,7 @@ async def update_primary_mid(
 async def delete_primary_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
-    deletion: PrimaryMIDDeletionRequest,
+    deletion: PrimaryMIDRefsRequest,
     _credentials: JWTCredentials = Depends(
         require_access_level(AccessLevel.READ_WRITE_DELETE)
     ),
@@ -152,7 +210,7 @@ async def delete_primary_mids(
 
     try:
         onboarded, not_onboarded = await db.filter_onboarded_mid_refs(
-            deletion.mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+            set(deletion.mid_refs), plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == PrimaryMID else ["path"]

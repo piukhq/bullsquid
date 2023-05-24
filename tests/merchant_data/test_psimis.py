@@ -4,12 +4,19 @@ from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
+from qbert.tables import Job
 
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.psimis.tables import PSIMI
+from bullsquid.merchant_data.tasks import (
+    OffboardAndDeletePSIMIs,
+    OffboardPSIMIs,
+    OnboardPSIMIs,
+    run_worker,
+)
 from tests.helpers import (
     Factory,
     assert_is_missing_field_error,
@@ -213,11 +220,10 @@ async def test_create_without_onboarding(
     assert expected is not None
     assert resp.json() == await psimi_to_json(expected)
 
-    # TODO: uncomment when Harmonia supports PSIMI onboarding.
-    # assert not await Job.exists().where(
-    #     Job.message_type == OnboardPSIMIs.__name__,
-    #     Job.message == OnboardPSIMIs(psimi_refs=[psimi_ref]).dict(),
-    # )
+    assert not await Job.exists().where(
+        Job.message_type == OnboardPSIMIs.__name__,
+        Job.message == OnboardPSIMIs(psimi_refs=[psimi_ref]).dict(),
+    )
 
 
 async def test_create_and_onboard(
@@ -249,11 +255,10 @@ async def test_create_and_onboard(
     assert expected is not None
     assert resp.json() == await psimi_to_json(expected)
 
-    # TODO: uncomment when Harmonia supports PSIMI onboarding.
-    # assert await Job.exists().where(
-    #     Job.message_type == OnboardPSIMIs.__name__,
-    #     Job.message == OnboardPSIMIs(psimi_refs=[psimi_ref]).dict(),
-    # )
+    assert await Job.exists().where(
+        Job.message_type == OnboardPSIMIs.__name__,
+        Job.message == OnboardPSIMIs(psimi_refs=[psimi_ref]).dict(),
+    )
 
 
 async def test_create_on_nonexistent_plan(
@@ -426,6 +431,134 @@ async def test_create_with_null_value(
     assert_is_null_error(resp, loc=["body", "psimi_metadata", "value"])
 
 
+async def test_onboard(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    psimi_factory: Factory[PSIMI],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    psimi = await psimi_factory(merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/psimis/onboarding",
+        json={"psimi_refs": [str(psimi.pk)]},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+
+    expected = await PSIMI.objects().get(PSIMI.pk == psimi.pk)
+    assert expected is not None
+    assert resp.json() == [await psimi_to_json(expected)]
+
+    assert await Job.exists().where(
+        Job.message_type == OnboardPSIMIs.__name__,
+        Job.message == OnboardPSIMIs(psimi_refs=[psimi.pk]).dict(),
+    )
+
+    await run_worker(burst=True)
+    expected = await PSIMI.objects().get(PSIMI.pk == psimi.pk)
+    assert expected is not None
+    assert expected.txm_status == TXMStatus.ONBOARDED
+
+
+async def test_onboard_no_psimis(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/psimis/onboarding",
+        json={"psimi_refs": []},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+    assert resp.json() == []
+    print(await Job.select())
+    assert not await Job.exists().where(Job.message_type == OnboardPSIMIs.__name__)
+
+
+async def test_onboard_nonexistent_psimis(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/psimis/onboarding",
+        json={"psimi_refs": [str(uuid4())]},
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "psimi_refs"])
+
+
+async def test_offboard(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    psimi_factory: Factory[PSIMI],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    psimi = await psimi_factory(merchant=merchant, txm_status=TXMStatus.ONBOARDED)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/psimis/offboarding",
+        json={"psimi_refs": [str(psimi.pk)]},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+
+    expected = await PSIMI.objects().get(PSIMI.pk == psimi.pk)
+    assert expected is not None
+    assert resp.json() == [await psimi_to_json(expected)]
+
+    assert await Job.exists().where(
+        Job.message_type == OffboardPSIMIs.__name__,
+        Job.message == OffboardPSIMIs(psimi_refs=[psimi.pk]).dict(),
+    )
+
+    await run_worker(burst=True)
+    expected = await PSIMI.objects().get(PSIMI.pk == psimi.pk)
+    assert expected is not None
+    assert expected.txm_status == TXMStatus.OFFBOARDED
+
+
+async def test_offboard_no_psimis(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/psimis/offboarding",
+        json={"psimi_refs": []},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+    assert resp.json() == []
+    print(await Job.select())
+    assert not await Job.exists().where(Job.message_type == OffboardPSIMIs.__name__)
+
+
+async def test_offboard_nonexistent_psimis(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/psimis/offboarding",
+        json={"psimi_refs": [str(uuid4())]},
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "psimi_refs"])
+
+
 async def test_delete(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
@@ -475,11 +608,10 @@ async def test_delete_not_onboarded_psimi(
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert psimi_status == ResourceStatus.DELETED
 
-    # TODO: uncomment once harmonia supports PSIMI offboarding.
-    # assert not await Job.exists().where(
-    #     Job.message_type == OffboardAndDeletePSIMIs.__name__,
-    #     Job.message == OffboardAndDeletePSIMIs(psimi_refs=[psimi.pk]).dict(),
-    # )
+    assert not await Job.exists().where(
+        Job.message_type == OffboardAndDeletePSIMIs.__name__,
+        Job.message == OffboardAndDeletePSIMIs(psimi_refs=[psimi.pk]).dict(),
+    )
 
 
 async def test_delete_offboarded_psimi(
@@ -504,11 +636,10 @@ async def test_delete_offboarded_psimi(
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert psimi_status == ResourceStatus.DELETED
 
-    # TODO: uncomment once harmonia supports PSIMI offboarding.
-    # assert not await Job.exists().where(
-    #     Job.message_type == OffboardAndDeletePSIMIs.__name__,
-    #     Job.message == OffboardAndDeletePSIMIs(psimi_refs=[psimi.pk]).dict(),
-    # )
+    assert not await Job.exists().where(
+        Job.message_type == OffboardAndDeletePSIMIs.__name__,
+        Job.message == OffboardAndDeletePSIMIs(psimi_refs=[psimi.pk]).dict(),
+    )
 
 
 async def test_delete_onboarded_psimi(
@@ -533,11 +664,10 @@ async def test_delete_onboarded_psimi(
     assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
     assert psimi_status == ResourceStatus.PENDING_DELETION
 
-    # TODO: uncomment once harmonia supports PSIMI onboarding.
-    # assert await Job.exists().where(
-    #     Job.message_type == OffboardAndDeletePSIMIS.__name__,
-    #     Job.message == OffboardAndDeletePSIMIs(psimi_refs=[psimi.pk]).dict(),
-    # )
+    assert await Job.exists().where(
+        Job.message_type == OffboardAndDeletePSIMIs.__name__,
+        Job.message == OffboardAndDeletePSIMIs(psimi_refs=[psimi.pk]).dict(),
+    )
 
 
 async def test_delete_nonexistent_psimi(

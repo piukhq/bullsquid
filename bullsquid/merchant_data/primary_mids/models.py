@@ -70,7 +70,7 @@ class PrimaryMIDOverviewResponse(BaseModel):
     _ = validator("txm_status", allow_reuse=True)(string_must_not_be_blank)
 
 
-class PrimaryMIDDeletionRequest(BaseModel):
+class PrimaryMIDRefsRequest(BaseModel):
     """Request model for a deletion of primary MIDs."""
 
     mid_refs: list[UUID4]

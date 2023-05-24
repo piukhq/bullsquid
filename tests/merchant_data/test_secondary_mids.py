@@ -4,11 +4,18 @@ from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
+from qbert.tables import Job
 
 from bullsquid.merchant_data.enums import (
     PaymentEnrolmentStatus,
     ResourceStatus,
     TXMStatus,
+)
+from bullsquid.merchant_data.tasks import (
+    OffboardAndDeleteSecondaryMIDs,
+    OnboardSecondaryMIDs,
+    OffboardSecondaryMIDs,
+    run_worker,
 )
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
@@ -327,12 +334,10 @@ async def test_create_without_onboarding(
     assert expected is not None
     assert resp.json() == await secondary_mid_to_json(expected)
 
-    # TODO: uncomment when harmonia supports onboarding secondary MIOs.
-    # assert not await Job.exists().where(
-    #     Job.message_type == OnboardSecondaryMIDs.__name__,
-    #     Job.message
-    #     == OnboardSecondaryMIDs(secondary_mid_refs=[secondary_mid_ref]).dict(),
-    # )
+    assert not await Job.exists().where(
+        Job.message_type == OnboardSecondaryMIDs.__name__,
+        Job.message == OnboardSecondaryMIDs(secondary_mid_refs=[mid_ref]).dict(),
+    )
 
 
 async def test_create_and_onboard(
@@ -365,12 +370,10 @@ async def test_create_and_onboard(
     assert expected is not None
     assert resp.json() == await secondary_mid_to_json(expected)
 
-    # TODO: uncomment when harmonia supports secondary MID onboarding.
-    # assert await Job.exists().where(
-    #     Job.message_type == OnboardSecondaryMIDs.__name__,
-    #     Job.message
-    #     == OnboardSecondaryMIDs(secondary_mid_refs=[secondary_mid_ref]).dict(),
-    # )
+    assert await Job.exists().where(
+        Job.message_type == OnboardSecondaryMIDs.__name__,
+        Job.message == OnboardSecondaryMIDs(secondary_mid_refs=[mid_ref]).dict(),
+    )
 
 
 async def test_create_without_payment_scheme_store_name(
@@ -616,6 +619,144 @@ async def test_create_with_null_value(
     assert_is_null_error(resp, loc=["body", "secondary_mid_metadata", "secondary_mid"])
 
 
+async def test_onboard(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    secondary_mid_factory: Factory[SecondaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.NOT_ONBOARDED
+    )
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/onboarding",
+        json={"secondary_mid_refs": [str(secondary_mid.pk)]},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+
+    expected = await SecondaryMID.objects().get(SecondaryMID.pk == secondary_mid.pk)
+    assert expected is not None
+    assert resp.json() == [await secondary_mid_to_json(expected)]
+
+    assert await Job.exists().where(
+        Job.message_type == OnboardSecondaryMIDs.__name__,
+        Job.message
+        == OnboardSecondaryMIDs(secondary_mid_refs=[secondary_mid.pk]).dict(),
+    )
+
+    await run_worker(burst=True)
+    expected = await SecondaryMID.objects().get(SecondaryMID.pk == secondary_mid.pk)
+    assert expected is not None
+    assert expected.txm_status == TXMStatus.ONBOARDED
+
+
+async def test_onboard_no_secondary_mids(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/onboarding",
+        json={"secondary_mid_refs": []},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+    assert resp.json() == []
+    print(await Job.select())
+    assert not await Job.exists().where(
+        Job.message_type == OnboardSecondaryMIDs.__name__
+    )
+
+
+async def test_onboard_nonexistent_secondary_mids(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/onboarding",
+        json={"secondary_mid_refs": [str(uuid4())]},
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "secondary_mid_refs"])
+
+
+async def test_offboard(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    secondary_mid_factory: Factory[SecondaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory(
+        merchant=merchant, txm_status=TXMStatus.ONBOARDED
+    )
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/offboarding",
+        json={"secondary_mid_refs": [str(secondary_mid.pk)]},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+
+    expected = await SecondaryMID.objects().get(SecondaryMID.pk == secondary_mid.pk)
+    assert expected is not None
+    assert resp.json() == [await secondary_mid_to_json(expected)]
+
+    assert await Job.exists().where(
+        Job.message_type == OffboardSecondaryMIDs.__name__,
+        Job.message
+        == OffboardSecondaryMIDs(secondary_mid_refs=[secondary_mid.pk]).dict(),
+    )
+
+    await run_worker(burst=True)
+    expected = await SecondaryMID.objects().get(SecondaryMID.pk == secondary_mid.pk)
+    assert expected is not None
+    assert expected.txm_status == TXMStatus.OFFBOARDED
+
+
+async def test_offboard_no_secondary_mids(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/offboarding",
+        json={"secondary_mid_refs": []},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+    assert resp.json() == []
+    print(await Job.select())
+    assert not await Job.exists().where(
+        Job.message_type == OffboardSecondaryMIDs.__name__
+    )
+
+
+async def test_offboard_nonexistent_secondary_mids(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    resp = test_client.post(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids/offboarding",
+        json={"secondary_mid_refs": [str(uuid4())]},
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "secondary_mid_refs"])
+
+
 async def test_delete(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
@@ -697,14 +838,13 @@ async def test_delete_not_onboarded(
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert mid_status == ResourceStatus.DELETED
 
-    # TODO: uncomment once harmonia supports secondary MID offboarding.
-    # assert not await Job.exists().where(
-    #     Job.message_type == OffboardAndDeleteSecondaryMIDs.__name__,
-    #     Job.message
-    #     == OffboardAndDeleteSecondaryMIDs(
-    #         secondary_mid_refs=[secondary_mid.pk],
-    #     ).dict(),
-    # )
+    assert not await Job.exists().where(
+        Job.message_type == OffboardAndDeleteSecondaryMIDs.__name__,
+        Job.message
+        == OffboardAndDeleteSecondaryMIDs(
+            secondary_mid_refs=[mid.pk],
+        ).dict(),
+    )
 
 
 async def test_delete_offboarded(
@@ -735,14 +875,13 @@ async def test_delete_offboarded(
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert mid_status == ResourceStatus.DELETED
 
-    # TODO: uncomment once harmonia supports secondary MID offboarding.
-    # assert not await Job.exists().where(
-    #     Job.message_type == OffboardAndDeleteSecondaryMIDs.__name__,
-    #     Job.message
-    #     == OffboardAndDeleteSecondaryMIDs(
-    #         secondary_mid_refs=[secondary_mid.pk],
-    #     ).dict(),
-    # )
+    assert not await Job.exists().where(
+        Job.message_type == OffboardAndDeleteSecondaryMIDs.__name__,
+        Job.message
+        == OffboardAndDeleteSecondaryMIDs(
+            secondary_mid_refs=[mid.pk],
+        ).dict(),
+    )
 
 
 async def test_delete_onboarded(
@@ -771,14 +910,13 @@ async def test_delete_onboarded(
     assert resp.status_code == status.HTTP_202_ACCEPTED
     assert mid_status == ResourceStatus.PENDING_DELETION
 
-    # TODO: uncomment once harmonia supports secondary MID onboarding.
-    # assert await Job.exists().where(
-    #     Job.message_type == OffboardAndDeleteSecondaryMIDs.__name__,
-    #     Job.message
-    #     == OffboardAndDeleteSecondaryMIDs(
-    #         secondary_mid_refs=[secondary_mid.pk],
-    #     ).dict(),
-    # )
+    assert await Job.exists().where(
+        Job.message_type == OffboardAndDeleteSecondaryMIDs.__name__,
+        Job.message
+        == OffboardAndDeleteSecondaryMIDs(
+            secondary_mid_refs=[mid.pk],
+        ).dict(),
+    )
 
 
 async def test_delete_nonexistent_secondary_mid(

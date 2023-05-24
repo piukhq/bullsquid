@@ -1,13 +1,12 @@
 """Database access layer for primary MID operations."""
 
-from typing import Any, cast
+from typing import Any
 from uuid import UUID
 
 from piccolo.columns import Column
 
 from bullsquid.db import InvalidData, NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
-from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
@@ -21,6 +20,54 @@ from bullsquid.merchant_data.primary_mids.models import (
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 
 
+def detail_response(mid: PrimaryMID) -> PrimaryMIDDetailResponse:
+    if isinstance(mid.payment_scheme, (str, UUID)):
+        raise ValueError("PrimaryMID.payment_scheme must be loaded for detail response")
+    if isinstance(mid.location, (str, UUID)):
+        raise ValueError("PrimaryMID.location must be loaded for detail response")
+
+    return PrimaryMIDDetailResponse(
+        mid=PrimaryMIDOverviewResponse(
+            mid_ref=mid.pk,
+            mid_metadata=PrimaryMIDMetadata(
+                payment_scheme_slug=mid.payment_scheme.slug,
+                mid=mid.mid,
+                visa_bin=mid.visa_bin,
+                payment_enrolment_status=mid.payment_enrolment_status,
+            ),
+            mid_status=mid.status,
+            date_added=mid.date_added,
+            txm_status=mid.txm_status,
+        ),
+        location=LocationLinkResponse(
+            location_ref=mid.location.pk,
+            location_title=mid.location.display_text,
+        )
+        if mid.location and mid.location.pk
+        else None,
+    )
+
+
+def overview_response(mid: PrimaryMID) -> PrimaryMIDOverviewResponse:
+    if isinstance(mid.payment_scheme, (str, UUID)):
+        raise ValueError(
+            "PrimaryMID.payment_scheme must be loaded for overview response"
+        )
+
+    return PrimaryMIDOverviewResponse(
+        mid_ref=mid.pk,
+        mid_metadata=PrimaryMIDMetadata(
+            payment_scheme_slug=mid.payment_scheme.slug,
+            mid=mid.mid,
+            visa_bin=mid.visa_bin,
+            payment_enrolment_status=mid.payment_enrolment_status,
+        ),
+        mid_status=mid.status,
+        date_added=mid.date_added,
+        txm_status=mid.txm_status,
+    )
+
+
 async def get_primary_mid_instance(
     pk: UUID,
     *,
@@ -30,7 +77,7 @@ async def get_primary_mid_instance(
     """Get a primary MID instance by primary key."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
 
-    mid = await PrimaryMID.objects(PrimaryMID.payment_scheme).get(
+    mid = await PrimaryMID.objects(PrimaryMID.payment_scheme, PrimaryMID.location).get(
         (PrimaryMID.pk == pk) & (PrimaryMID.merchant == merchant)
     )
 
@@ -51,28 +98,26 @@ async def get_primary_mid(
         pk, plan_ref=plan_ref, merchant_ref=merchant_ref
     )
 
-    location = cast(Location | None, await mid.get_related(PrimaryMID.location))
+    return detail_response(mid)
 
-    return PrimaryMIDDetailResponse(
-        mid=PrimaryMIDOverviewResponse(
-            mid_ref=mid.pk,
-            mid_metadata=PrimaryMIDMetadata(
-                payment_scheme_slug=mid.payment_scheme.slug,
-                mid=mid.mid,
-                visa_bin=mid.visa_bin,
-                payment_enrolment_status=mid.payment_enrolment_status,
-            ),
-            mid_status=mid.status,
-            date_added=mid.date_added,
-            txm_status=mid.txm_status,
-        ),
-        location=LocationLinkResponse(
-            location_ref=location.pk,
-            location_title=location.display_text,
-        )
-        if location
-        else None,
+
+async def get_primary_mids(
+    pks: set[UUID],
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> list[PrimaryMIDOverviewResponse]:
+    """Get a number of primary MIDs by their primary keys."""
+    merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    mids = await PrimaryMID.objects(PrimaryMID.payment_scheme).where(
+        PrimaryMID.pk.is_in(list(pks)),
+        PrimaryMID.merchant == merchant,
     )
+
+    if len(mids) != len(pks):
+        raise NoSuchRecord(PrimaryMID)
+
+    return [overview_response(mid) for mid in mids]
 
 
 async def list_primary_mids(
@@ -89,53 +134,37 @@ async def list_primary_mids(
         p=p,
     )
 
-    return [
-        PrimaryMIDOverviewResponse(
-            mid_ref=result.pk,
-            mid_metadata=PrimaryMIDMetadata(
-                payment_scheme_slug=result.payment_scheme.slug,
-                mid=result.mid,
-                visa_bin=result.visa_bin,
-                payment_enrolment_status=result.payment_enrolment_status,
-            ),
-            mid_status=result.status,
-            date_added=result.date_added,
-            txm_status=result.txm_status,
-        )
-        for result in results
-    ]
+    return [overview_response(result) for result in results]
 
 
 async def filter_onboarded_mid_refs(
-    mid_refs: list[UUID], *, plan_ref: UUID, merchant_ref: UUID
-) -> tuple[list[UUID], list[UUID]]:
+    mid_refs: set[UUID], *, plan_ref: UUID, merchant_ref: UUID
+) -> tuple[set[UUID], set[UUID]]:
     """
     Split the given list of primary MID refs into onboarded and not.
     """
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
+    q_mid_refs = list(mid_refs)
 
-    # remove duplicates to ensure count mismatches are not caused by duplicate MIDs
-    mid_refs = list(set(mid_refs))
-
-    count = await PrimaryMID.count().where(PrimaryMID.pk.is_in(mid_refs))
+    count = await PrimaryMID.count().where(PrimaryMID.pk.is_in(q_mid_refs))
     if count != len(mid_refs):
         raise NoSuchRecord(PrimaryMID)
 
-    return [
+    return {
         result["pk"]
         for result in await PrimaryMID.select(PrimaryMID.pk).where(
-            PrimaryMID.pk.is_in(mid_refs),
+            PrimaryMID.pk.is_in(q_mid_refs),
             PrimaryMID.merchant == merchant,
             PrimaryMID.txm_status == TXMStatus.ONBOARDED,
         )
-    ], [
+    }, {
         result["pk"]
         for result in await PrimaryMID.select(PrimaryMID.pk).where(
-            PrimaryMID.pk.is_in(mid_refs),
+            PrimaryMID.pk.is_in(q_mid_refs),
             PrimaryMID.merchant == merchant,
             PrimaryMID.txm_status != TXMStatus.ONBOARDED,
         )
-    ]
+    }
 
 
 async def create_primary_mid(
@@ -161,18 +190,7 @@ async def create_primary_mid(
 
     await mid.save()
 
-    return PrimaryMIDOverviewResponse(
-        mid_ref=mid.pk,
-        mid_metadata=PrimaryMIDMetadata(
-            payment_scheme_slug=mid.payment_scheme.slug,
-            mid=mid.mid,
-            visa_bin=mid.visa_bin,
-            payment_enrolment_status=mid.payment_enrolment_status,
-        ),
-        mid_status=mid.status,
-        date_added=mid.date_added,
-        txm_status=mid.txm_status,
-    )
+    return overview_response(mid)
 
 
 async def update_primary_mid(
@@ -190,22 +208,11 @@ async def update_primary_mid(
         setattr(mid, name, value)
     await mid.save()
 
-    return PrimaryMIDOverviewResponse(
-        mid_ref=mid.pk,
-        mid_metadata=PrimaryMIDMetadata(
-            payment_scheme_slug=mid.payment_scheme.slug,
-            mid=mid.mid,
-            visa_bin=mid.visa_bin,
-            payment_enrolment_status=mid.payment_enrolment_status,
-        ),
-        mid_status=mid.status,
-        date_added=mid.date_added,
-        txm_status=mid.txm_status,
-    )
+    return overview_response(mid)
 
 
 async def update_primary_mids_status(
-    mid_refs: list[UUID],
+    mid_refs: set[UUID],
     *,
     status: ResourceStatus,
     plan_ref: UUID,
@@ -219,5 +226,5 @@ async def update_primary_mids_status(
         values[PrimaryMID.location] = None
 
     await PrimaryMID.update(values).where(
-        PrimaryMID.pk.is_in(mid_refs), PrimaryMID.merchant == merchant
+        PrimaryMID.pk.is_in(list(mid_refs)), PrimaryMID.merchant == merchant
     )

@@ -29,12 +29,12 @@ from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 T = TypeVar("T", bound=BaseTable)
 
 
-async def find_subjects(table: Type[T], entity_refs: list[UUID]) -> list[T]:
+async def find_subjects(table: Type[T], entity_refs: set[UUID]) -> list[T]:
     """
     Query the given table for all entities in the entity_refs list.
+    This function should only be called on tables with a pk field.
     """
-    # clearly this function can only be called on tables with a pk field.
-    subjects = await table.all_objects().where(table.pk.is_in(entity_refs))
+    subjects = await table.all_objects().where(table.pk.is_in(list(entity_refs)))
     if len(subjects) != len(entity_refs):
         raise NoSuchRecord(table)
     return subjects
@@ -79,7 +79,7 @@ async def _list_comments_by_parent(parent: Comment) -> list[CommentResponse]:
             comment,
             subjects=await find_subjects(
                 RESOURCE_TYPE_TO_TABLE[ResourceType(parent.subject_type)],
-                comment.subjects,
+                set(comment.subjects),
             ),
         )
         for comment in comments
@@ -213,7 +213,7 @@ async def create_comment(
     # find & validated related subjects
     subjects = await find_subjects(
         RESOURCE_TYPE_TO_TABLE[comment_data.subject_type],
-        comment_data.subjects,
+        set(comment_data.subjects),
     )
     validate_subject_owners(
         subjects,
@@ -251,7 +251,7 @@ async def edit_comment(
 
     subjects = await find_subjects(
         RESOURCE_TYPE_TO_TABLE[ResourceType(comment.subject_type)],
-        comment.subjects,
+        set(comment.subjects),
     )
 
     comment.text = fields.text

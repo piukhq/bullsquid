@@ -134,9 +134,10 @@ async def delete_locations(
     if not deletion.location_refs:
         return []
 
+    location_refs_set = set(deletion.location_refs)
     try:
         await db.confirm_locations_exist(
-            deletion.location_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+            location_refs_set, plan_ref=plan_ref, merchant_ref=merchant_ref
         )
     except NoSuchRecord as ex:
         loc = ["body"] if ex.table == Location else ["path"]
@@ -146,7 +147,7 @@ async def delete_locations(
         ) from ex
 
     await db.update_locations_status(
-        deletion.location_refs,
+        location_refs_set,
         status=ResourceStatus.DELETED,
         plan_ref=plan_ref,
         merchant_ref=merchant_ref,
@@ -179,7 +180,7 @@ async def link_location_to_primary_mid(
     try:
         mids = await create_location_primary_mid_links(
             location_ref=location_ref,
-            primary_mid_refs=link_request.mid_refs,
+            primary_mid_refs=set(link_request.mid_refs),
             plan_ref=plan_ref,
             merchant_ref=merchant_ref,
         )

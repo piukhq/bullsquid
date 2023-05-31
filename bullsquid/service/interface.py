@@ -4,6 +4,7 @@
 from typing import Any, Mapping
 
 import aiohttp
+from loguru import logger
 
 
 class ServiceInterface:
@@ -32,7 +33,9 @@ class ServiceInterface:
             async with session.get(
                 url, params=kwargs, headers=self.headers
             ) as response:
-                response.raise_for_status()
+                if not response.ok:
+                    logger.debug(f"request to {path} failed: {await response.text()}")
+                    response.raise_for_status()
                 return await response.json()
 
     async def post(self, path: str, json: Mapping) -> dict:

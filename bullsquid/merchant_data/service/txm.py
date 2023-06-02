@@ -56,9 +56,11 @@ class TXMServiceInterface(ServiceInterface):
     async def offboard_mids(self, mid_refs: set[UUID]) -> dict:
         """Offboard MIDs from Harmonia."""
         identifiers = await PrimaryMID.select(
-            PrimaryMID.mid,
+            PrimaryMID.mid.as_alias("identifier"),
             PrimaryMID.payment_scheme.slug.as_alias("payment_scheme"),
         ).where(PrimaryMID.pk.is_in(list(mid_refs)))
+        for identifier in identifiers:
+            identifier["identifier_type"] = "PRIMARY"
 
         return await self.post(
             "/txm/identifiers/deletion", {"identifiers": identifiers, "locations": []}
@@ -67,9 +69,11 @@ class TXMServiceInterface(ServiceInterface):
     async def offboard_secondary_mids(self, secondary_mid_refs: set[UUID]) -> dict:
         """Offboard Secondary MIDs from Harmonia."""
         identifiers = await SecondaryMID.select(
-            SecondaryMID.secondary_mid,
+            SecondaryMID.secondary_mid.as_alias("identifier"),
             SecondaryMID.payment_scheme.slug.as_alias("payment_scheme"),
         ).where(SecondaryMID.pk.is_in(list(secondary_mid_refs)))
+        for identifier in identifiers:
+            identifier["identifier_type"] = "SECONDARY"
 
         return await self.post(
             "/txm/identifiers/deletion", {"identifiers": identifiers, "locations": []}
@@ -78,9 +82,11 @@ class TXMServiceInterface(ServiceInterface):
     async def offboard_psimis(self, psimi_refs: set[UUID]) -> dict:
         """Offboard PSIMIs from Harmonia."""
         identifiers = await PSIMI.select(
-            PSIMI.value,
+            PSIMI.value.as_alias("identifier"),
             PSIMI.payment_scheme.slug.as_alias("payment_scheme"),
         ).where(PSIMI.pk.is_in(list(psimi_refs)))
+        for identifier in identifiers:
+            identifier["identifier_type"] = "PSIMI"
 
         return await self.post(
             "/txm/identifiers/deletion", {"identifiers": identifiers, "locations": []}

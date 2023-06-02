@@ -34,7 +34,9 @@ class ServiceInterface:
                 url, params=kwargs, headers=self.headers
             ) as response:
                 if not response.ok:
-                    logger.debug(f"request to {path} failed: {await response.text()}")
+                    logger.debug(
+                        f"get request to {path} failed: {await response.text()}"
+                    )
                     response.raise_for_status()
                 return await response.json()
 
@@ -45,5 +47,9 @@ class ServiceInterface:
         url = self._build_url(path)
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=json, headers=self.headers) as response:
-                response.raise_for_status()
+                if not response.ok:
+                    logger.debug(
+                        f"post request to {path} failed: {await response.text()}"
+                    )
+                    response.raise_for_status()
                 return await response.json()

@@ -88,3 +88,10 @@ class UpdateSecondaryMIDRequest(BaseModel):
     payment_enrolment_status: PaymentEnrolmentStatus | None
 
     _ = validator("payment_scheme_store_name", allow_reuse=True)(nullify_blank_strings)
+
+
+class UpdateSecondaryMIDs(BaseModel):
+    """Request model for updating a number of secondary MIDs enrolment status"""
+
+    secondary_mid_refs: list[UUID4]
+    payment_enrolment_status: PaymentEnrolmentStatus

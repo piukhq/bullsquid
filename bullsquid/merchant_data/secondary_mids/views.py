@@ -23,10 +23,11 @@ from bullsquid.merchant_data.secondary_mids.models import (
     CreateSecondaryMIDRequest,
     LocationLinkRequest,
     LocationLinkResponse,
-    SecondaryMIDRefsRequest,
     SecondaryMIDDeletionResponse,
+    SecondaryMIDRefsRequest,
     SecondaryMIDResponse,
     UpdateSecondaryMIDRequest,
+    UpdateSecondaryMIDs,
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.settings import settings
@@ -60,6 +61,30 @@ async def list_secondary_mids(
         ) from ex
 
     return secondary_mids
+
+
+@router.patch("", response_model=list[SecondaryMIDResponse])
+async def bulk_update_secondary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    secondary_mid_data: UpdateSecondaryMIDs,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> list[SecondaryMIDResponse]:
+    """Update a number of secondary MID's enrolment status"""
+    try:
+        mids = await db.bulk_update_secondary_mids(
+            set(secondary_mid_data.secondary_mid_refs),
+            secondary_mid_data.payment_enrolment_status,
+            merchant_ref=merchant_ref,
+            plan_ref=plan_ref,
+        )
+    except NoSuchRecord as ex:
+        loc = ["path"] if ex.table in {Plan, Merchant} else ["body"]
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
+
+    return mids
 
 
 @router.get("/{secondary_mid_ref}", response_model=SecondaryMIDResponse)

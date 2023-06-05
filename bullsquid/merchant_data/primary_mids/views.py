@@ -24,6 +24,7 @@ from bullsquid.merchant_data.primary_mids.models import (
     PrimaryMIDDetailResponse,
     PrimaryMIDOverviewResponse,
     UpdatePrimaryMIDRequest,
+    UpdatePrimaryMIDs,
 )
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.settings import settings
@@ -107,6 +108,30 @@ async def create_primary_mid(
         await tasks.queue.push(tasks.OnboardPrimaryMIDs(mid_refs=[mid.mid_ref]))
 
     return mid
+
+
+@router.patch("", response_model=list[PrimaryMIDOverviewResponse])
+async def bulk_update_primary_mids(
+    plan_ref: UUID,
+    merchant_ref: UUID,
+    mid_data: UpdatePrimaryMIDs,
+    _credentials: JWTCredentials = Depends(
+        require_access_level(AccessLevel.READ_WRITE)
+    ),
+) -> list[PrimaryMIDOverviewResponse]:
+    """Update a number of primary MID's enrolment status"""
+    try:
+        mids = await db.bulk_update_primary_mids(
+            set(mid_data.mid_refs),
+            mid_data.payment_enrolment_status,
+            merchant_ref=merchant_ref,
+            plan_ref=plan_ref,
+        )
+    except NoSuchRecord as ex:
+        loc = ["path"] if ex.table in {Plan, Merchant} else ["body"]
+        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
+
+    return mids
 
 
 @router.patch("/{mid_ref}", response_model=PrimaryMIDOverviewResponse)

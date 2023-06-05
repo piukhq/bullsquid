@@ -2,7 +2,11 @@
 from uuid import UUID
 
 from bullsquid.db import NoSuchRecord
-from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.enums import (
+    PaymentEnrolmentStatus,
+    ResourceStatus,
+    TXMStatus,
+)
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.db import get_merchant, paginate
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme
@@ -118,7 +122,7 @@ async def get_secondary_mids(
     plan_ref: UUID,
     merchant_ref: UUID,
 ) -> list[SecondaryMIDResponse]:
-    """Get a number of primary MIDs by their primary keys."""
+    """Get a number of secondary MIDs by their primary keys."""
     merchant = await get_merchant(merchant_ref, plan_ref=plan_ref)
     secondary_mids = await SecondaryMID.objects(SecondaryMID.payment_scheme).where(
         SecondaryMID.pk.is_in(list(pks)),
@@ -255,3 +259,24 @@ async def update_secondary_mid(
     await secondary_mid.save()
 
     return make_response(secondary_mid)
+
+
+async def bulk_update_secondary_mids(
+    secondary_mid_refs: set[UUID],
+    status: PaymentEnrolmentStatus,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> list[SecondaryMIDResponse]:
+    """Update a secondary MID's editable fields."""
+    await get_secondary_mids(
+        secondary_mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+
+    await SecondaryMID.update({SecondaryMID.payment_enrolment_status: status}).where(
+        SecondaryMID.pk.is_in(list(secondary_mid_refs))
+    )
+    secondary_mids = await get_secondary_mids(
+        secondary_mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+    return secondary_mids

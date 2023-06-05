@@ -6,7 +6,11 @@ from uuid import UUID
 from piccolo.columns import Column
 
 from bullsquid.db import InvalidData, NoSuchRecord, paginate
-from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
+from bullsquid.merchant_data.enums import (
+    PaymentEnrolmentStatus,
+    ResourceStatus,
+    TXMStatus,
+)
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import get_payment_scheme
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
@@ -228,3 +232,22 @@ async def update_primary_mids_status(
     await PrimaryMID.update(values).where(
         PrimaryMID.pk.is_in(list(mid_refs)), PrimaryMID.merchant == merchant
     )
+
+
+async def bulk_update_primary_mids(
+    mid_refs: set[UUID],
+    status: PaymentEnrolmentStatus,
+    *,
+    plan_ref: UUID,
+    merchant_ref: UUID,
+) -> list[PrimaryMIDOverviewResponse]:
+    """Update a primary MID's editable fields."""
+    await get_primary_mids(mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref)
+
+    await PrimaryMID.update({PrimaryMID.payment_enrolment_status: status}).where(
+        PrimaryMID.pk.is_in(list(mid_refs))
+    )
+    mids = await get_primary_mids(
+        mid_refs, plan_ref=plan_ref, merchant_ref=merchant_ref
+    )
+    return mids

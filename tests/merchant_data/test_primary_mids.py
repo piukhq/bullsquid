@@ -1305,3 +1305,32 @@ async def test_detail_response_without_location(
         detail_response(db_mid)
 
     assert "location" in str(ex.value)
+
+
+async def test_bulk_update_enrolment_status(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    mid = await primary_mid_factory(
+        merchant=merchant, payment_enrolment_status=PaymentEnrolmentStatus.UNKNOWN
+    )
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
+        json={
+            "mid_refs": [str(mid.pk)],
+            "payment_enrolment_status": PaymentEnrolmentStatus.ENROLLED,
+        },
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+
+    expected = await PrimaryMID.objects().get(PrimaryMID.pk == mid.pk)
+
+    assert expected is not None
+
+    assert resp.json() == [await primary_mid_overview_json(expected)]

@@ -101,3 +101,10 @@ class PrimaryMIDDetailResponse(BaseModel):
 
     mid: PrimaryMIDOverviewResponse
     location: LocationLinkResponse | None
+
+
+class UpdatePrimaryMIDs(BaseModel):
+    """Request model for updating a number of primary MIDs enrolment status"""
+
+    mid_refs: list[UUID4]
+    payment_enrolment_status: PaymentEnrolmentStatus

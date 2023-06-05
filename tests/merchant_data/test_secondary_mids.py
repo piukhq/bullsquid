@@ -11,12 +11,6 @@ from bullsquid.merchant_data.enums import (
     ResourceStatus,
     TXMStatus,
 )
-from bullsquid.merchant_data.tasks import (
-    OffboardAndDeleteSecondaryMIDs,
-    OnboardSecondaryMIDs,
-    OffboardSecondaryMIDs,
-    run_worker,
-)
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
 from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
@@ -25,6 +19,12 @@ from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
 )
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from bullsquid.merchant_data.tasks import (
+    OffboardAndDeleteSecondaryMIDs,
+    OffboardSecondaryMIDs,
+    OnboardSecondaryMIDs,
+    run_worker,
+)
 from tests.helpers import (
     Factory,
     assert_is_missing_field_error,
@@ -1266,3 +1266,32 @@ async def test_update_enrolment_status(
     assert expected is not None
 
     assert resp.json() == await secondary_mid_to_json(expected)
+
+
+async def test_bulk_update_enrolment_status(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    secondary_mid_factory: Factory[SecondaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    secondary_mid = await secondary_mid_factory(
+        merchant=merchant, payment_enrolment_status=PaymentEnrolmentStatus.UNKNOWN
+    )
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/secondary_mids",
+        json={
+            "secondary_mid_refs": [str(secondary_mid.pk)],
+            "payment_enrolment_status": PaymentEnrolmentStatus.ENROLLED,
+        },
+    )
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+
+    expected = await SecondaryMID.objects().get(SecondaryMID.pk == secondary_mid.pk)
+
+    assert expected is not None
+
+    assert resp.json() == [await secondary_mid_to_json(expected)]

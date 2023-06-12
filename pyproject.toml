@@ -49,6 +49,7 @@ pytest-icdiff = "^0.6"
 types-pyyaml = "^6.0.12.2"
 httpx = "^0.23.3"
 ruff = "^0.0.252"
+rich = "^13.4.2"
 
 [tool.poetry-dynamic-versioning]
 enable = true

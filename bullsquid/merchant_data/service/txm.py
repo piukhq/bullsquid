@@ -27,7 +27,7 @@ class TXMServiceInterface(ServiceInterface):
         for identifier in identifiers:
             identifier["identifier_type"] = "PRIMARY"
 
-        return await self.post("/txm/identifiers/", {"identifiers": identifiers})
+        return await self.post("/txm/identifiers", {"identifiers": identifiers})
 
     async def onboard_secondary_mids(self, secondary_mid_refs: set[UUID]) -> dict:
         """Onboard Secondary MIDs into Harmonia."""
@@ -39,7 +39,7 @@ class TXMServiceInterface(ServiceInterface):
         for identifier in identifiers:
             identifier["identifier_type"] = "SECONDARY"
 
-        return await self.post("/txm/identifiers/", {"identifiers": identifiers})
+        return await self.post("/txm/identifiers", {"identifiers": identifiers})
 
     async def onboard_psimis(self, psimi_refs: set[UUID]) -> dict:
         """Onboard PSIMIs into Harmonia."""
@@ -51,7 +51,7 @@ class TXMServiceInterface(ServiceInterface):
         for identifier in identifiers:
             identifier["identifier_type"] = "PSIMI"
 
-        return await self.post("/txm/identifiers/", {"identifiers": identifiers})
+        return await self.post("/txm/identifiers", {"identifiers": identifiers})
 
     async def offboard_mids(self, mid_refs: set[UUID]) -> dict:
         """Offboard MIDs from Harmonia."""

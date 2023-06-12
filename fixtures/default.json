@@ -19,7 +19,8 @@
                 "pk": "0ce27edd-34b2-4630-b653-193e9f5947be",
                 "plan_id": 105,
                 "slug": "iceland-bonus-card",
-                "status": "active"
+                "status": "active",
+		"created": "2023-06-12T16:24:00Z"
             },
             {
                 "icon_url": "https://api.gb.bink.com/content/media/hermes/schemes/Harvey_Nichols_Logo.png",
@@ -28,7 +29,8 @@
                 "pk": "e9538964-ba55-42fb-852c-3ae37e2adcb8",
                 "plan_id": 124,
                 "slug": "harvey-nichols",
-                "status": "active"
+                "status": "active",
+		"created": "2023-06-12T16:24:00Z"
             },
             {
                 "icon_url": "https://api.gb.bink.com/content/media/hermes/schemes/Wasabi_Logo.png",
@@ -37,7 +39,8 @@
                 "pk": "ce2c7875-48d4-4d52-893d-2c671f0cf22a",
                 "plan_id": 215,
                 "slug": "wasabi-club",
-                "status": "active"
+                "status": "active",
+		"created": "2023-06-12T16:24:00Z"
             }
         ],
         "Merchant": [
@@ -48,7 +51,8 @@
                 "name": "Iceland",
                 "pk": "549d6769-9416-499b-85f2-22336cff4bd8",
                 "plan": "0ce27edd-34b2-4630-b653-193e9f5947be",
-                "status": "active"
+                "status": "active",
+		"created": "2023-06-12T16:24:00Z"
             },
             {
                 "icon_url": "https://api.gb.bink.com/content/media/hermes/schemes/Harvey_Nichols_Logo.png",
@@ -57,7 +61,8 @@
                 "name": "Harvey Nichols",
                 "pk": "27ac26ca-4113-4a06-aa8a-7d68510f738f",
                 "plan": "e9538964-ba55-42fb-852c-3ae37e2adcb8",
-                "status": "active"
+                "status": "active",
+		"created": "2023-06-12T16:24:00Z"
             },
             {
                 "icon_url": "https://api.gb.bink.com/content/media/hermes/schemes/Wasabi_Logo.png",
@@ -66,7 +71,8 @@
                 "name": "Wasabi",
                 "pk": "e691df97-4361-4e3d-a223-49bd29c6d01f",
                 "plan": "ce2c7875-48d4-4d52-893d-2c671f0cf22a",
-                "status": "active"
+                "status": "active",
+		"created": "2023-06-12T16:24:00Z"
             }
         ],
         "Location": [
@@ -84,7 +90,8 @@
                 "merchant_internal_id": null,
                 "merchant": "549d6769-9416-499b-85f2-22336cff4bd8",
                 "date_added": "2023-01-24T14:28:22.764153",
-                "status": "active"
+                "status": "active",
+		"created": "2023-06-12T16:24:00Z"
             }, {
                 "pk": "41adeb72-0a03-487a-950a-4fb7a04aa5f7",
                 "location_id": "41adeb72-0a03-487a-950a-4fb7a04aa5f7",
@@ -99,7 +106,8 @@
                 "merchant_internal_id": null,
                 "merchant": "549d6769-9416-499b-85f2-22336cff4bd8",
                 "date_added": "2023-01-24T14:28:23.064374",
-                "status": "active"
+                "status": "active",
+		"created": "2023-06-12T16:24:00Z"
             }
         ]
     }

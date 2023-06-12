@@ -175,7 +175,7 @@ async def _run_job(message: BaseModel) -> None:
             ).where(PrimaryMID.pk.is_in(message.mid_refs))
 
         case OffboardSecondaryMIDs():
-            await txm.offboard_mids(set(message.secondary_mid_refs))
+            await txm.offboard_secondary_mids(set(message.secondary_mid_refs))
             await SecondaryMID.update(
                 {SecondaryMID.txm_status: TXMStatus.OFFBOARDED}
             ).where(SecondaryMID.pk.is_in(message.secondary_mid_refs))

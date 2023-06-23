@@ -1,15 +1,18 @@
 """API authentication dependencies."""
+import datetime
 from enum import Enum
-from typing import Callable
+from typing import Any, Callable, cast
 from urllib.parse import urljoin
-
 import jwt
+from piccolo.columns import Column
 import sentry_sdk
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
 
+from bullsquid.service.auth0 import Auth0ServiceInterface
 from bullsquid.settings import settings
+from bullsquid.user_data.tables import UserProfile
 
 apikey_header = APIKeyHeader(name="Authorization")
 
@@ -169,15 +172,43 @@ else:
     jwt_bearer = JWTBearer()
 
 
+async def fetch_user_data(user_id: str, auth0: Auth0ServiceInterface) -> None:
+    profile_data = await auth0.get_user_profile(user_id)
+
+    profile_fields: dict[Column, Any] = {
+        UserProfile.email_address: profile_data["email"],
+        UserProfile.name: profile_data["name"],
+        UserProfile.nickname: profile_data["nickname"],
+        UserProfile.picture: profile_data["picture"],
+    }
+
+    lookup = await UserProfile.objects().get_or_create(
+        UserProfile.user_id == user_id,
+        defaults=profile_fields,
+    )
+    created = lookup._was_created or False
+
+    update_cutoff = datetime.datetime.utcnow() - settings.user_profile_ttl
+
+    if not created and lookup.updated_at < update_cutoff:
+        await UserProfile.update(cast(dict[Column | str, Any], profile_fields)).where(
+            UserProfile.user_id == user_id
+        )
+
+
+_auth0: Auth0ServiceInterface | None = None
+
+
 def require_access_level(
     level: AccessLevel, *, app_name: str
-) -> Callable[[], JWTCredentials]:
+) -> Callable[[BackgroundTasks, JWTCredentials], JWTCredentials]:
     """
     FastAPI dependency that ensures a given access level exists in the client's
     access token.
     """
 
     def check_credentials(
+        background_tasks: BackgroundTasks,
         credentials: JWTCredentials = Depends(jwt_bearer),
     ) -> JWTCredentials:
         if credentials.scheme != "Bearer":
@@ -189,6 +220,12 @@ def require_access_level(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Missing required permissions.",
             )
+
+        global _auth0
+        if _auth0 is None:
+            _auth0 = Auth0ServiceInterface(cast(str, settings.oauth.domain))
+
+        background_tasks.add_task(fetch_user_data, credentials.claims["sub"], _auth0)
 
         return credentials
 

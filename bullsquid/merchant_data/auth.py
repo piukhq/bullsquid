@@ -3,12 +3,16 @@ Provides merchant data API authentication helpers.
 """
 from typing import Callable
 
+from fastapi import BackgroundTasks
+
 from bullsquid.api.auth import AccessLevel, JWTCredentials
 from bullsquid.api.auth import require_access_level as base_require_access_level
 from bullsquid.merchant_data.piccolo_app import APP_CONFIG
 
 
-def require_access_level(level: AccessLevel) -> Callable[[], JWTCredentials]:
+def require_access_level(
+    level: AccessLevel,
+) -> Callable[[BackgroundTasks, JWTCredentials], JWTCredentials]:
     """
     Call bullsquid.api.auth.require_access_level with the correct app name.
     """

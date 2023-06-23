@@ -1,6 +1,7 @@
 """Pydantic-validated application configuration."""
 from pathlib import Path
 from typing import Any
+from datetime import timedelta
 
 import tomli
 from pydantic import AnyHttpUrl, BaseSettings, Field, root_validator, validator
@@ -81,6 +82,8 @@ class OAuthSettings(BaseSettings):
     audience: str = "https://portal.bink.com"
     algorithms: list[str] = ["RS256"]
     leeway: int = 10
+    mgmt_client_id: str = ""
+    mgmt_client_secret: str = ""
 
     @validator("domain")
     @classmethod
@@ -160,6 +163,9 @@ class Settings(BaseSettings):
 
     # Number of results for each page
     default_page_size = 20
+
+    # How long we keep our user profiles before checking for updates
+    user_profile_ttl = timedelta(weeks=2)
 
 
 settings = Settings()

@@ -82,7 +82,10 @@ async def bulk_update_secondary_mids(
         )
     except NoSuchRecord as ex:
         loc = ["path"] if ex.table in {Plan, Merchant} else ["body"]
-        raise ResourceNotFoundError.from_no_such_record(ex, loc=loc) from ex
+        plural = ex.table is SecondaryMID
+        raise ResourceNotFoundError.from_no_such_record(
+            ex, loc=loc, plural=plural
+        ) from ex
 
     return mids
 

@@ -1334,3 +1334,26 @@ async def test_bulk_update_enrolment_status(
     assert expected is not None
 
     assert resp.json() == [await primary_mid_overview_json(expected)]
+
+
+async def test_bulk_update_enrolment_status_nonexistent_mid(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    await primary_mid_factory(
+        merchant=merchant, payment_enrolment_status=PaymentEnrolmentStatus.UNKNOWN
+    )
+
+    resp = test_client.patch(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/mids",
+        json={
+            "mid_refs": [str(uuid4())],
+            "payment_enrolment_status": PaymentEnrolmentStatus.ENROLLED,
+        },
+    )
+
+    assert_is_not_found_error(resp, loc=["body", "mid_refs"])

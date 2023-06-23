@@ -15,6 +15,7 @@ APP_REGISTRY = AppRegistry(
     apps=[
         "bullsquid.merchant_data.piccolo_app",
         "bullsquid.customer_wallet.piccolo_app",
+        "bullsquid.user_data.piccolo_app",
         "qbert.piccolo_app",
     ]
 )

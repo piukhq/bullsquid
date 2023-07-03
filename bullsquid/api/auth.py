@@ -166,7 +166,9 @@ if settings.debug or settings.oauth.domain is None:
 
     def jwt_bearer() -> JWTCredentials:
         """A fake jwt_bearer dependency for use in debug mode."""
-        return JWTCredentials(scheme="Debug", credentials="", claims={})
+        return JWTCredentials(
+            scheme="Debug", credentials="", claims={"sub": "test-user-data"}
+        )
 
 else:
     jwt_bearer = JWTBearer()

@@ -25,6 +25,7 @@ from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.psimis.tables import PSIMI
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
+from bullsquid.user_data.tables import UserProfile
 
 T = TypeVar("T", bound=BaseTable)
 
@@ -71,6 +72,17 @@ def validate_subject_owners(
         raise NoSuchRecord(RESOURCE_TYPE_TO_TABLE[subject_type])
 
 
+async def get_user_name(user_id: str) -> str:
+    user_data = (
+        await UserProfile.select(UserProfile.name)
+        .where(UserProfile.user_id == user_id)
+        .first()
+    )
+    if user_data is None:
+        return "Unknown User"
+    return user_data["name"]
+
+
 async def _list_comments_by_parent(parent: Comment) -> list[CommentResponse]:
     comments = await Comment.objects().where(Comment.parent == parent)
 
@@ -96,7 +108,7 @@ async def create_comment_response(
     return CommentResponse(
         comment_ref=comment.pk,
         created_at=comment.created_at,
-        created_by=comment.created_by,
+        created_by=await get_user_name(user_id=comment.created_by),
         is_edited=comment.is_edited,
         is_deleted=comment.is_deleted,
         subjects=[
@@ -195,12 +207,13 @@ async def list_comments_by_subject(
 
 
 async def create_comment(
-    comment_data: CreateCommentRequest, parent: UUID | None
+    comment_data: CreateCommentRequest, *, user_id: str, parent: UUID | None
 ) -> CommentResponse:
     """
     Create a comment from the given request data.
     Returns a CommentResponse instance.
     """
+
     # fetch the related records and raise errors if they do not exist.
     if parent and not await Comment.exists().where(Comment.pk == parent):
         raise NoSuchRecord(Comment)
@@ -228,7 +241,7 @@ async def create_comment(
         subjects=comment_data.subjects,
         subject_type=comment_data.subject_type,
         parent=parent,
-        created_by="somebody",
+        created_by=user_id,
     )
     await comment.save()
 

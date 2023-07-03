@@ -23,7 +23,7 @@ def comment_json(
     return {
         "comment_ref": str(comment.pk),
         "created_at": comment.created_at.isoformat(),
-        "created_by": comment.created_by,
+        "created_by": "Unknown User",
         "is_edited": comment.is_edited,
         "is_deleted": comment.is_deleted,
         "subjects": [

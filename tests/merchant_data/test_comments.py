@@ -12,6 +12,7 @@ from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.psimis.tables import PSIMI
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 from bullsquid.merchant_data.tables import BaseTable
+from bullsquid.user_data.tables import UserProfile
 from tests.helpers import Factory, assert_is_not_found_error, assert_is_value_error
 
 
@@ -19,11 +20,12 @@ def comment_json(
     comment: Comment,
     *,
     subject: BaseTable,
+    created_by: str = "Unknown User",
 ) -> dict:
     return {
         "comment_ref": str(comment.pk),
         "created_at": comment.created_at.isoformat(),
-        "created_by": "Unknown User",
+        "created_by": created_by,
         "is_edited": comment.is_edited,
         "is_deleted": comment.is_deleted,
         "subjects": [
@@ -96,6 +98,164 @@ async def test_list_by_owner_ref(
             {
                 "subject_type": "merchant",
                 "comments": [comment_json(expected, subject=merchant)],
+            }
+        ],
+    }
+
+
+async def test_list_with_user_nickname(
+    user_profile_factory: Factory[UserProfile],
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    user_profile = await user_profile_factory()
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[merchant.pk],
+        subject_type=ResourceType.MERCHANT,
+        created_by=user_profile.user_id,
+    )
+
+    resp = test_client.get("/api/v1/directory_comments", params={"ref": str(plan.pk)})
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    expected = await Comment.objects().get(Comment.pk == comment.pk)
+    assert expected is not None
+    assert resp.json() == {
+        "entity_comments": None,
+        "lower_comments": [
+            {
+                "subject_type": "merchant",
+                "comments": [
+                    comment_json(
+                        expected, subject=merchant, created_by=user_profile.nickname
+                    )
+                ],
+            }
+        ],
+    }
+
+
+async def test_list_with_user_name(
+    user_profile_factory: Factory[UserProfile],
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    user_profile = await user_profile_factory(nickname=None)
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[merchant.pk],
+        subject_type=ResourceType.MERCHANT,
+        created_by=user_profile.user_id,
+    )
+
+    resp = test_client.get("/api/v1/directory_comments", params={"ref": str(plan.pk)})
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    expected = await Comment.objects().get(Comment.pk == comment.pk)
+    assert expected is not None
+    assert resp.json() == {
+        "entity_comments": None,
+        "lower_comments": [
+            {
+                "subject_type": "merchant",
+                "comments": [
+                    comment_json(
+                        expected, subject=merchant, created_by=user_profile.name
+                    )
+                ],
+            }
+        ],
+    }
+
+
+async def test_list_with_user_email(
+    user_profile_factory: Factory[UserProfile],
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    user_profile = await user_profile_factory(nickname=None, name=None)
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[merchant.pk],
+        subject_type=ResourceType.MERCHANT,
+        created_by=user_profile.user_id,
+    )
+
+    resp = test_client.get("/api/v1/directory_comments", params={"ref": str(plan.pk)})
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    expected = await Comment.objects().get(Comment.pk == comment.pk)
+    assert expected is not None
+    assert resp.json() == {
+        "entity_comments": None,
+        "lower_comments": [
+            {
+                "subject_type": "merchant",
+                "comments": [
+                    comment_json(
+                        expected,
+                        subject=merchant,
+                        created_by=user_profile.email_address,
+                    )
+                ],
+            }
+        ],
+    }
+
+
+async def test_list_with_user_id(
+    user_profile_factory: Factory[UserProfile],
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    comment_factory: Factory[Comment],
+    test_client: TestClient,
+) -> None:
+    user_profile = await user_profile_factory(
+        nickname=None, name=None, email_address=None
+    )
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    comment = await comment_factory(
+        owner=plan.pk,
+        owner_type=ResourceType.PLAN,
+        subjects=[merchant.pk],
+        subject_type=ResourceType.MERCHANT,
+        created_by=user_profile.user_id,
+    )
+
+    resp = test_client.get("/api/v1/directory_comments", params={"ref": str(plan.pk)})
+    assert resp.status_code == status.HTTP_200_OK, resp.text
+
+    expected = await Comment.objects().get(Comment.pk == comment.pk)
+    assert expected is not None
+    assert resp.json() == {
+        "entity_comments": None,
+        "lower_comments": [
+            {
+                "subject_type": "merchant",
+                "comments": [
+                    comment_json(
+                        expected,
+                        subject=merchant,
+                        created_by=user_profile.user_id,
+                    )
+                ],
             }
         ],
     }

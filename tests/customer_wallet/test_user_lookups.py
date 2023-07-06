@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from httpx import Response
 
 from bullsquid.customer_wallet.user_lookups.tables import UserLookup
-from tests.customer_wallet.conftest import Factory
+from tests.helpers import Factory
 
 
 def user_json(user_lookup: UserLookup) -> dict[str, Any]:

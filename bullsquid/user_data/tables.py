@@ -9,9 +9,9 @@ class UserProfile(Table):
     """
 
     user_id = Text(primary_key=True)
-    name = Text()
-    nickname = Text()
-    email_address = Text()
+    name = Text(null=True)
+    nickname = Text(null=True)
+    email_address = Text(null=True)
+    picture = Text(null=True)
     created_at = Timestamptz()
     updated_at = Timestamptz()
-    picture = Text()

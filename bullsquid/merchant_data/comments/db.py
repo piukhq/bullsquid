@@ -74,13 +74,24 @@ def validate_subject_owners(
 
 async def get_user_name(user_id: str) -> str:
     user_data = (
-        await UserProfile.select(UserProfile.name)
+        await UserProfile.select(
+            UserProfile.nickname,
+            UserProfile.name,
+            UserProfile.email_address,
+        )
         .where(UserProfile.user_id == user_id)
         .first()
     )
+
     if user_data is None:
         return "Unknown User"
-    return user_data["name"]
+
+    return (
+        user_data["nickname"]
+        or user_data["name"]
+        or user_data["email_address"]
+        or user_id
+    )
 
 
 async def _list_comments_by_parent(parent: Comment) -> list[CommentResponse]:

@@ -21,6 +21,13 @@ from piccolo.utils.warnings import (  # noqa: E402
 from bullsquid.api.app import create_app  # noqa: E402
 
 
+pytest_plugins = [
+    "tests.merchant_data.fixtures",
+    "tests.customer_wallet.fixtures",
+    "tests.user_data.fixtures",
+]
+
+
 @pytest.fixture()
 def database() -> Generator[None, None, None]:
     """

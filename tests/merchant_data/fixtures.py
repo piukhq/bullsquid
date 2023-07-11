@@ -2,6 +2,7 @@
 import random
 from datetime import datetime
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from piccolo.testing.model_builder import ModelBuilder
@@ -32,6 +33,7 @@ def plan_factory(database: None) -> Factory[Plan]:
                 "status": ResourceStatus.ACTIVE,
                 "icon_url": "https://example.com/icon.png",
                 "created": current,
+                "slug": str(uuid4()),
                 **defaults,  # type: ignore
             },
             persist=persist,

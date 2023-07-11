@@ -235,7 +235,7 @@ async def test_create_with_blank_slug(
     default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
-    plan = await plan_factory(persist=False, slug="")
+    plan = await plan_factory(persist=False, slug=None)
     resp = test_client.post(
         "/api/v1/plans",
         json={

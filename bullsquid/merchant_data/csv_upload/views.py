@@ -1,7 +1,9 @@
 """
 API endpoints for importing data en masse from files.
 """
+from datetime import datetime
 from enum import Enum
+from uuid import uuid4
 
 from fastapi import APIRouter, Form, UploadFile, status
 from loguru import logger
@@ -74,16 +76,21 @@ def archive_file(file: UploadFile) -> None:
     """
     Archive the file to blob storage.
     """
+    file_date = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    default_filename = f"{uuid4()}-{file_date}.csv"
+    filename = file.filename or default_filename
     if dsn := settings.blob_storage.dsn:
-        logger.info("Archiving file to blob storage", filename=file.filename)
+        logger.info("Archiving file to blob storage", filename=filename)
         storage = AzureBlobStorageServiceInterface(dsn)
         storage.upload_blob(
-            file.file, container=settings.blob_storage.archive_container, blob=file.filename
+            file.file,
+            container=settings.blob_storage.archive_container,
+            blob=filename,
         )
     else:
         logger.warning(
             "Blob storage not configured, skipping file archival",
-            filename=file.filename,
+            filename=filename,
         )
 
 

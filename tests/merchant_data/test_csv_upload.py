@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import BinaryIO, Generator
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -110,6 +111,7 @@ async def test_load_invalid_file_type(
         },
         data={
             "file_type": "fake file type for testing",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -135,6 +137,7 @@ async def test_load_locations_file(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -164,6 +167,7 @@ async def test_load_locations_file_clean(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -189,6 +193,7 @@ async def test_load_locations_file_with_merchant_ref(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
             "merchant_ref": str(merchant.pk),
         },
@@ -215,6 +220,7 @@ async def test_load_locations_file_with_no_merchant_ref_or_name(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -240,6 +246,7 @@ async def test_load_locations_file_no_merchants(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -265,6 +272,7 @@ async def test_load_locations_file_physical_no_address(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -292,6 +300,7 @@ async def test_load_locations_file_duplicate_location(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -309,6 +318,7 @@ async def test_load_locations_file_duplicate_location(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -338,6 +348,7 @@ async def test_load_locations_file_duplicate_primary_mid(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -369,6 +380,7 @@ async def test_load_locations_file_duplicate_secondary_mid(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -391,6 +403,7 @@ async def test_load_garbage_file(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -413,6 +426,7 @@ async def test_load_merchants_file(
         },
         data={
             "file_type": "merchant_details",
+            "file_name": "merchant_details.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -436,6 +450,7 @@ async def test_load_merchants_file_with_no_merchant_name(
         },
         data={
             "file_type": "merchant_details",
+            "file_name": "merchant_details.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -457,6 +472,7 @@ async def test_load_merchants_file_missing_plan(
         },
         data={
             "file_type": "merchant_details",
+            "file_name": "merchant_details.csv",
             "plan_ref": str(uuid4()),
         },
     )
@@ -512,6 +528,7 @@ async def test_load_locations_with_merchant_ref_file(
         },
         data={
             "file_type": "locations",
+            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
             "merchant_ref": str(merchant.pk),
         },
@@ -542,6 +559,7 @@ async def test_load_identifiers_file(
         },
         data={
             "file_type": "identifiers",
+            "file_name": "identifiers.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -571,6 +589,7 @@ async def test_load_identifiers_file_with_merchant_ref(
         },
         data={
             "file_type": "identifiers",
+            "file_name": "identifiers.csv",
             "plan_ref": str(plan.pk),
             "merchant_ref": str(merchant1.pk),
         },
@@ -600,9 +619,61 @@ async def test_load_identifiers_file_missing_location(
         },
         data={
             "file_type": "identifiers",
+            "file_name": "identifiers.csv",
             "plan_ref": str(plan.pk),
         },
     )
+
+    assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
+    await run_worker(burst=True)
+
+
+@pytest.mark.usefixtures("default_payment_schemes")
+async def test_load_identifiers_file_with_archive(
+    test_client: TestClient,
+    identifiers_file: BinaryIO,
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+) -> None:
+    """Load a valid file with blob storage configured."""
+    plan = await plan_factory()
+    merchant1 = await merchant_factory(plan=plan, name="2Wasabi")
+    merchant2 = await merchant_factory(plan=plan, name="3Wasabi")
+    await location_factory(merchant=merchant1, location_id="A037")
+    await location_factory(merchant=merchant2, location_id="A038")
+
+    dsn = (
+        "DefaultEndpointsProtocol=http;"
+        "AccountName=testaccount;"
+        "AccountKey=dGVzdGtleQo=;"
+        "BlobEndpoint=http://testbink.com/testaccount;"
+    )
+
+    patch_dsn = patch(
+        "bullsquid.merchant_data.csv_upload.views.settings.blob_storage.dsn",
+        dsn,
+    )
+    patch_blob = patch("bullsquid.service.azure_storage.BlobServiceClient")
+    with patch_dsn, patch_blob as mock_blob:
+        resp = test_client.post(
+            "/api/v1/plans/csv_upload",
+            files={
+                "file": identifiers_file,
+            },
+            data={
+                "file_type": "identifiers",
+                "file_name": "identifiers.csv",
+                "plan_ref": str(plan.pk),
+            },
+        )
+
+        mock_blob.from_connection_string.assert_called_once_with(dsn)
+        mock_service_client = mock_blob.from_connection_string.return_value
+        mock_service_client.get_blob_client.assert_called_once_with(
+            container="portal-archive",
+            blob="identifiers.csv",
+        )
 
     assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
     await run_worker(burst=True)

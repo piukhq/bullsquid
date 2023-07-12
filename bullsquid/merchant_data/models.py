@@ -1,5 +1,5 @@
 """Defines the base model class with a default configuration."""
-from pydantic import BaseModel as PydanticBaseModel
+from pydantic import BaseModel as PydanticBaseModel, ConstrainedStr
 
 
 class BaseModel(PydanticBaseModel):
@@ -13,3 +13,7 @@ class BaseModel(PydanticBaseModel):
 
         # perform validation even on omitted fields
         validate_all = True
+
+
+class Slug(ConstrainedStr):
+    regex = "^[a-z0-9]+(?:-[a-z0-9]+)*$"

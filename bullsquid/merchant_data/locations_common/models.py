@@ -6,7 +6,7 @@ from datetime import datetime
 from pydantic import UUID4, root_validator, validator
 
 from bullsquid.merchant_data.enums import ResourceStatus
-from bullsquid.merchant_data.models import BaseModel
+from bullsquid.merchant_data.models import BaseModel, Slug
 from bullsquid.merchant_data.validators import (
     nullify_blank_strings,
     string_must_not_be_blank,
@@ -52,7 +52,7 @@ class LocationOverviewMetadataBase(BaseModel):
 class LocationPaymentSchemeCountResponse(BaseModel):
     """Counts of MIDs by payment scheme on a location."""
 
-    slug: str
+    slug: Slug
     count: int
 
     _ = validator("slug", allow_reuse=True)(string_must_not_be_blank)

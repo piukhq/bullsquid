@@ -7,7 +7,7 @@ from bullsquid.merchant_data.locations_common.models import (
     LocationOverviewMetadataBase,
     SubLocationOverviewResponse,
 )
-from bullsquid.merchant_data.models import BaseModel
+from bullsquid.merchant_data.models import BaseModel, Slug
 from bullsquid.merchant_data.primary_mids.models import LocationLinkResponse
 from bullsquid.merchant_data.validators import (
     nullify_blank_strings,
@@ -79,7 +79,7 @@ class PrimaryMIDLinkResponse(BaseModel):
     """Request model for linking a primary MID with a location."""
 
     mid_ref: UUID4
-    payment_scheme_slug: str
+    payment_scheme_slug: Slug
     mid_value: str
 
 
@@ -94,7 +94,7 @@ class SecondaryMIDLinkResponse(BaseModel):
 
     link_ref: UUID4
     secondary_mid_ref: UUID4
-    payment_scheme_slug: str
+    payment_scheme_slug: Slug
     secondary_mid_value: str
 
 

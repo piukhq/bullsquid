@@ -5,7 +5,7 @@ Keeping them here avoids circular imports.
 from pydantic import UUID4, validator
 
 from bullsquid.merchant_data.enums import ResourceStatus
-from bullsquid.merchant_data.models import BaseModel
+from bullsquid.merchant_data.models import BaseModel, Slug
 from bullsquid.merchant_data.validators import (
     FlexibleUrl,
     nullify_blank_strings,
@@ -18,7 +18,7 @@ class PlanMetadataResponse(BaseModel):
 
     name: str
     plan_id: int | None
-    slug: str | None
+    slug: Slug | None
     icon_url: FlexibleUrl | None
 
     _ = validator("name", allow_reuse=True)(string_must_not_be_blank)
@@ -38,7 +38,7 @@ class MerchantMetadataResponse(BaseModel):
 class MerchantPaymentSchemeCountResponse(BaseModel):
     """Counts of MIDs by payment scheme on a merchant."""
 
-    slug: str
+    slug: Slug
     mids: int
     secondary_mids: int
     psimis: int

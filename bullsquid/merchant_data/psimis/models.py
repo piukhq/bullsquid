@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import UUID4, BaseModel, validator
 
 from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.models import Slug
 from bullsquid.merchant_data.validators import (
     nullify_blank_strings,
     string_must_not_be_blank,
@@ -16,7 +17,7 @@ class PSIMIMetadata(BaseModel):
 
     value: str
     payment_scheme_merchant_name: str | None
-    payment_scheme_slug: str
+    payment_scheme_slug: Slug
 
     _ = validator("value", allow_reuse=True)(string_must_not_be_blank)
     _ = validator("payment_scheme_merchant_name", allow_reuse=True)(

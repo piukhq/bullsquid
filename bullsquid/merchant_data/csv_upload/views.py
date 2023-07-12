@@ -70,20 +70,20 @@ async def import_identifiers_file(
         )
 
 
-def archive_file(file: UploadFile, file_name: str) -> None:
+def archive_file(file: UploadFile) -> None:
     """
     Archive the file to blob storage.
     """
     if dsn := settings.blob_storage.dsn:
-        logger.info("Archiving file to blob storage", file_name=file_name)
+        logger.info("Archiving file to blob storage", filename=file.filename)
         storage = AzureBlobStorageServiceInterface(dsn)
         storage.upload_blob(
-            file.file, container=settings.blob_storage.archive_container, blob=file_name
+            file.file, container=settings.blob_storage.archive_container, blob=file.filename
         )
     else:
         logger.warning(
             "Blob storage not configured, skipping file archival",
-            file_name=file_name,
+            filename=file.filename,
         )
 
 
@@ -91,7 +91,6 @@ def archive_file(file: UploadFile, file_name: str) -> None:
 async def csv_upload_file(
     file: UploadFile,
     file_type: FileType = Form(),
-    file_name: str = Form(),
     plan_ref: UUID4 = Form(),
     merchant_ref: UUID4 | None = Form(default=None),
 ) -> None:
@@ -111,4 +110,4 @@ async def csv_upload_file(
     except Exception as ex:
         raise DataError(loc=["body", "file"], resource_name="CSV upload") from ex
     else:
-        archive_file(file, file_name)
+        archive_file(file)

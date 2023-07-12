@@ -126,13 +126,16 @@ def secondary_mid_factory(
 
 
 @pytest.fixture
-def psimi_factory(database: None) -> Factory[PSIMI]:
+def psimi_factory(
+    database: None, default_payment_schemes: list[PaymentScheme]
+) -> Factory[PSIMI]:
     async def factory(*, persist: bool = True, **defaults: Any) -> PSIMI:
         return await ModelBuilder.build(
             PSIMI,
             defaults={
                 "status": ResourceStatus.ACTIVE,
                 "txm_status": TXMStatus.NOT_ONBOARDED,
+                "payment_scheme": random.choice(default_payment_schemes),
                 "created": current,
                 **defaults,  # type: ignore
             },

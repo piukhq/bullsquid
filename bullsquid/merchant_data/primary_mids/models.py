@@ -9,7 +9,7 @@ from bullsquid.merchant_data.enums import (
     ResourceStatus,
     TXMStatus,
 )
-from bullsquid.merchant_data.models import BaseModel
+from bullsquid.merchant_data.models import BaseModel, Slug
 from bullsquid.merchant_data.validators import (
     nullify_blank_strings,
     string_must_not_be_blank,
@@ -19,7 +19,7 @@ from bullsquid.merchant_data.validators import (
 class PrimaryMIDMetadata(BaseModel):
     """Primary MID metadata model."""
 
-    payment_scheme_slug: str
+    payment_scheme_slug: Slug
     mid: str
     visa_bin: str | None
     payment_enrolment_status = PaymentEnrolmentStatus.UNKNOWN

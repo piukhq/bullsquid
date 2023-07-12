@@ -1,10 +1,10 @@
 """Request & response model definitions for plan endpoints."""
 
 
-from pydantic import UUID4, constr, validator
+from pydantic import UUID4, validator
 
 from bullsquid.merchant_data.enums import ResourceStatus
-from bullsquid.merchant_data.models import BaseModel
+from bullsquid.merchant_data.models import BaseModel, Slug
 from bullsquid.merchant_data.shared.models import (
     MerchantOverviewResponse,
     PlanMetadataResponse,
@@ -21,7 +21,7 @@ class CreatePlanRequest(BaseModel):
 
     name: str
     icon_url: FlexibleUrl | None
-    slug: constr(regex=("^[a-z0-9]+(?:-[a-z0-9]+)*$")) | None
+    slug: Slug | None
     plan_id: int | None
 
     _ = validator("name", allow_reuse=True)(string_must_not_be_blank)

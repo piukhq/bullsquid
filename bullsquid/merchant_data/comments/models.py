@@ -6,6 +6,7 @@ from datetime import datetime
 from pydantic import UUID4, BaseModel, root_validator, validator
 
 from bullsquid.merchant_data.enums import ResourceType
+from bullsquid.merchant_data.models import Slug
 from bullsquid.merchant_data.validators import (
     nullify_blank_strings,
     string_must_not_be_blank,
@@ -99,7 +100,7 @@ class CommentSubject(BaseModel):
 
     display_text: str
     subject_ref: UUID4
-    icon_slug: str | None
+    icon_slug: Slug | None
 
     _ = validator("display_text", allow_reuse=True)(string_must_not_be_blank)
     _ = validator("icon_slug", allow_reuse=True)(nullify_blank_strings)

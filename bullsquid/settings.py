@@ -110,6 +110,24 @@ class SentrySettings(BaseSettings):
     env: str | None
 
 
+class BlobStorageSettings(BaseSettings):
+    """
+    Settings for the Azure Blob Storage service. If DSN is None, the service
+    will not be initialised and the other settings will be ignored.
+    """
+
+    class Config:
+        """
+        If using env variables, set Blob Storage settings with blob_storage_dsn
+        and blob_storage_archive_container.
+        """
+
+        env_prefix = "blob_storage"
+
+    dsn: str | None = None
+    archive_container: str = "portal-archive"
+
+
 class Settings(BaseSettings):
     """Top level settings for the app."""
 
@@ -151,6 +169,9 @@ class Settings(BaseSettings):
 
     # Sentry SDK settings.
     sentry: SentrySettings = Field(default_factory=SentrySettings)
+
+    # Azure Blob Storage settings.
+    blob_storage: BlobStorageSettings = Field(default_factory=BlobStorageSettings)
 
     # TEMPORARY: for compatibility until the frontend has transitioned over to
     # using OAuth.

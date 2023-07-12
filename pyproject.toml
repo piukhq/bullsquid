@@ -34,6 +34,7 @@ tomli = "^2.0.1"
 pyjwt = { extras = ["crypto"], version = "^2.6.0" }
 pyyaml = "^6.0"
 python-multipart = "^0.0.5"
+azure-storage-blob = "^12.17.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

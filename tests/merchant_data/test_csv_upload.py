@@ -111,7 +111,6 @@ async def test_load_invalid_file_type(
         },
         data={
             "file_type": "fake file type for testing",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -137,7 +136,6 @@ async def test_load_locations_file(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -167,7 +165,6 @@ async def test_load_locations_file_clean(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -193,7 +190,6 @@ async def test_load_locations_file_with_merchant_ref(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
             "merchant_ref": str(merchant.pk),
         },
@@ -220,7 +216,6 @@ async def test_load_locations_file_with_no_merchant_ref_or_name(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -246,7 +241,6 @@ async def test_load_locations_file_no_merchants(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -272,7 +266,6 @@ async def test_load_locations_file_physical_no_address(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -300,7 +293,6 @@ async def test_load_locations_file_duplicate_location(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -318,7 +310,6 @@ async def test_load_locations_file_duplicate_location(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -348,7 +339,6 @@ async def test_load_locations_file_duplicate_primary_mid(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -380,7 +370,6 @@ async def test_load_locations_file_duplicate_secondary_mid(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -403,7 +392,6 @@ async def test_load_garbage_file(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -426,7 +414,6 @@ async def test_load_merchants_file(
         },
         data={
             "file_type": "merchant_details",
-            "file_name": "merchant_details.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -450,7 +437,6 @@ async def test_load_merchants_file_with_no_merchant_name(
         },
         data={
             "file_type": "merchant_details",
-            "file_name": "merchant_details.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -472,7 +458,6 @@ async def test_load_merchants_file_missing_plan(
         },
         data={
             "file_type": "merchant_details",
-            "file_name": "merchant_details.csv",
             "plan_ref": str(uuid4()),
         },
     )
@@ -528,7 +513,6 @@ async def test_load_locations_with_merchant_ref_file(
         },
         data={
             "file_type": "locations",
-            "file_name": "locations.csv",
             "plan_ref": str(plan.pk),
             "merchant_ref": str(merchant.pk),
         },
@@ -559,7 +543,6 @@ async def test_load_identifiers_file(
         },
         data={
             "file_type": "identifiers",
-            "file_name": "identifiers.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -589,7 +572,6 @@ async def test_load_identifiers_file_with_merchant_ref(
         },
         data={
             "file_type": "identifiers",
-            "file_name": "identifiers.csv",
             "plan_ref": str(plan.pk),
             "merchant_ref": str(merchant1.pk),
         },
@@ -619,7 +601,6 @@ async def test_load_identifiers_file_missing_location(
         },
         data={
             "file_type": "identifiers",
-            "file_name": "identifiers.csv",
             "plan_ref": str(plan.pk),
         },
     )
@@ -663,7 +644,6 @@ async def test_load_identifiers_file_with_archive(
             },
             data={
                 "file_type": "identifiers",
-                "file_name": "identifiers.csv",
                 "plan_ref": str(plan.pk),
             },
         )

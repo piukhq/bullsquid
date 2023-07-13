@@ -25,7 +25,7 @@ class CreatePlanRequest(BaseModel):
     plan_id: int | None
 
     _ = validator("name", allow_reuse=True)(string_must_not_be_blank)
-    _ = validator("slug", allow_reuse=True)(nullify_blank_strings)
+    _ = validator("slug", allow_reuse=True, pre=True)(nullify_blank_strings)
 
 
 class PlanPaymentSchemeCountResponse(BaseModel):

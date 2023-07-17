@@ -134,7 +134,7 @@ class Settings(BaseSettings):
     class Config:
         """Base settings configuration."""
 
-        secrets_dir = "/var/run/secrets/bullsquid"
+        secrets_dir = "/mnt/secrets"
 
         @classmethod
         def customise_sources(

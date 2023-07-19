@@ -36,6 +36,7 @@ class DatabaseSettings(BaseSettings):
         """
 
         env_prefix = "database_"
+        secrets_dir = "/mnt/secrets"
 
     dsn = "postgresql://postgres:postgres@localhost:5432/{}?application_name=bullsquid"
     dbname = "bullsquid"
@@ -51,6 +52,7 @@ class TXMSettings(BaseSettings):
         """
 
         env_prefix = "txm_"
+        secrets_dir = "/mnt/secrets"
 
     base_url: AnyHttpUrl | None
     api_key: str | None
@@ -77,6 +79,7 @@ class OAuthSettings(BaseSettings):
         """
 
         env_prefix = "oauth_"
+        secrets_dir = "/mnt/secrets"
 
     domain: AnyHttpUrl | None
     audience: str = "https://portal.bink.com"
@@ -105,6 +108,7 @@ class SentrySettings(BaseSettings):
         """
 
         env_prefix = "sentry_"
+        secrets_dir = "/mnt/secrets"
 
     dsn: AnyHttpUrl | None
     env: str | None
@@ -123,6 +127,7 @@ class BlobStorageSettings(BaseSettings):
         """
 
         env_prefix = "blob_storage"
+        secrets_dir = "/mnt/secrets"
 
     dsn: str | None = None
     archive_container: str = "portal-archive"

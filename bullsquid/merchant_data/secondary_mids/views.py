@@ -277,14 +277,14 @@ async def delete_secondary_mids(
         SecondaryMIDDeletionResponse(
             secondary_mid_ref=secondary_mid_ref,
             status=ResourceStatus.PENDING_DELETION,
-            deletion_reason=None,
+            reason=None,
         )
         for secondary_mid_ref in onboarded
     ] + [
         SecondaryMIDDeletionResponse(
             secondary_mid_ref=secondary_mid_ref,
             status=ResourceStatus.DELETED,
-            deletion_reason=None,
+            reason=None,
         )
         for secondary_mid_ref in not_onboarded
     ]

@@ -157,7 +157,7 @@ async def delete_locations(
         LocationDeletionResponse(
             location_ref=location_ref,
             location_status=ResourceStatus.DELETED,
-            deletion_reason=None,
+            reason=None,
         )
         for location_ref in deletion.location_refs
     ]

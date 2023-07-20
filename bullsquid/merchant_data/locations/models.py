@@ -60,6 +60,9 @@ class LocationDeletionRequest(BaseModel):
     """Request model for deleting locations."""
 
     location_refs: list[UUID4]
+    reason: str | None
+
+    _ = validator("reason", allow_reuse=True)(nullify_blank_strings)
 
 
 class LocationDeletionResponse(BaseModel):
@@ -67,9 +70,9 @@ class LocationDeletionResponse(BaseModel):
 
     location_ref: UUID4
     location_status: ResourceStatus
-    deletion_reason: str | None
+    reason: str | None
 
-    _ = validator("deletion_reason", allow_reuse=True)(nullify_blank_strings)
+    _ = validator("reason", allow_reuse=True)(nullify_blank_strings)
 
 
 class PrimaryMIDLinkRequest(BaseModel):

@@ -203,10 +203,14 @@ async def delete_psimis(
 
     return [
         PSIMIDeletionResponse(
-            psimi_ref=psimi_ref, status=ResourceStatus.PENDING_DELETION
+            psimi_ref=psimi_ref,
+            status=ResourceStatus.PENDING_DELETION,
+            deletion_reason=None,
         )
         for psimi_ref in onboarded
     ] + [
-        PSIMIDeletionResponse(psimi_ref=psimi_ref, status=ResourceStatus.DELETED)
+        PSIMIDeletionResponse(
+            psimi_ref=psimi_ref, status=ResourceStatus.DELETED, deletion_reason=None
+        )
         for psimi_ref in not_onboarded
     ]

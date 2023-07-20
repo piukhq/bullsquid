@@ -682,7 +682,11 @@ async def test_delete(
 
     assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
     assert resp.json() == [
-        {"location_ref": str(location.pk), "location_status": "deleted"}
+        {
+            "location_ref": str(location.pk),
+            "location_status": "deleted",
+            "deletion_reason": None,
+        }
         for location in locations
     ]
 

@@ -582,7 +582,7 @@ async def test_delete(
                 if psimi.txm_status == TXMStatus.ONBOARDED
                 else "deleted"
             ),
-            "deletion_reason": None,
+            "reason": None,
         }
     ]
 

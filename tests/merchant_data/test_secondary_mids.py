@@ -780,7 +780,7 @@ async def test_delete(
                 if mid.txm_status == TXMStatus.ONBOARDED
                 else "deleted"
             ),
-            "deletion_reason": None,
+            "reason": None,
         }
     ]
 

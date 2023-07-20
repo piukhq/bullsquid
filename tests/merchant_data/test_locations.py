@@ -685,7 +685,7 @@ async def test_delete(
         {
             "location_ref": str(location.pk),
             "location_status": "deleted",
-            "deletion_reason": None,
+            "reason": None,
         }
         for location in locations
     ]

@@ -175,6 +175,19 @@ else:
 
 
 async def fetch_user_data(user_id: str, auth0: Auth0ServiceInterface) -> None:
+    update_cutoff = datetime.datetime.utcnow() - settings.user_profile_ttl
+    exists = (
+        await UserProfile()
+        .exists()
+        .where(
+            UserProfile.user_id == user_id,
+            UserProfile.updated_at > update_cutoff,
+        )
+    )
+    if exists:
+        logger.debug("User profile already exists and is up to date.", user_id=user_id)
+        return
+
     profile_data = await auth0.get_user_profile(user_id)
 
     profile_fields: dict[Column, Any] = {
@@ -184,18 +197,18 @@ async def fetch_user_data(user_id: str, auth0: Auth0ServiceInterface) -> None:
         UserProfile.picture: profile_data["picture"],
     }
 
-    lookup = await UserProfile.objects().get_or_create(
+    profile = await UserProfile.objects().get_or_create(
         UserProfile.user_id == user_id,
         defaults=profile_fields,
     )
-    created = lookup._was_created or False
-
-    update_cutoff = datetime.datetime.utcnow() - settings.user_profile_ttl
-
-    if not created and lookup.updated_at < update_cutoff:
+    created = profile._was_created or False
+    if not created:
+        logger.info("Updating user profile.", user_id=user_id)
         await UserProfile.update(cast(dict[Column | str, Any], profile_fields)).where(
             UserProfile.user_id == user_id
         )
+    else:
+        logger.info("Created user profile.", user_id=user_id)
 
 
 _auth0: Auth0ServiceInterface | None = None

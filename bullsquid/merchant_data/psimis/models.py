@@ -52,3 +52,6 @@ class PSIMIDeletionResponse(BaseModel):
 
     psimi_ref: UUID
     status: ResourceStatus
+    deletion_reason: str | None
+
+    _ = validator("deletion_reason", allow_reuse=True)(nullify_blank_strings)

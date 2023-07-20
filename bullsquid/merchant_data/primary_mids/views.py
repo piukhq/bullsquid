@@ -266,11 +266,17 @@ async def delete_primary_mids(
 
     return [
         PrimaryMIDDeletionResponse(
-            mid_ref=mid_ref, mid_status=ResourceStatus.PENDING_DELETION
+            mid_ref=mid_ref,
+            mid_status=ResourceStatus.PENDING_DELETION,
+            deletion_reason=None,
         )
         for mid_ref in onboarded
     ] + [
-        PrimaryMIDDeletionResponse(mid_ref=mid_ref, mid_status=ResourceStatus.DELETED)
+        PrimaryMIDDeletionResponse(
+            mid_ref=mid_ref,
+            mid_status=ResourceStatus.DELETED,
+            deletion_reason=None,
+        )
         for mid_ref in not_onboarded
     ]
 

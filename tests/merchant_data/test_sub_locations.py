@@ -472,7 +472,11 @@ async def test_delete_sub_location(
 
     assert resp.status_code == status.HTTP_202_ACCEPTED, resp.text
     assert resp.json() == [
-        {"location_ref": str(sub_location.pk), "location_status": "deleted"}
+        {
+            "location_ref": str(sub_location.pk),
+            "location_status": "deleted",
+            "deletion_reason": None,
+        }
         for sub_location in sub_locations
     ]
 

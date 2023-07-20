@@ -58,6 +58,9 @@ class SecondaryMIDDeletionResponse(BaseModel):
 
     secondary_mid_ref: UUID4
     status: ResourceStatus
+    deletion_reason: str | None
+
+    _ = validator("deletion_reason", allow_reuse=True)(nullify_blank_strings)
 
 
 class LocationLinkRequest(BaseModel):

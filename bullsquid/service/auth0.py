@@ -8,7 +8,7 @@ from bullsquid.settings import settings
 class Auth0ServiceInterface(ServiceInterface):
     async def update_token(self) -> None:
         """Fetches an up to date token for auth0"""
-        audience = f"{self.base_url}/api/v2/"
+        audience = f"{self.base_url.rstrip('/')}/api/v2/"
         token = await self.post(
             "/oauth/token",
             json={

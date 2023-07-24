@@ -191,10 +191,10 @@ async def fetch_user_data(user_id: str, auth0: Auth0ServiceInterface) -> None:
     profile_data = await auth0.get_user_profile(user_id)
 
     profile_fields: dict[Column, Any] = {
-        UserProfile.email_address: profile_data["email"],
-        UserProfile.name: profile_data["name"],
-        UserProfile.nickname: profile_data["nickname"],
-        UserProfile.picture: profile_data["picture"],
+        UserProfile.email_address: profile_data.get("email"),
+        UserProfile.name: profile_data.get("name"),
+        UserProfile.nickname: profile_data.get("nickname"),
+        UserProfile.picture: profile_data.get("picture"),
     }
 
     profile = await UserProfile.objects().get_or_create(

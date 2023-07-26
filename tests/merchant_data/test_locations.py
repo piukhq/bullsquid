@@ -29,6 +29,9 @@ async def location_to_json(
     *,
     is_sub_location: bool = False,
     include_sub_locations: bool = False,
+    visa_identifiers: int = 1,
+    mastercard_identifiers: int = 1,
+    amex_identifiers: int = 1
 ) -> dict:
     """Converts a location to its expected JSON representation."""
     data: dict[str, Any] = {
@@ -46,7 +49,11 @@ async def location_to_json(
         "payment_schemes": [
             {
                 "slug": payment_scheme.slug,
-                "count": 0,
+                "count": {
+                    "visa": visa_identifiers,
+                    "mastercard": mastercard_identifiers,
+                    "amex": amex_identifiers
+                    }[payment_scheme.slug],
             }
             for payment_scheme in payment_schemes
         ],
@@ -73,11 +80,16 @@ async def location_to_json(
 async def location_to_json_detail(
     location: Location,
     payment_schemes: list[PaymentScheme],
+    mids: dict[str, int] | None = None,
+    secondary_mids: dict[str, int] | None = None,
 ) -> dict:
     """Converts a location to its expected JSON representation."""
     if location.parent:
         raise ValueError("sub-location passed to location json helper")
-
+    if mids is None:
+        mids = {}
+    if secondary_mids is None:
+        secondary_mids = {}
     return {
         "location_ref": str(location.pk),
         "location_metadata": {
@@ -99,7 +111,8 @@ async def location_to_json_detail(
         "payment_schemes": [
             {
                 "slug": payment_scheme.slug,
-                "count": 0,
+                "mids": mids.get(payment_scheme.slug, 0),
+                "secondary_mids": secondary_mids.get(payment_scheme.slug, 0)
             }
             for payment_scheme in payment_schemes
         ],
@@ -133,6 +146,15 @@ async def test_list(
     default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
+    locations = [await location_factory() for _ in range(3)]
+    counts = {
+        location.location_id: {
+            "visa": 0,
+            "mastercard": 0,
+            "amex" : 0
+        }
+        for location in locations
+    }
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
@@ -1374,6 +1396,12 @@ async def test_edit_locations(
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
     new_details = await location_factory(persist=False)
+    counts = {
+        location.location_id: {
+            "mids": 0,
+            "secondary_mids": 0,
+        }
+    }
     resp = test_client.put(
         f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}",
         json={
@@ -1394,8 +1422,7 @@ async def test_edit_locations(
     expected = await Location.objects().get(Location.pk == location.pk)
     assert expected is not None
     assert resp.json() == await location_to_json_detail(
-        expected, default_payment_schemes
-    )
+        expected, default_payment_schemes,    )
     assert expected.name == new_details.name
 
 

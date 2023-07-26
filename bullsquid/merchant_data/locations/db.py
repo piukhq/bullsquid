@@ -26,6 +26,18 @@ from bullsquid.merchant_data.secondary_mid_location_links.tables import (
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 
+async def location_counts(location: Location, payment_scheme: PaymentScheme) -> int:
+    primary_mids = await PrimaryMID.count().where(
+        PrimaryMID.location == location,
+        PrimaryMID.payment_scheme == payment_scheme,
+    )
+    secondary_mids = await SecondaryMID.count().where(
+        SecondaryMIDLocationLink.location == location,
+        SecondaryMID.payment_scheme == payment_scheme,
+    )
+    return primary_mids + secondary_mids
+
+
 def create_location_overview_metadata(location: Location) -> LocationOverviewMetadata:
     """Creates a LocationMetadataResponse instance from the given location object."""
     return LocationOverviewMetadata(
@@ -70,7 +82,7 @@ async def create_location_overview_response(
         payment_schemes=[
             LocationPaymentSchemeCountResponse(
                 slug=payment_scheme.slug,
-                count=0,
+                count=await location_counts(location, payment_scheme),
             )
             for payment_scheme in payment_schemes
         ],

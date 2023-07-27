@@ -1,6 +1,8 @@
 """Database access layer for operations on locations"""
 from uuid import UUID
 
+from piccolo.query.methods.select import Count
+
 from bullsquid.db import NoSuchRecord, paginate
 from bullsquid.merchant_data.enums import ResourceStatus
 from bullsquid.merchant_data.locations.models import (
@@ -26,17 +28,32 @@ from bullsquid.merchant_data.secondary_mid_location_links.tables import (
 from bullsquid.merchant_data.secondary_mids.tables import SecondaryMID
 
 
-async def location_counts(location: Location, payment_scheme: PaymentScheme) -> int:
-    primary_mids = await PrimaryMID.count().where(
-        PrimaryMID.location == location,
-        PrimaryMID.payment_scheme == payment_scheme,
+async def create_locations_count_response(location: Location, payment_scheme: list[PaymentScheme]) -> LocationPaymentSchemeCountResponse:
+    
+    mids = {
+        mid_count["payment_scheme"]: mid_count["count"]
+        for mid_count in await PrimaryMID.all_select(PrimaryMID.payment_scheme, Count())
+        .where(
+            PrimaryMID.location == location, PrimaryMID.status != ResourceStatus.DELETED
+        )
+        .group_by(PrimaryMID.payment_scheme)
+    }
+    
+    secondary_mids = {
+        secondary_mid_count["payment_scheme"]: secondary_mid_count["count"]
+        for secondary_mid_count in await SecondaryMID.all_select(
+            SecondaryMID.payment_scheme, Count()
+        )
+        .where(
+            SecondaryMIDLocationLink.location == location,
+            SecondaryMID.status != ResourceStatus.DELETED,
+        )
+        .group_by(SecondaryMID.payment_scheme)
+    }
+    return LocationPaymentSchemeCountResponse(
+        slug=payment_scheme.slug,
+        count= mids + secondary_mids
     )
-    secondary_mids = await SecondaryMID.count().where(
-        SecondaryMIDLocationLink.location == location,
-        SecondaryMID.payment_scheme == payment_scheme,
-    )
-    return primary_mids + secondary_mids
-
 
 def create_location_overview_metadata(location: Location) -> LocationOverviewMetadata:
     """Creates a LocationMetadataResponse instance from the given location object."""
@@ -82,7 +99,7 @@ async def create_location_overview_response(
         payment_schemes=[
             LocationPaymentSchemeCountResponse(
                 slug=payment_scheme.slug,
-                count=await location_counts(location, payment_scheme),
+                count=await create_locations_count_response(location, payment_scheme),
             )
             for payment_scheme in payment_schemes
         ],
@@ -111,7 +128,7 @@ async def create_location_detail_response(
         payment_schemes=[
             LocationPaymentSchemeCountResponse(
                 slug=payment_scheme.slug,
-                count=0,
+                count= await create_locations_count_response(location, payment_scheme),
             )
             for payment_scheme in payment_schemes
         ],

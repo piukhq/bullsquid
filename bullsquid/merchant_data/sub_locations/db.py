@@ -7,13 +7,9 @@ from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.locations_common.db import (
     create_sub_location_overview_response,
 )
-from bullsquid.merchant_data.locations_common.models import (
-    LocationPaymentSchemeCountResponse,
-    SubLocationOverviewResponse,
-)
+from bullsquid.merchant_data.locations_common.models import SubLocationOverviewResponse
 from bullsquid.merchant_data.merchants.db import get_merchant
 from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
-from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.sub_locations.models import (
     ParentLocation,
     SubLocationDetailMetadata,
@@ -42,7 +38,7 @@ def create_sub_location_detail_metadata(
 
 
 async def create_sub_location_detail_response(
-    location: Location, payment_schemes: list[PaymentScheme]
+    location: Location,
 ) -> SubLocationDetailResponse:
     """Creates a SubLocationDetailResponse instance from the given merchant object."""
     return SubLocationDetailResponse(
@@ -57,13 +53,6 @@ async def create_sub_location_detail_response(
             linked_mids_count=0,
             linked_secondary_mids_count=0,
             location_metadata=create_sub_location_detail_metadata(location),
-            payment_schemes=[
-                LocationPaymentSchemeCountResponse(
-                    slug=payment_scheme.slug,
-                    count=0,
-                )
-                for payment_scheme in payment_schemes
-            ],
         ),
     )
 

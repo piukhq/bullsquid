@@ -4,10 +4,8 @@ Database functions shared between locations and sub-locations.
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.locations_common.models import (
     LocationOverviewMetadataBase,
-    LocationPaymentSchemeCountResponse,
     SubLocationOverviewResponse,
 )
-from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 
 
 def create_location_overview_metadata_base(
@@ -26,8 +24,6 @@ def create_location_overview_metadata_base(
 
 async def create_sub_location_overview_response(
     location: Location,
-    *,
-    payment_schemes: list[PaymentScheme],
 ) -> SubLocationOverviewResponse:
     """Creates a LocationOverviewResponse instance from the given merchant object."""
     return SubLocationOverviewResponse(
@@ -35,11 +31,4 @@ async def create_sub_location_overview_response(
         location_ref=location.pk,
         location_status=location.status,
         location_metadata=create_location_overview_metadata_base(location),
-        payment_schemes=[
-            LocationPaymentSchemeCountResponse(
-                slug=payment_scheme.slug,
-                count=0,
-            )
-            for payment_scheme in payment_schemes
-        ],
     )

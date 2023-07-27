@@ -1,13 +1,11 @@
 from typing import Any
 from uuid import uuid4
 
-import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
-from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mid_location_links.tables import (
@@ -25,7 +23,6 @@ from tests.helpers import (
 
 async def location_to_json(
     location: Location,
-    payment_schemes: list[PaymentScheme],
     *,
     is_sub_location: bool = False,
     include_sub_locations: bool = False,
@@ -43,22 +40,13 @@ async def location_to_json(
         },
         "location_status": location.status,
         "date_added": location.date_added.isoformat(),
-        "payment_schemes": [
-            {
-                "slug": payment_scheme.slug,
-                "count": 0,
-            }
-            for payment_scheme in payment_schemes
-        ],
     }
 
     if not is_sub_location:
         data["location_metadata"]["location_id"] = location.location_id
         data["sub_locations"] = (
             [
-                await location_to_json(
-                    sub_location, payment_schemes, is_sub_location=True
-                )
+                await location_to_json(sub_location, is_sub_location=True)
                 for sub_location in await Location.objects().where(
                     Location.parent == location.pk
                 )
@@ -70,10 +58,7 @@ async def location_to_json(
     return data
 
 
-async def location_to_json_detail(
-    location: Location,
-    payment_schemes: list[PaymentScheme],
-) -> dict:
+async def location_to_json_detail(location: Location) -> dict:
     """Converts a location to its expected JSON representation."""
     if location.parent:
         raise ValueError("sub-location passed to location json helper")
@@ -96,13 +81,6 @@ async def location_to_json_detail(
         "date_added": location.date_added.isoformat(),
         "linked_mids_count": 0,
         "linked_secondary_mids_count": 0,
-        "payment_schemes": [
-            {
-                "slug": payment_scheme.slug,
-                "count": 0,
-            }
-            for payment_scheme in payment_schemes
-        ],
     }
 
 
@@ -130,7 +108,6 @@ async def test_list(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     location_factory: Factory[Location],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -142,14 +119,13 @@ async def test_list(
     assert resp.status_code == status.HTTP_200_OK
     expected = await Location.objects().get(Location.pk == location.pk)
     assert expected is not None
-    assert resp.json() == [await location_to_json(expected, default_payment_schemes)]
+    assert resp.json() == [await location_to_json(expected)]
 
 
 async def test_list_with_sub_locations(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     location_factory: Factory[Location],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -166,11 +142,7 @@ async def test_list_with_sub_locations(
     expected = await Location.objects().get(Location.pk == location.pk)
     assert expected is not None
 
-    assert resp.json() == [
-        await location_to_json(
-            expected, default_payment_schemes, include_sub_locations=True
-        )
-    ]
+    assert resp.json() == [await location_to_json(expected, include_sub_locations=True)]
 
 
 async def test_list_with_invalid_plan(
@@ -201,7 +173,6 @@ async def testlist_exclude_secondary_mid(
     location_factory: Factory[Location],
     secondary_mid_factory: Factory[SecondaryMID],
     secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -231,10 +202,7 @@ async def testlist_exclude_secondary_mid(
     expected = await Location.objects().where(
         Location.pk.is_in([location.pk for location in locations[-2:]])
     )
-    assert resp.json() == [
-        await location_to_json(location, default_payment_schemes)
-        for location in expected
-    ]
+    assert resp.json() == [await location_to_json(location) for location in expected]
 
 
 async def test_list_exclude_unlinked_secondary_mid(
@@ -242,7 +210,6 @@ async def test_list_exclude_unlinked_secondary_mid(
     merchant_factory: Factory[Merchant],
     location_factory: Factory[Location],
     secondary_mid_factory: Factory[SecondaryMID],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -259,7 +226,7 @@ async def test_list_exclude_unlinked_secondary_mid(
 
     expected = await Location.objects().get(Location.pk == location.pk)
     assert expected is not None
-    assert resp.json() == [await location_to_json(expected, default_payment_schemes)]
+    assert resp.json() == [await location_to_json(expected)]
 
 
 async def test_list_exclude_nonexistent_secondary_mid(
@@ -300,7 +267,6 @@ async def test_details(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     location_factory: Factory[Location],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -316,9 +282,7 @@ async def test_details(
     expected = await Location.objects().get(Location.pk == location.pk)
     assert expected is not None
 
-    assert resp.json() == await location_to_json_detail(
-        expected, default_payment_schemes
-    )
+    assert resp.json() == await location_to_json_detail(expected)
 
 
 async def test_details_invalid_location_ref(
@@ -372,7 +336,6 @@ async def test_create(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     location_factory: Factory[Location],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -402,7 +365,7 @@ async def test_create(
 
     expected = await Location.objects().get(Location.pk == resp.json()["location_ref"])
     assert expected is not None
-    assert resp.json() == await location_to_json(expected, default_payment_schemes)
+    assert resp.json() == await location_to_json(expected)
 
 
 async def test_create_withoutnexistent_plan(
@@ -1367,7 +1330,6 @@ async def test_edit_locations(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     location_factory: Factory[Location],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -1393,13 +1355,10 @@ async def test_edit_locations(
 
     expected = await Location.objects().get(Location.pk == location.pk)
     assert expected is not None
-    assert resp.json() == await location_to_json_detail(
-        expected, default_payment_schemes
-    )
+    assert resp.json() == await location_to_json_detail(expected)
     assert expected.name == new_details.name
 
 
-@pytest.mark.usefixtures("default_payment_schemes")
 async def test_edit_location_with_non_existent_id(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],

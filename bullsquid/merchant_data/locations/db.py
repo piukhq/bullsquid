@@ -13,12 +13,7 @@ from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.locations_common.db import (
     create_sub_location_overview_response,
 )
-from bullsquid.merchant_data.locations_common.models import (
-    LocationPaymentSchemeCountResponse,
-)
 from bullsquid.merchant_data.merchants.db import get_merchant
-from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
-from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.primary_mids.tables import PrimaryMID
 from bullsquid.merchant_data.secondary_mid_location_links.tables import (
     SecondaryMIDLocationLink,
@@ -59,7 +54,6 @@ async def create_location_overview_response(
     location: Location,
     *,
     sub_locations: list[Location] | None,
-    payment_schemes: list[PaymentScheme],
 ) -> LocationOverviewResponse:
     """Creates a LocationOverviewResponse instance from the given merchant object."""
     return LocationOverviewResponse(
@@ -67,17 +61,8 @@ async def create_location_overview_response(
         location_ref=location.pk,
         location_status=location.status,
         location_metadata=create_location_overview_metadata(location),
-        payment_schemes=[
-            LocationPaymentSchemeCountResponse(
-                slug=payment_scheme.slug,
-                count=0,
-            )
-            for payment_scheme in payment_schemes
-        ],
         sub_locations=[
-            await create_sub_location_overview_response(
-                sub_location, payment_schemes=payment_schemes
-            )
+            await create_sub_location_overview_response(sub_location)
             for sub_location in sub_locations
         ]
         if sub_locations
@@ -85,24 +70,21 @@ async def create_location_overview_response(
     )
 
 
-async def create_location_detail_response(
-    location: Location, payment_schemes: list[PaymentScheme]
-) -> LocationDetailResponse:
+async def create_location_detail_response(location: Location) -> LocationDetailResponse:
     """Creates a LocationDetailResponse instance from the given merchant object."""
+
+    mid_count = await PrimaryMID.count().where(PrimaryMID.location == location)
+    secondary_mid_count = await SecondaryMIDLocationLink.count().where(
+        SecondaryMIDLocationLink.location == location
+    )
+
     return LocationDetailResponse(
         date_added=location.date_added,
         location_ref=location.pk,
         location_status=location.status,
-        linked_mids_count=0,
-        linked_secondary_mids_count=0,
+        linked_mids_count=mid_count,
+        linked_secondary_mids_count=secondary_mid_count,
         location_metadata=create_location_detail_metadata(location),
-        payment_schemes=[
-            LocationPaymentSchemeCountResponse(
-                slug=payment_scheme.slug,
-                count=0,
-            )
-            for payment_scheme in payment_schemes
-        ],
     )
 
 
@@ -145,14 +127,12 @@ async def list_locations(
         p=p,
     )
 
-    payment_schemes = await list_payment_schemes()
     return [
         await create_location_overview_response(
             location,
             sub_locations=await Location.objects().where(Location.parent == location.pk)
             if include_sub_locations
             else None,
-            payment_schemes=payment_schemes,
         )
         for location in locations
     ]
@@ -182,10 +162,7 @@ async def create_location(
     )
     await location.save()
 
-    payment_schemes = await list_payment_schemes()
-    return await create_location_overview_response(
-        location, sub_locations=[], payment_schemes=payment_schemes
-    )
+    return await create_location_overview_response(location, sub_locations=[])
 
 
 async def list_available_primary_mids(
@@ -224,8 +201,7 @@ async def get_location(
     if not location:
         raise NoSuchRecord(Location)
 
-    payment_schemes = await list_payment_schemes()
-    return await create_location_detail_response(location, payment_schemes)
+    return await create_location_detail_response(location)
 
 
 async def get_location_instance(
@@ -357,5 +333,4 @@ async def edit_location(
     for key, value in fields:
         setattr(location, key, value)
     await location.save()
-    payment_schemes = await list_payment_schemes()
-    return await create_location_detail_response(location, payment_schemes)
+    return await create_location_detail_response(location)

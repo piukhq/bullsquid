@@ -6,11 +6,8 @@ from datetime import datetime
 from pydantic import UUID4, root_validator, validator
 
 from bullsquid.merchant_data.enums import ResourceStatus
-from bullsquid.merchant_data.models import BaseModel, Slug
-from bullsquid.merchant_data.validators import (
-    nullify_blank_strings,
-    string_must_not_be_blank,
-)
+from bullsquid.merchant_data.models import BaseModel
+from bullsquid.merchant_data.validators import nullify_blank_strings
 
 
 class LocationOverviewMetadataBase(BaseModel):
@@ -49,21 +46,11 @@ class LocationOverviewMetadataBase(BaseModel):
         return values
 
 
-class LocationPaymentSchemeCountResponse(BaseModel):
-    """Counts of MIDs by payment scheme on a location."""
-
-    slug: Slug
-    count: int
-
-    _ = validator("slug", allow_reuse=True)(string_must_not_be_blank)
-
-
 class LocationOverviewBase(BaseModel):
     """Base location overview model."""
 
     location_ref: UUID4
     location_status: ResourceStatus
-    payment_schemes: list[LocationPaymentSchemeCountResponse]
     date_added: datetime
 
 

@@ -110,6 +110,11 @@ async def test_list(
     location_factory: Factory[Location],
     test_client: TestClient,
 ) -> None:
+    locations = [await location_factory() for _ in range(3)]
+    {
+        location.location_id: {"visa": 0, "mastercard": 0, "amex": 0}
+        for location in locations
+    }
     plan = await plan_factory()
     merchant = await merchant_factory(plan=plan)
     location = await location_factory(merchant=merchant)
@@ -1257,7 +1262,7 @@ async def test_associated_secondary_mids(
     ]
 
 
-async def test_assocated_secondary_mids_nonexistent_location(
+async def test_associated_secondary_mids_nonexistent_location(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     location_factory: Factory[Location],
@@ -1385,3 +1390,45 @@ async def test_edit_location_with_non_existent_id(
     )
 
     assert_is_not_found_error(resp, loc=["path", "location_ref"])
+
+
+async def test_location_mid_counts(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    primary_mid_factory: Factory[PrimaryMID],
+    location_factory: Factory[Location],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    await primary_mid_factory(merchant=merchant, location=location)
+    await primary_mid_factory(merchant=merchant, location=location)
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}",
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json()["linked_mids_count"] == 2
+
+
+async def test_location_secondary_mid_counts(
+    plan_factory: Factory[Plan],
+    merchant_factory: Factory[Merchant],
+    location_factory: Factory[Location],
+    secondary_mid_factory: Factory[SecondaryMID],
+    secondary_mid_location_link_factory: Factory[SecondaryMIDLocationLink],
+    test_client: TestClient,
+) -> None:
+    plan = await plan_factory()
+    merchant = await merchant_factory(plan=plan)
+    location = await location_factory(merchant=merchant)
+    secondary_mid = await secondary_mid_factory(merchant=merchant)
+    await secondary_mid_location_link_factory(
+        location=location, secondary_mid=secondary_mid
+    )
+
+    resp = test_client.get(
+        f"/api/v1/plans/{plan.pk}/merchants/{merchant.pk}/locations/{location.pk}",
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json()["linked_secondary_mids_count"] == 1

@@ -33,8 +33,6 @@ class SubLocationDetails(LocationOverviewBase):
     """
 
     location_metadata: SubLocationDetailMetadata
-    linked_mids_count: int
-    linked_secondary_mids_count: int
 
 
 class ParentLocation(BaseModel):

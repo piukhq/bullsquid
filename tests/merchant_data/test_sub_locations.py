@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.merchants.tables import Merchant
-from bullsquid.merchant_data.payment_schemes.tables import PaymentScheme
 from bullsquid.merchant_data.plans.tables import Plan
 from tests.helpers import (
     Factory,
@@ -19,7 +18,6 @@ from tests.helpers import (
 
 async def sub_location_to_json(
     location: Location,
-    payment_schemes: list[PaymentScheme],
 ) -> dict:
     """Converts a sub-location to its expected JSON representation."""
     data: dict[str, Any] = {
@@ -34,13 +32,6 @@ async def sub_location_to_json(
         },
         "location_status": location.status,
         "date_added": location.date_added.isoformat(),
-        "payment_schemes": [
-            {
-                "slug": payment_scheme.slug,
-                "count": 0,
-            }
-            for payment_scheme in payment_schemes
-        ],
     }
 
     return data
@@ -49,7 +40,6 @@ async def sub_location_to_json(
 async def sub_location_to_json_detail(
     location: Location,
     parent: Location,
-    payment_schemes: list[PaymentScheme],
 ) -> dict:
     """Converts a location to its expected JSON representation."""
     if not location.parent:
@@ -75,15 +65,6 @@ async def sub_location_to_json_detail(
             },
             "location_status": location.status,
             "date_added": location.date_added.isoformat(),
-            "linked_mids_count": 0,
-            "linked_secondary_mids_count": 0,
-            "payment_schemes": [
-                {
-                    "slug": payment_scheme.slug,
-                    "count": 0,
-                }
-                for payment_scheme in payment_schemes
-            ],
         },
     }
 
@@ -92,7 +73,6 @@ async def test_create_sub_location(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     location_factory: Factory[Location],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -123,7 +103,7 @@ async def test_create_sub_location(
 
     expected = await Location.objects().get(Location.pk == resp.json()["location_ref"])
     assert expected is not None
-    assert resp.json() == await sub_location_to_json(expected, default_payment_schemes)
+    assert resp.json() == await sub_location_to_json(expected)
 
 
 @pytest.mark.usefixtures("default_payment_schemes")
@@ -165,7 +145,6 @@ async def test_list_sub_locations(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     location_factory: Factory[Location],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -185,7 +164,6 @@ async def test_list_sub_locations(
         expected.append(
             await sub_location_to_json(
                 instance,
-                default_payment_schemes,
             )
         )
 
@@ -197,7 +175,6 @@ async def test_sub_location_details(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     location_factory: Factory[Location],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -217,7 +194,6 @@ async def test_sub_location_details(
     assert resp.json() == await sub_location_to_json_detail(
         expected,
         location,
-        default_payment_schemes,
     )
 
 
@@ -262,7 +238,6 @@ async def test_edit_sub_locations(
     plan_factory: Factory[Plan],
     merchant_factory: Factory[Merchant],
     location_factory: Factory[Location],
-    default_payment_schemes: list[PaymentScheme],
     test_client: TestClient,
 ) -> None:
     plan = await plan_factory()
@@ -291,7 +266,6 @@ async def test_edit_sub_locations(
     assert resp.json() == await sub_location_to_json_detail(
         expected,
         location,
-        default_payment_schemes,
     )
     assert expected.name == new_details.name
 

@@ -9,7 +9,6 @@ from bullsquid.merchant_data.locations_common.db import (
 )
 from bullsquid.merchant_data.locations_common.models import SubLocationOverviewResponse
 from bullsquid.merchant_data.merchants.db import get_merchant
-from bullsquid.merchant_data.payment_schemes.db import list_payment_schemes
 from bullsquid.merchant_data.sub_locations.models import (
     ParentLocation,
     SubLocationDetailMetadata,
@@ -50,8 +49,6 @@ async def create_sub_location_detail_response(
             date_added=location.date_added,
             location_ref=location.pk,
             location_status=location.status,
-            linked_mids_count=0,
-            linked_secondary_mids_count=0,
             location_metadata=create_sub_location_detail_metadata(location),
         ),
     )
@@ -82,13 +79,8 @@ async def list_sub_locations(
         p=p,
     )
 
-    payment_schemes = await list_payment_schemes()
     return [
-        await create_sub_location_overview_response(
-            location,
-            payment_schemes=payment_schemes,
-        )
-        for location in locations
+        await create_sub_location_overview_response(location) for location in locations
     ]
 
 
@@ -119,10 +111,7 @@ async def create_sub_location(
     )
     await location.save()
 
-    payment_schemes = await list_payment_schemes()
-    return await create_sub_location_overview_response(
-        location, payment_schemes=payment_schemes
-    )
+    return await create_sub_location_overview_response(location)
 
 
 async def get_sub_location(
@@ -147,8 +136,7 @@ async def get_sub_location(
     if not location:
         raise NoSuchRecord(Location)
 
-    payment_schemes = await list_payment_schemes()
-    return await create_sub_location_detail_response(location, payment_schemes)
+    return await create_sub_location_detail_response(location)
 
 
 async def edit_sub_location(
@@ -178,8 +166,7 @@ async def edit_sub_location(
         setattr(location, key, value)
     await location.save()
 
-    payment_schemes = await list_payment_schemes()
-    return await create_sub_location_detail_response(location, payment_schemes)
+    return await create_sub_location_detail_response(location)
 
 
 async def reparent_sub_location(

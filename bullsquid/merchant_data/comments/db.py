@@ -140,7 +140,11 @@ async def create_comment_response(
 
 
 async def list_comments_by_owner(
-    ref: UUID, *, n: int, p: int, filter_subject_type: FilterSubjectType | None = None
+    ref: UUID,
+    *,
+    n: int,
+    p: int,
+    filter_subject_type: FilterSubjectType | None = None,
 ) -> list[SubjectComments]:
     """
     List all comments with the given ref as their owner.

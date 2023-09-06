@@ -757,16 +757,14 @@ dev = ["black", "build", "flake8", "mypy", "pre-commit", "pytest", "pytest-cov",
 
 [[package]]
 name = "docstring-parser"
-version = "0.12"
-description = "\"Parse Python docstrings in reST, Google and Numpydoc format\""
+version = "0.15"
+description = "Parse Python docstrings in reST, Google and Numpydoc format"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.6,<4.0"
 files = [
-    {file = "docstring_parser-0.12.tar.gz", hash = "sha256:6723a3728c81e080a0454a550d11c7ad27dca0461099f3952218acf98488e1d5"},
+    {file = "docstring_parser-0.15-py3-none-any.whl", hash = "sha256:d1679b86250d269d06a99670924d6bce45adc00b08069dae8c47d98e89b667a9"},
+    {file = "docstring_parser-0.15.tar.gz", hash = "sha256:48ddc093e8b1865899956fcc03b03e66bb7240c310fac5af81814580c55bf682"},
 ]
-
-[package.extras]
-test = ["black", "pytest"]
 
 [[package]]
 name = "email-validator"
@@ -2040,18 +2038,18 @@ full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart", "pyyam
 
 [[package]]
 name = "targ"
-version = "0.3.7"
+version = "0.3.8"
 description = "Build a Python CLI for your app, just using type hints and docstrings."
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "targ-0.3.7-py3-none-any.whl", hash = "sha256:8bb472aa69f80732013c8f801df7deca3cb0ec4545acc256d1c1cd79c3fca4bd"},
-    {file = "targ-0.3.7.tar.gz", hash = "sha256:7abed2da34079bd4bb782c3f17866745986927ea5e18af03d42f1dbca7473d09"},
+    {file = "targ-0.3.8-py3-none-any.whl", hash = "sha256:cabee4dc7f4aa5c858dbf4ff6b948746a245616c6a370774aaf23afbabdd2676"},
+    {file = "targ-0.3.8.tar.gz", hash = "sha256:6e32e0cd76ab90ead61ed164f4a7131279f8a3721000f419bf219821727253bb"},
 ]
 
 [package.dependencies]
 colorama = "==0.4.*"
-docstring-parser = "0.12"
+docstring-parser = ">=0.12"
 
 [[package]]
 name = "tomli"

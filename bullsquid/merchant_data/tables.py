@@ -2,7 +2,8 @@
 Base merchant data tables.
 """
 
-from piccolo.columns import UUID, ForeignKey, Selectable, Text, Timestamptz
+from typing import Sequence
+from piccolo.columns import UUID, ForeignKey, Selectable, Text, Timestamptz, Column
 from piccolo.query import Count, Objects, Select
 from piccolo.query.methods.exists import Exists
 from piccolo.table import Table
@@ -64,7 +65,9 @@ class BaseTable(Table):
         return super().select(*columns, exclude_secrets=exclude_secrets)
 
     @classmethod
-    def count(cls) -> Count:
+    def count(
+        cls, column: Column | None = None, distinct: Sequence[Column] | None = None
+    ) -> Count:
         return super().count().where(cls.status != ResourceStatus.DELETED)
 
     @classmethod

@@ -301,12 +301,12 @@ async def test_list_lower_comments_multiple_subject_types(
         "entity_comments": None,
         "lower_comments": [
             {
-                "subject_type": "mid",
-                "comments": [comment_json(expected_pm_comment, subject=primary_mid)],
-            },
-            {
                 "subject_type": "secondary_mid",
                 "comments": [comment_json(expected_sm_comment, subject=secondary_mid)],
+            },
+            {
+                "subject_type": "mid",
+                "comments": [comment_json(expected_pm_comment, subject=primary_mid)],
             },
         ],
     }

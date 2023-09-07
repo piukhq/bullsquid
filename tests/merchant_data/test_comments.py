@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import uuid4
 
 from fastapi import status
@@ -273,17 +274,23 @@ async def test_list_lower_comments_multiple_subject_types(
     merchant = await merchant_factory(plan=plan)
     primary_mid = await primary_mid_factory(merchant=merchant)
     secondary_mid = await secondary_mid_factory(merchant=merchant)
+
+    pm_date = datetime(2023, 3, 9, 10, 15)
+    sm_date = datetime(2022, 3, 4, 10, 30)
+
     pm_comment = await comment_factory(
         owner=merchant.pk,
         owner_type=ResourceType.MERCHANT,
         subjects=[primary_mid.pk],
         subject_type=ResourceType.PRIMARY_MID,
+        created_at=pm_date,
     )
     sm_comment = await comment_factory(
         owner=merchant.pk,
         owner_type=ResourceType.MERCHANT,
         subjects=[secondary_mid.pk],
         subject_type=ResourceType.SECONDARY_MID,
+        created_at=sm_date,
     )
 
     resp = test_client.get(
@@ -301,12 +308,12 @@ async def test_list_lower_comments_multiple_subject_types(
         "entity_comments": None,
         "lower_comments": [
             {
-                "subject_type": "secondary_mid",
-                "comments": [comment_json(expected_sm_comment, subject=secondary_mid)],
-            },
-            {
                 "subject_type": "mid",
                 "comments": [comment_json(expected_pm_comment, subject=primary_mid)],
+            },
+            {
+                "subject_type": "secondary_mid",
+                "comments": [comment_json(expected_sm_comment, subject=secondary_mid)],
             },
         ],
     }

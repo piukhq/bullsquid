@@ -5,6 +5,7 @@ Base merchant data tables.
 from typing import Sequence
 from piccolo.columns import UUID, ForeignKey, Selectable, Text, Timestamptz, Column
 from piccolo.query import Count, Objects, Select
+from piccolo.query.methods.select import Count as SelectCount
 from piccolo.query.methods.exists import Exists
 from piccolo.table import Table
 
@@ -48,12 +49,17 @@ class BaseTable(Table):
     def select(
         cls, *columns: Selectable | str, exclude_secrets: bool = False
     ) -> Select:
-        return (
+        q = (
             super()
             .select(*columns, exclude_secrets=exclude_secrets)
             .where(cls.status != ResourceStatus.DELETED)
-            .order_by(cls.created, ascending=False)
         )
+
+        # if there's a count(*) involved, we don't want to order the results
+        if not any(isinstance(c, SelectCount) for c in columns):
+            q = q.order_by(cls.created, ascending=False)
+
+        return q
 
     @classmethod
     def all_select(

@@ -120,9 +120,9 @@ class DataError(APIError):
     status_code = status.HTTP_409_CONFLICT
     error = "data_error"
 
-    def __init__(self, *, loc: list[str], resource_name: str) -> None:
+    def __init__(self, *, loc: list[str], resource_name: str, reason: str) -> None:
         self.loc = loc
-        self.message = f"Field is not valid for {resource_name}"
+        self.message = f"Field is not valid for {resource_name}: {reason}"
         super().__init__()
 
     @staticmethod
@@ -134,4 +134,5 @@ class DataError(APIError):
         return DataError(
             loc=loc,
             resource_name=get_pretty_table_name(ex.table),
+            reason="",
         )

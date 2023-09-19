@@ -7,10 +7,10 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Form, UploadFile, status
 from loguru import logger
-from pydantic import UUID4
+from pydantic import UUID4, ValidationError
 from bullsquid.settings import settings
 
-from bullsquid.api.errors import DataError
+from bullsquid.api.errors import APIMultiError, DataError
 from bullsquid.merchant_data.csv_upload.file_handling import csv_model_reader
 from bullsquid.merchant_data.csv_upload.models import (
     IdentifiersFileRecord,
@@ -114,7 +114,20 @@ async def csv_upload_file(
                 await import_identifiers_file(
                     file, plan_ref=plan_ref, merchant_ref=merchant_ref
                 )
+    except ValidationError as ex:
+        raise APIMultiError(
+            [
+                DataError(
+                    loc=["body", "file", error._loc],  # type: ignore
+                    resource_name="CSV upload",
+                    reason=str(error.exc),  # type: ignore
+                )
+                for error in ex.raw_errors
+            ]
+        )
     except Exception as ex:
-        raise DataError(loc=["body", "file"], resource_name="CSV upload") from ex
+        raise DataError(
+            loc=["body", "file"], resource_name="CSV upload", reason=str(ex)
+        ) from ex
     else:
         archive_file(file)

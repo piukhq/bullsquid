@@ -134,5 +134,5 @@ class DataError(APIError):
         return DataError(
             loc=loc,
             resource_name=get_pretty_table_name(ex.table),
-            reason="",
+            reason="Invalid data",
         )

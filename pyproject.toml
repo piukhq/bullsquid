@@ -17,7 +17,7 @@ bullsquid-worker = "bullsquid.cmd.worker:main"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-piccolo = {extras = ["all"], version = "^0.119.0"}
+piccolo = {extras = ["all"], version = "^0.121.0"}
 fastapi = "^0.92.0"
 loguru = "^0.6.0"
 sentry-sdk = "^1.15.0"

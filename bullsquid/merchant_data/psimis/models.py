@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import UUID4, BaseModel, validator
 
-from bullsquid.merchant_data.enums import ResourceStatus
+from bullsquid.merchant_data.enums import ResourceStatus, TXMStatus
 from bullsquid.merchant_data.models import Slug
 from bullsquid.merchant_data.validators import (
     nullify_blank_strings,
@@ -39,6 +39,7 @@ class PSIMIResponse(BaseModel):
     psimi_metadata: PSIMIMetadata
     psimi_status: ResourceStatus
     date_added: datetime
+    txm_status: TXMStatus = TXMStatus.NOT_ONBOARDED
 
 
 class PSIMIRefsRequest(BaseModel):

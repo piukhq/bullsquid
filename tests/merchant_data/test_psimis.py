@@ -37,6 +37,7 @@ async def psimi_to_json(psimi: PSIMI) -> dict:
         },
         "psimi_status": psimi.status,
         "date_added": psimi.date_added.isoformat(),
+        "txm_status": psimi.txm_status
     }
 
 

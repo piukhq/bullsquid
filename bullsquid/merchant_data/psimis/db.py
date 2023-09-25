@@ -19,6 +19,7 @@ def make_response(psimi: PSIMI) -> PSIMIResponse:
         ),
         psimi_status=psimi.status,
         date_added=psimi.date_added,
+        txm_status=psimi.txm_status,
     )
 
 

@@ -126,7 +126,7 @@ async def create_comment_response(
             CommentSubject(
                 display_text=subject.display_text,
                 subject_ref=subject.pk,
-                icon_slug=None,
+                icon_slug=getattr(subject, "payment_scheme", None),
             )
             for subject in subjects
         ],

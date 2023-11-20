@@ -126,9 +126,7 @@ async def create_comment_response(
             CommentSubject(
                 display_text=subject.display_text,
                 subject_ref=subject.pk,
-                icon_slug=None
-                if comment.subject_type == "plan" or "merchant"
-                else subject.payment_scheme,  # type: ignore
+                icon_slug=getattr(subject, "payment_scheme", None),
             )
             for subject in subjects
         ],

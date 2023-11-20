@@ -23,6 +23,9 @@ def comment_json(
     subject: BaseTable,
     created_by: str = "Unknown User",
 ) -> dict:
+    payment_scheme = None
+    if hasattr(subject, "payment_scheme"):
+        payment_scheme = subject.payment_scheme.slug
     return {
         "comment_ref": str(comment.pk),
         "created_at": comment.created_at.isoformat(),
@@ -33,7 +36,7 @@ def comment_json(
             {
                 "display_text": subject.display_text,
                 "subject_ref": str(subject.pk),
-                "icon_slug": None,
+                "icon_slug": payment_scheme,
             }
         ],
         "metadata": {

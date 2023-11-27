@@ -133,6 +133,7 @@ async def import_location(
         postcode=record.postcode,
         merchant_internal_id=record.merchant_internal_id,
         merchant=merchant,
+        plan=record.plan,
     )
 
     try:

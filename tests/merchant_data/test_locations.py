@@ -560,7 +560,7 @@ async def test_create_with_duplication_location_id(
         },
     )
 
-    assert_is_uniqueness_error(resp, loc=["body", "location_id"])
+    assert_is_uniqueness_error(resp, loc=["body", "plan_ref"])
 
 
 async def test_create_physical_location_without_address_line_1(

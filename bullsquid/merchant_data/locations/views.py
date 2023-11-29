@@ -99,8 +99,14 @@ async def create_location(
     ),
 ) -> LocationOverviewResponse:
     """Create a location for the given merchant."""
-    if not await fields_are_unique(Location, {Location.merchant.plan: plan_ref}):
-        raise UniqueError(loc=["body", "plan_ref"])
+    if not await fields_are_unique(
+        Location,
+        {
+            Location.merchant.plan: plan_ref,
+            Location.location_id: location_data.location_id,
+        },
+    ):
+        raise UniqueError(loc=["body", "location_id", "plan_ref"])
 
     try:
         location = await db.create_location(

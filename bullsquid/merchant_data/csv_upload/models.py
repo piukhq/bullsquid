@@ -32,7 +32,6 @@ class LocationFileRecord(BaseModel):
     mastercard_mids: str
     visa_secondary_mids: str
     mastercard_secondary_mids: str
-    plan: str
 
     _ = validator("location_id", "merchant_internal_id", allow_reuse=True)(
         string_must_not_be_blank

@@ -106,7 +106,7 @@ async def create_location(
             Location.location_id: location_data.location_id,
         },
     ):
-        raise UniqueError(loc=["body", "location_id", "plan_ref"])
+        raise UniqueError(loc=["body", "location_id"])
 
     try:
         location = await db.create_location(

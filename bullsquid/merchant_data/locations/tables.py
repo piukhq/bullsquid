@@ -15,7 +15,7 @@ from bullsquid.merchant_data.tables import BaseTable
 class Location(BaseTable):
     """Represents a location that can have multiple MIDs."""
 
-    location_id = Text(null=True, unique=True)
+    location_id = Text(null=True)
     name = Text(required=True)
     is_physical_location = Boolean(default=True)
     address_line_1 = Text(null=True, default=None)

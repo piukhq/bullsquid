@@ -3,7 +3,7 @@ Task functions for importing location records from CSV files.
 """
 from uuid import UUID
 
-from asyncpg import UniqueViolationError
+from bullsquid.db import fields_are_unique
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
@@ -135,10 +135,15 @@ async def import_location(
         merchant=merchant,
     )
 
-    try:
-        await location.save()
-    except UniqueViolationError as ex:
-        raise DuplicateLocation from ex
+    if not fields_are_unique(
+        Location,
+        {
+            Location.merchant.plan: record.merchant.plan,  # type: ignore
+            Location.location_id: record.location_id,
+        },
+    ):
+        raise DuplicateLocation
+    await location.save()
     return location
 
 

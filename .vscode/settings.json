@@ -17,17 +17,5 @@
     "xml"
   ],
   "python.testing.pytestEnabled": true,
-  "python.testing.unittestEnabled": false,
-  "sqltools.connections": [
-    {
-      "previewLimit": 50,
-      "server": "localhost",
-      "port": 5432,
-      "driver": "PostgreSQL",
-      "name": "Bullsquid",
-      "database": "bullsquid",
-      "username": "postgres",
-      "password": "postgres"
-    }
-  ]
+  "python.testing.unittestEnabled": false
 }

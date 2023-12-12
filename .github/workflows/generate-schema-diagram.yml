@@ -24,8 +24,8 @@ jobs:
           python-version: "3.11"
       - name: "Install graphviz and psql"
         run: |
-          apt update
-          apt install -y graphviz postgresql-client
+          sudo apt update
+          sudo apt install -y graphviz postgresql-client
       - name: "Install Poetry"
         run: "pip install poetry"
       - name: "Disable virtualenv creation"

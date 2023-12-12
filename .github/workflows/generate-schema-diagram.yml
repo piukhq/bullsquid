@@ -1,4 +1,5 @@
 name: "generate-schema-diagram"
+
 on:
   push:
     # branches: ["master"]
@@ -8,6 +9,10 @@ on:
     #   - "bullsquid/merchant_data/piccolo_migrations/*.py"
     #   - "bullsquid/customer_wallet/piccolo_migrations/*.py"
     #   - "bullsquid/user_data/piccolo_migrations/*.py"
+
+env:
+  PICCOLO_CONF: "bullsquid.piccolo_conf"
+
 jobs:
   generate-schema-diagram:
     runs-on: "ubuntu-latest"
@@ -36,8 +41,7 @@ jobs:
       - name: "Create bullsquid database"
         run: "psql -h localhost -U postgres -c 'CREATE DATABASE bullsquid;'"
       - name: "Run migrations"
-        # run: "scripts/migrate"
-        run: "poetry run piccolo migrations forwards all --diagnose"
+        run: "scripts/migrate"
       - name: "Generate schema graph"
         run: "piccolo schema graph --output=bullsquid.dot"
       - name: "Render to PNG"

@@ -1,7 +1,8 @@
 name: "generate-schema-diagram"
 on:
   push:
-    branches: ["master"]
+    # branches: ["master"]
+
     # disabled for now, consider enabling later
     # paths:
     #   - "bullsquid/merchant_data/piccolo_migrations/*.py"
@@ -35,7 +36,8 @@ jobs:
       - name: "Create bullsquid database"
         run: "psql -h localhost -U postgres -c 'CREATE DATABASE bullsquid;'"
       - name: "Run migrations"
-        run: "scripts/migrate"
+        # run: "scripts/migrate"
+        run: "piccolo migrations forwards all --diagnose"
       - name: "Generate schema graph"
         run: "piccolo schema graph --output=bullsquid.dot"
       - name: "Render to PNG"

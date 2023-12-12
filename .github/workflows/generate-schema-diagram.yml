@@ -1,0 +1,46 @@
+name: "generate-schema-diagram"
+on:
+  push:
+    branches: ["master"]
+    # disabled for now, consider enabling later
+    # paths:
+    #   - "bullsquid/merchant_data/piccolo_migrations/*.py"
+    #   - "bullsquid/customer_wallet/piccolo_migrations/*.py"
+    #   - "bullsquid/user_data/piccolo_migrations/*.py"
+jobs:
+  generate-schema-diagram:
+    runs-on: "ubuntu-latest"
+    services:
+      postgres:
+        image: "postgres:latest"
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_HOST_AUTH_METHOD: "trust"
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v4"
+        with:
+          python-version: "3.11"
+      - name: "Install graphviz and psql"
+        run: |
+          apt update
+          apt install -y graphviz postgresql-client
+      - name: "Install Poetry"
+        run: "pip install poetry"
+      - name: "Disable virtualenv creation"
+        run: "poetry config virtualenvs.create false"
+      - name: "Install project dependencies"
+        run: "poetry install"
+      - name: "Create bullsquid database"
+        run: "psql -h localhost -U postgres -c 'CREATE DATABASE bullsquid;'"
+      - name: "Run migrations"
+        run: "scripts/migrate"
+      - name: "Generate schema graph"
+        run: "piccolo schema graph --output=bullsquid.dot"
+      - name: "Render to PNG"
+        run: "dot -Tpng -obullsquid.png bullsquid.dot"
+      - uses: "actions/upload-artifact@v3"
+        with:
+          name: "schema-diagram"
+          path: "bullsquid.png"

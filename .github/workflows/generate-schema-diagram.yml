@@ -1,12 +1,18 @@
 name: "generate-schema-diagram"
+
 on:
   push:
     branches: ["master"]
+
     # disabled for now, consider enabling later
     # paths:
     #   - "bullsquid/merchant_data/piccolo_migrations/*.py"
     #   - "bullsquid/customer_wallet/piccolo_migrations/*.py"
     #   - "bullsquid/user_data/piccolo_migrations/*.py"
+
+env:
+  PICCOLO_CONF: "bullsquid.piccolo_conf"
+
 jobs:
   generate-schema-diagram:
     runs-on: "ubuntu-latest"

@@ -2,7 +2,7 @@ name: "generate-schema-diagram"
 
 on:
   push:
-    # branches: ["master"]
+    branches: ["master"]
 
     # disabled for now, consider enabling later
     # paths:

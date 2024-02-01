@@ -1,7 +1,7 @@
 """Pydantic-validated application configuration."""
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
-from datetime import timedelta
 
 import tomli
 from pydantic import AnyHttpUrl, BaseSettings, Field, root_validator, validator
@@ -62,9 +62,7 @@ class TXMSettings(BaseSettings):
     def validate_all_are_present(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Either all or none of these settings must be present."""
         if not all(values.values()) and any(values.values()):
-            raise ValueError(
-                "If one TXM setting is provided, all others must also be provided."
-            )
+            raise ValueError("If one TXM setting is provided, all others must also be provided.")
 
         return values
 
@@ -192,6 +190,8 @@ class Settings(BaseSettings):
 
     # How long we keep our user profiles before checking for updates
     user_profile_ttl = timedelta(weeks=2)
+    hermes_url: str = "http://localhost:8000"
+    service_api_key: str = "F616CE5C88744DD52DB628FAD8B3D"
 
 
 settings = Settings()

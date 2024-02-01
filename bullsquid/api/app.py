@@ -3,7 +3,6 @@ Defines the create_app function used to initialize the application.
 """
 from asyncpg.exceptions import PostgresError
 from fastapi import Depends, FastAPI, Request, status
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from piccolo.engine import engine_finder
@@ -12,6 +11,7 @@ from starlette.responses import JSONResponse
 from bullsquid.api.auth import jwt_bearer
 from bullsquid.api.errors import error_response
 from bullsquid.customer_wallet.router import router as customer_wallet_router
+from bullsquid.hackathon.router import router as hackarouter
 from bullsquid.merchant_data.router import router as merchant_data_router
 from bullsquid.status.views import router as status_api
 
@@ -24,13 +24,13 @@ def create_app() -> FastAPI:
         description="API for interacting with the portal backend.",
         version="1.0.0",
     )
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    # app.add_middleware(
+    #     CORSMiddleware,
+    #     allow_origins=["*"],
+    #     allow_credentials=True,
+    #     allow_methods=["*"],
+    #     allow_headers=["*"],
+    # )
     app.include_router(status_api, tags=["Status"])
     app.include_router(
         merchant_data_router,
@@ -41,6 +41,11 @@ def create_app() -> FastAPI:
         customer_wallet_router,
         dependencies=[Depends(jwt_bearer)],
         prefix="/api/v1",
+    )
+    app.include_router(
+        hackarouter,
+        # dependencies=[Depends(jwt_bearer)],
+        prefix="/api/v2",
     )
 
     app.mount("/fe2", StaticFiles(directory="fe2", html=True), name="Frontend 2")

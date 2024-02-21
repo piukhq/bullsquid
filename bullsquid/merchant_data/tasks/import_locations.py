@@ -3,10 +3,10 @@ Task functions for importing location records from CSV files.
 """
 from uuid import UUID
 
-from bullsquid.db import fields_are_unique
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
+from bullsquid.db import fields_are_unique
 from bullsquid.merchant_data.csv_upload.models import LocationFileRecord
 from bullsquid.merchant_data.locations.models import LocationDetailMetadata
 from bullsquid.merchant_data.locations.tables import Location
@@ -138,7 +138,7 @@ async def import_location(
     if not fields_are_unique(
         Location,
         {
-            Location.merchant.plan: record.merchant.plan,  # type: ignore
+            Location.merchant.plan: merchant.plan,
             Location.location_id: record.location_id,
         },
     ):

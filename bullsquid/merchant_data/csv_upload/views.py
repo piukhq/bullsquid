@@ -8,7 +8,6 @@ from uuid import uuid4
 from fastapi import APIRouter, Form, UploadFile, status
 from loguru import logger
 from pydantic import UUID4, ValidationError
-from bullsquid.settings import settings
 
 from bullsquid.api.errors import APIMultiError, DataError
 from bullsquid.merchant_data.csv_upload.file_handling import csv_model_reader
@@ -21,6 +20,7 @@ from bullsquid.merchant_data.tasks import ImportLocationFileRecord, queue
 from bullsquid.merchant_data.tasks.import_identifiers import ImportIdentifiersFileRecord
 from bullsquid.merchant_data.tasks.import_merchants import ImportMerchantsFileRecord
 from bullsquid.service.azure_storage import AzureBlobStorageServiceInterface
+from bullsquid.settings import settings
 
 router = APIRouter(prefix="/plans/csv_upload")
 

@@ -17,7 +17,7 @@ if settings.sentry.dsn:
         dsn=settings.sentry.dsn,
         release=__version__,
         environment=settings.sentry.env,
-    )  # pylint: disable=abstract-class-instantiated
+    )
 
 # initialise the asgi app instance.
 app = create_app()

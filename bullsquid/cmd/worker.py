@@ -13,8 +13,11 @@ Options:
 
 from docopt import docopt
 from loguru import logger
+import sentry_sdk
 
 from bullsquid import __version__
+from bullsquid.settings import settings
+from bullsquid.log_conf import set_loguru_intercept
 
 
 def main() -> None:
@@ -33,4 +36,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # redirect all logging into loguru.
+    set_loguru_intercept()
+
+    if settings.sentry.dsn:
+        sentry_sdk.init(
+            dsn=settings.sentry.dsn,
+            release=__version__,
+            environment=settings.sentry.env,
+        )
+
     main()

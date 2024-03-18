@@ -18,7 +18,7 @@ async def forwards() -> MigrationManager:
 
     async def patch_empty_location_ids() -> None:
         await Location.raw(
-            "UPDATE location SET location_id = uuid_generate_v4() WHERE location_id = ''"
+            "UPDATE location SET location_id = uuid_generate_v4() WHERE location_id = '' or location_id is null"
         )
 
     manager.add_raw(patch_empty_location_ids)

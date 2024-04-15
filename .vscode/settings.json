@@ -8,7 +8,6 @@
     "source.organizeImports": "explicit"
   },
   "editor.formatOnSave": true,
-  "python.formatting.provider": "black",
   "python.testing.pytestArgs": [
     "-p",
     "no:icdiff",

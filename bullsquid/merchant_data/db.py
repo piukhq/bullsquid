@@ -1,6 +1,7 @@
 """
 Top-level database utilities for the whole merchant data module.
 """
+
 from typing import Type
 
 from bullsquid.merchant_data.enums import ResourceType

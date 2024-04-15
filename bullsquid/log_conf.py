@@ -1,4 +1,5 @@
 """Configures standard logging to go through loguru."""
+
 import logging
 
 from loguru import logger

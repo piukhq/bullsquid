@@ -1,4 +1,5 @@
 """Defines the router for endpoints in the merchant data management system."""
+
 from fastapi import APIRouter
 
 from bullsquid.merchant_data.comments.views import router as comments_router

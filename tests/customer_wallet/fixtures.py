@@ -1,4 +1,5 @@
 """Fixtures & factory functions for building customer wallet objects."""
+
 import json
 from datetime import datetime, timezone
 from typing import Any

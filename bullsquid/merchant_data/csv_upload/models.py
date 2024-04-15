@@ -1,6 +1,7 @@
 """
 Pydantic models used for CSV file imports.
 """
+
 from pydantic import validator
 
 from bullsquid.merchant_data.models import BaseModel

@@ -1,4 +1,5 @@
 """Piccolo ORM configuration."""
+
 from piccolo.conf.apps import AppRegistry
 from piccolo.engine.postgres import PostgresEngine
 

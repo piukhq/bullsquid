@@ -1,11 +1,11 @@
 #!/bin/sh
 . scripts/_common
 
-info 'ruff'
+info 'lints'
 ruff check .
 
-info 'black'
-black --check .
+info 'formatting'
+ruff format --check .
 
 info 'mypy'
 mypy .

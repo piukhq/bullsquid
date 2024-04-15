@@ -1,6 +1,7 @@
 """
 Endpoints that operate on secondary MID location links.
 """
+
 from fastapi import APIRouter, Depends, status
 from pydantic import UUID4
 

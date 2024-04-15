@@ -1,4 +1,5 @@
 """Endpoints that operate on locations"""
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status

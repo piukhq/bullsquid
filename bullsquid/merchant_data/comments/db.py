@@ -1,6 +1,7 @@
 """
 Database access functions for the comments module.
 """
+
 from collections import defaultdict
 from typing import Type, TypeVar
 from uuid import UUID

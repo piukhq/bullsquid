@@ -1,6 +1,7 @@
 """
 Provides merchant data API authentication helpers.
 """
+
 from typing import Callable
 
 from fastapi import BackgroundTasks

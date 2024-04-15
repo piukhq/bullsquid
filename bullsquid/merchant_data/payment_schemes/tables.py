@@ -1,4 +1,5 @@
 """Payment scheme table definitions."""
+
 from piccolo.columns import Text
 from piccolo.table import Table
 

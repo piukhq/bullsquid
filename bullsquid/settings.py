@@ -1,4 +1,5 @@
 """Pydantic-validated application configuration."""
+
 from pathlib import Path
 from typing import Any
 from datetime import timedelta

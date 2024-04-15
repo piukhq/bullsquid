@@ -1,6 +1,7 @@
 """
 Request & response models for the comments module.
 """
+
 from datetime import datetime
 
 from pydantic import UUID4, BaseModel, root_validator, validator

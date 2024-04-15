@@ -1,4 +1,5 @@
 """Application status API containing liveness and readiness checks."""
+
 from fastapi import APIRouter, HTTPException, Response, status
 from piccolo.apps.migrations.commands.check import (
     CheckMigrationManager,

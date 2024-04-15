@@ -100,7 +100,8 @@ async def create_secondary_mid_location_links(
             )
 
     created = any(
-        link._was_created for link in links  # pylint: disable=protected-access
+        link._was_created
+        for link in links  # pylint: disable=protected-access
     )
 
     return links, created

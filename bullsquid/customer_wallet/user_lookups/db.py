@@ -1,4 +1,5 @@
 """Custom wallet database access layer."""
+
 from datetime import datetime, timezone
 
 from piccolo.utils.encoding import dump_json

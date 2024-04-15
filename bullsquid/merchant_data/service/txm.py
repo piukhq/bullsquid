@@ -1,4 +1,5 @@
 """Harmonia service class."""
+
 from unittest.mock import MagicMock, create_autospec
 from uuid import UUID
 

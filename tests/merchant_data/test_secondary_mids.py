@@ -1,4 +1,5 @@
 """Tests for secondary MID API endpoints."""
+
 import random
 from uuid import uuid4
 

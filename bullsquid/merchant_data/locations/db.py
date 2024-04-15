@@ -1,4 +1,5 @@
 """Database access layer for operations on locations"""
+
 from uuid import UUID
 
 from bullsquid.db import NoSuchRecord, paginate

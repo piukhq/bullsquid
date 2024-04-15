@@ -1,6 +1,7 @@
 """
 Task functions for importing mid records from CSV files.
 """
+
 from uuid import UUID
 
 from loguru import logger

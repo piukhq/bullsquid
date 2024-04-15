@@ -1,4 +1,5 @@
 """Test merchant data API endpoints that operate on primary MIDs."""
+
 import random
 from datetime import datetime
 from typing import cast

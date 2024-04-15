@@ -1,4 +1,5 @@
 """Database operations for secondary MIDs."""
+
 from uuid import UUID
 
 from bullsquid.db import NoSuchRecord

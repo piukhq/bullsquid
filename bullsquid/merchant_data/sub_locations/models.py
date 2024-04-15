@@ -1,4 +1,5 @@
 """Request & response model definitions for location endpoints."""
+
 from pydantic import UUID4, root_validator, validator
 
 from bullsquid.merchant_data.locations_common.models import (

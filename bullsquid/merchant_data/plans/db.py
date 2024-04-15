@@ -1,4 +1,5 @@
 """Database access layer for plan operations."""
+
 from typing import Any, Mapping
 from uuid import UUID
 

@@ -1,10 +1,10 @@
 #!/bin/sh
 . scripts/_common
 
-info 'ruff'
-ruff --fix-only .
+info 'fix lints'
+ruff check --fix-only .
 
-info 'black'
-black .
+info 'formatting'
+ruff format .
 
 success 'code formatting complete'

@@ -1,4 +1,5 @@
 """Database operations for PSIMIs."""
+
 from uuid import UUID
 
 from bullsquid.db import NoSuchRecord, paginate

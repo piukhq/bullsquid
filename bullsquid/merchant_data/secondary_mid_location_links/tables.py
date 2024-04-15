@@ -1,6 +1,7 @@
 """
 The link between a secondary MID and a location.
 """
+
 from piccolo.columns import UUID, ForeignKey
 from piccolo.table import Table
 

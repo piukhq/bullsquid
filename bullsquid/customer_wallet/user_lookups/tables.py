@@ -1,4 +1,5 @@
 """Table definitions for the customer wallet API."""
+
 from piccolo.columns import JSON, Serial, Text, Timestamptz
 from piccolo.table import Table
 

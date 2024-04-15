@@ -1,4 +1,5 @@
 """Tests for customer wallet API endpoints."""
+
 import secrets
 from datetime import datetime
 from typing import Any

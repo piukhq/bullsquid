@@ -1,4 +1,5 @@
 """Plan table definitions."""
+
 from piccolo.columns import Integer, Text
 
 from bullsquid.merchant_data.tables import BaseTable

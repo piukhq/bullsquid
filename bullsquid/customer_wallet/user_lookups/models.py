@@ -1,4 +1,5 @@
 """Request & response Pydantic models for the user lookups API."""
+
 from datetime import datetime
 from typing import Any
 

@@ -1,6 +1,7 @@
 """
 Defines the create_app function used to initialize the application.
 """
+
 from asyncpg.exceptions import PostgresError
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware

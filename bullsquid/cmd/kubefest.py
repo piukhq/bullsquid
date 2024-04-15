@@ -10,6 +10,7 @@ Options:
     -h --help   Show this screen.
     --version   Show version.
 """
+
 import re
 from typing import Any
 

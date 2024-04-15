@@ -1,4 +1,5 @@
 """Tests for the service interface base class."""
+
 import pytest
 from aiohttp import ClientResponseError
 from aioresponses import aioresponses

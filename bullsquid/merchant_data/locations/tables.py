@@ -1,4 +1,5 @@
 """Location table definitions."""
+
 from piccolo.columns import (
     M2M,
     Boolean,

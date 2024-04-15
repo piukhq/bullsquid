@@ -1,6 +1,7 @@
 """
 Database table definitions for the comments module.
 """
+
 from piccolo.columns import (
     UUID,
     Array,

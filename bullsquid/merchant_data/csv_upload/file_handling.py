@@ -1,6 +1,7 @@
 """
 Utility functions for handling files.
 """
+
 import codecs
 import csv
 from typing import BinaryIO, Generator, Type, TypeVar

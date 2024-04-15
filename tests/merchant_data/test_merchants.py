@@ -1,4 +1,5 @@
 """Test merchant data API endpoints that operate on merchants."""
+
 import itertools
 from uuid import uuid4
 

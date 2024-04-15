@@ -1,6 +1,7 @@
 """
 Models shared between locations and sub-locations.
 """
+
 from datetime import datetime
 
 from pydantic import UUID4, root_validator, validator

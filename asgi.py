@@ -2,6 +2,7 @@
 Sets up the ASGI application.
 Running this file directly also starts uvicorn for local development.
 """
+
 import sentry_sdk
 
 from bullsquid import __version__

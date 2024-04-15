@@ -1,4 +1,5 @@
 """Tests the liveness and readiness endpoints in the status API."""
+
 from asyncio import Future
 from typing import Generator
 from unittest.mock import patch

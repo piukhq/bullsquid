@@ -1,4 +1,5 @@
 """Secondary MID table definitions."""
+
 from piccolo.columns import M2M, ForeignKey, LazyTableReference, Text, Timestamptz
 
 from bullsquid.merchant_data.enums import PaymentEnrolmentStatus, TXMStatus

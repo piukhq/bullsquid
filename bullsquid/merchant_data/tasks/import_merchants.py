@@ -1,6 +1,7 @@
 """
 Task functions for importing merchants records from CSV files.
 """
+
 from uuid import UUID
 
 from loguru import logger

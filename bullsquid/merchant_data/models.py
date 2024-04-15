@@ -1,4 +1,5 @@
 """Defines the base model class with a default configuration."""
+
 from pydantic import BaseModel as PydanticBaseModel, ConstrainedStr
 
 

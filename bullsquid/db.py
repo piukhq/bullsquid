@@ -1,4 +1,5 @@
 """Database access layer."""
+
 from typing import Any, Type, TypeVar
 from uuid import UUID
 

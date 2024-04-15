@@ -1,4 +1,5 @@
 """Primary MID table definitions."""
+
 from piccolo.columns import ForeignKey, Text, Timestamptz
 
 from bullsquid.merchant_data.enums import PaymentEnrolmentStatus, TXMStatus

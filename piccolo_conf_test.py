@@ -1,4 +1,5 @@
 """Piccolo ORM configuration."""
+
 from piccolo.engine.postgres import PostgresEngine
 
 from bullsquid.piccolo_conf import APP_REGISTRY  # noqa: F401

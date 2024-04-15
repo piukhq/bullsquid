@@ -6,8 +6,7 @@ VERSION = "0.74.4"
 DESCRIPTION = "add unique constraint for location & secondary MID link table"
 
 
-class LocationSecondaryMIDLink(Table):
-    ...
+class LocationSecondaryMIDLink(Table): ...
 
 
 async def forwards():

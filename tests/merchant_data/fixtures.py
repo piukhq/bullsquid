@@ -1,4 +1,5 @@
 """Fixtures & factory functions for building merchant data objects."""
+
 import random
 from datetime import datetime
 from typing import Any

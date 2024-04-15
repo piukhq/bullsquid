@@ -1,6 +1,5 @@
 """Service interface classes for any external API dependencies."""
 
-
 from typing import Any, Mapping
 
 import aiohttp

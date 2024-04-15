@@ -1,4 +1,5 @@
 """Customer wallet API endpoints."""
+
 from fastapi import APIRouter, Depends, Header, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse

@@ -1,4 +1,5 @@
 """Tests for the transaction matching service interface."""
+
 from unittest.mock import MagicMock, patch
 
 from aioresponses import aioresponses

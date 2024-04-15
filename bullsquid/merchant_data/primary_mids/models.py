@@ -1,4 +1,5 @@
 """Request & response model definitions for merchant endpoints."""
+
 import string
 from datetime import datetime
 

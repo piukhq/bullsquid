@@ -1,4 +1,5 @@
 """Test API error handling methods."""
+
 import json
 
 from fastapi import status

@@ -1,4 +1,5 @@
 """Tests for PSIMI API endpoints."""
+
 import random
 from uuid import uuid4
 

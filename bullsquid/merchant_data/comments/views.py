@@ -1,6 +1,7 @@
 """
 View functions for endpoints in the comments module.
 """
+
 from uuid import UUID
 
 from fastapi import Depends, Query, status

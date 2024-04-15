@@ -1,6 +1,7 @@
 """
 Database functions shared between locations and sub-locations.
 """
+
 from bullsquid.merchant_data.locations.tables import Location
 from bullsquid.merchant_data.locations_common.models import (
     LocationOverviewMetadataBase,

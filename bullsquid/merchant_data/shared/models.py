@@ -2,6 +2,7 @@
 Pydantic models that are used in multiple other models modules.
 Keeping them here avoids circular imports.
 """
+
 from pydantic import UUID4, validator
 
 from bullsquid.merchant_data.enums import ResourceStatus

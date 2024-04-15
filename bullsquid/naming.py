@@ -1,4 +1,5 @@
 """Useful functions to do with naming things."""
+
 from typing import Type
 
 from inflection import titleize, underscore

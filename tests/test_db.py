@@ -1,4 +1,5 @@
 """Test for the top level database module."""
+
 from typing import Any, AsyncGenerator, Type
 
 import pytest

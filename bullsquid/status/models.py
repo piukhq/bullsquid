@@ -1,4 +1,5 @@
 """Response models for the status API."""
+
 from pydantic import BaseModel
 
 

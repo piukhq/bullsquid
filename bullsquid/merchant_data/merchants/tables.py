@@ -1,4 +1,5 @@
 """Merchant table definitions."""
+
 from piccolo.columns import ForeignKey, Text
 
 from bullsquid.merchant_data.plans.tables import Plan

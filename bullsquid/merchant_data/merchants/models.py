@@ -1,4 +1,5 @@
 """Request & response model definitions for merchant endpoints."""
+
 from pydantic import UUID4, validator
 
 from bullsquid.merchant_data.enums import ResourceStatus

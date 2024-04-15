@@ -1,4 +1,5 @@
 """Common place for enumerations used in the API and database."""
+
 from enum import Enum
 
 

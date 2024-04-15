@@ -7,8 +7,7 @@ VERSION = "0.74.4"
 DESCRIPTION = "replace unique constraint on user_id with auth_id+user_id"
 
 
-class UserLookup(Table):
-    ...
+class UserLookup(Table): ...
 
 
 async def forwards():
